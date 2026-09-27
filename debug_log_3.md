@@ -156,3 +156,22 @@
 ### 验证
 - 全库 V1. 零残留；单测 404 全过
 
+---
+
+## 2026-09-28 集成测试修复 + 全链路用例
+
+### 变更
+- 新增 tests/integration/conftest.py：_Capturer 假 mcp 收集各 *_tools.register() 内部
+  工具函数成字典（server 模块并不直接暴露工具函数，原集成测试 server.xxx 已失效）
+- test_real_instance.py：server 改为 SimpleNamespace(**_collect())；原硬编码
+  "耐火等级"/"标准墙" 在未命名项目环境失效，改为动态取真实存在的字符串属性
+  （property_service.get_property_type 过滤）和真实分类项
+- 新增 test_create_delete_chain.py：lint→预览→confirm 拦截→创建 2 墙 1 柱（x≈60
+  偏远坐标）→读回 verify→删除还原，真机端到端
+- 断言注意：lint/只读工具经 success_result 包装有 status；create/preview/delete
+  由 service 直出无外层 status，直接看 created/failed/verify
+
+### 验证
+- 真机集成：21 过 2 跳（prop 值过滤、无字符串属性时跳过）
+- 单测 404 全过无回归
+

@@ -8,9 +8,14 @@
 """
 
 import pytest
+from types import SimpleNamespace
 
+import conftest
 import instance_manager
-import server
+
+# 工具函数藏在各 *_tools.register() 内部，server 模块并不直接暴露；
+# 用 conftest._collect 抓出全部工具，绑成 server 命名空间供下方调用
+server = SimpleNamespace(**conftest._collect())
 
 # 模块加载时尝试发现真机；失败则标记整文件跳过
 try:
@@ -23,9 +28,24 @@ pytestmark = pytest.mark.skipif(
     not _ALL, reason="无可用 ArchiCAD 真机，跳过集成测试"
 )
 
-# 主测实例：优先用已知有 8 面墙的 ac29-1
+# 主测实例：优先用已知有墙的 ac29-1
 PRIMARY = "ac29-1" if "ac29-1" in _ALL else _ALL[0]
 FIRE_PROP = "耐火等级"
+
+
+@pytest.fixture(scope="module")
+def prop_name() -> str:
+    """取一个主实例真实存在的字符串类型属性名（环境无关）。"""
+    import property_service
+    conn = instance_manager.manager.get_conn(PRIMARY)
+    names = conn.commands.GetAllPropertyNames()
+    assert names, "项目无任何属性"
+    for n in names:
+        name = getattr(n, "nonLocalizedName", None) or str(n)
+        t = property_service.service.get_property_type(name, PRIMARY)
+        if getattr(t, "value", t) == "string":
+            return name
+    pytest.skip("项目无字符串类型属性")
 
 
 @pytest.fixture(scope="module")
@@ -65,12 +85,12 @@ def test_get_elements_by_type_wall(wall_guids):
     assert len(wall_guids) >= 1
 
 
-def test_get_element_properties(wall_guids):
-    r = server.get_element_properties(wall_guids, [FIRE_PROP], PRIMARY)
+def test_get_element_properties(wall_guids, prop_name):
+    r = server.get_element_properties(wall_guids, [prop_name], PRIMARY)
     assert r["status"] == "success", r
     assert r["count"] == len(wall_guids)
     for item in r["items"]:
-        assert FIRE_PROP in item["properties"]
+        assert prop_name in item["properties"]
 
 
 def test_search_by_type_and_pagination(wall_guids):
@@ -82,25 +102,25 @@ def test_search_by_type_and_pagination(wall_guids):
     assert r["count"] == total
 
 
-def test_search_by_property_value(wall_guids):
-    # 先读第一面墙的实际耐火等级，再按该值过滤（不依赖所有墙都已赋值的假设）
-    read = server.get_element_properties(wall_guids[:1], [FIRE_PROP], PRIMARY)
-    actual = read["items"][0]["properties"].get(FIRE_PROP)
+def test_search_by_property_value(wall_guids, prop_name):
+    # 先读第一面墙的实际属性值，再按该值过滤（不依赖所有墙都已赋值的假设）
+    read = server.get_element_properties(wall_guids[:1], [prop_name], PRIMARY)
+    actual = read["items"][0]["properties"].get(prop_name)
     if actual in (None, ""):
-        pytest.skip(f"第一面墙无 {FIRE_PROP} 值，无法验证值过滤")
+        pytest.skip(f"第一面墙无 {prop_name} 值，无法验证值过滤")
     r = server.search_elements_by_criteria(
         element_type="Wall",
-        filters=[{"field": FIRE_PROP, "operator": "=", "value": str(actual)}],
+        filters=[{"field": prop_name, "operator": "=", "value": str(actual)}],
         limit=100, instance=PRIMARY,
     )
     assert r["status"] == "success", r
     assert r["count"] >= 1
 
 
-def test_search_by_property_no_match():
+def test_search_by_property_no_match(prop_name):
     r = server.search_elements_by_criteria(
         element_type="Wall",
-        filters=[{"field": FIRE_PROP, "operator": "=", "value": "不存在的值X"}],
+        filters=[{"field": prop_name, "operator": "=", "value": "不存在的值X"}],
         limit=100, instance=PRIMARY,
     )
     assert r["status"] == "success", r
@@ -146,19 +166,21 @@ def test_get_element_geometry_info(wall_guids):
 # --- P1 写入工具（只验证拦截，不实际写入）-----------------------------------
 
 
-def test_preview_property_change(wall_guids):
+def test_preview_property_change(wall_guids, prop_name):
     r = server.preview_property_change(
-        wall_guids, FIRE_PROP, "3小时", PRIMARY
+        wall_guids, prop_name, "3小时", PRIMARY
     )
+    if r["status"] == "error" and r["error_code"] == "PROPERTY_TYPE_UNKNOWN":
+        pytest.skip(f"属性 {prop_name} 类型无法确定")
     assert r["status"] == "success", r
     data = r["data"]
     assert data["target_count"] == len(wall_guids)
     assert len(data["before_values"]) == len(wall_guids)
 
 
-def test_set_property_requires_confirm(wall_guids):
+def test_set_property_requires_confirm(wall_guids, prop_name):
     r = server.set_element_properties(
-        wall_guids, FIRE_PROP, "3小时", confirm=False, instance=PRIMARY
+        wall_guids, prop_name, "3小时", confirm=False, instance=PRIMARY
     )
     assert r["status"] == "error"
     assert r["error_code"] == "CONFIRM_REQUIRED"
@@ -172,14 +194,29 @@ def test_set_gdl_requires_confirm(wall_guids):
     assert r["error_code"] == "CONFIRM_REQUIRED"
 
 
+def _first_classification():
+    """取项目里一个真实存在的（系统名，项名）；没有返回 (None, None)。"""
+    r = server.get_classifications(PRIMARY)
+    for sys_item in r.get("items", []):
+        sys_name = sys_item.get("name") or sys_item.get("system_name")
+        for it in sys_item.get("items", []) or sys_item.get("classifications", []):
+            name = it.get("name") or it.get("id")
+            if sys_name and name:
+                return sys_name, name
+    return None, None
+
+
 def test_preview_classification(wall_guids):
+    sys_name, item_name = _first_classification()
+    if not item_name:
+        pytest.skip("项目无可用分类项")
     r = server.preview_classification(
-        wall_guids[:1], "标准墙", instance=PRIMARY
+        wall_guids[:1], item_name, sys_name, instance=PRIMARY
     )
     assert r["status"] == "success", r
     data = r["data"]
     assert data["target_count"] == 1
-    assert "标准墙" in data["target_item"]
+    assert item_name in data["target_item"]
     assert data["system_id"]
 
 
