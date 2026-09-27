@@ -265,7 +265,11 @@ def register(mcp: FastMCP, safe) -> None:
             d = property_service.service.get_property_definition(
                 property_name, instance)
             if d is None:
-                raise errors.PropertyNotFoundError(property_name, instance)
+                raise errors.PropertyNotFoundError(
+                    property_name, instance,
+                    suggestions=property_service.service
+                    .suggest_property_names(property_name, instance),
+                )
             return success_result(
                 instance=info.instance_id, project=info.project_name,
                 count=1, data=d,
@@ -299,6 +303,7 @@ def register(mcp: FastMCP, safe) -> None:
             return success_result(
                 instance=info.instance_id, project=info.project_name,
                 count=len(data["rows"]),
-                data={"unit": data["unit"], "groups": data["rows"]},
+                data={"unit": data["unit"], "groups": data["rows"],
+                      "flat": data["flat_rows"]},
             )
         return safe(instance, _run)

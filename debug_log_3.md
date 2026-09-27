@@ -243,3 +243,24 @@
 ### 验证
 - 单测 414 → 419 全过；真机集成 25 过 2 跳
 
+---
+
+## 2026-09-28 V0.18 算量收尾：平铺出表 + 友好报错 + 兼容补测 + 一键回归
+
+### 变更（对应优化建议 2/3/4/5）
+- aggregate_service.py：+_flatten，返回新增 flat_rows（维度键展平到行顶层，
+  一组一行，LLM 可直接转表格）
+- errors.py：PropertyNotFoundError +suggestions 参数，消息追加
+  "你是不是想用：xxx？"
+- property_service.py：+suggest_property_names（difflib 对全部属性名模糊匹配，
+  cutoff 0.5，取前 3）；get_property_id 报错时自动附建议
+- read_tools.py：get_property_definition 报错同样带建议
+- tests/compatibility：+TestQuantityCompatibility 3 项（6 个通用量属性各版本
+  类型核验、墙上量读取、MEP 三命令存在性）
+- 新增 regression.py（一键回归：单测→集成→兼容性→性能基准，汇总报告，
+  --json 存文件，多实例自动选 ac29-1）
+
+### 验证
+- python regression.py：456 通过 0 失败（单测 419 + 集成 25 + 兼容 12，
+  兼容从 9 涨到 12），性能基准 8 项命令正常输出
+

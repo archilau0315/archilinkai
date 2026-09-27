@@ -185,13 +185,17 @@ class PropertyError(ArchicadMCPError):
 
 
 class PropertyNotFoundError(PropertyError):
-    def __init__(self, name: str, instance: str | None = None):
+    def __init__(self, name, instance=None, suggestions=None):
+        msg = f"未找到属性 {name}，请确认属性名拼写与当前项目一致"
+        if suggestions:
+            msg += f"。你是不是想用：{'、'.join(suggestions)}？"
         super().__init__(
             code=ErrorCode.PROPERTY_NOT_FOUND,
-            message=f"未找到属性 {name}，请确认属性名拼写与当前项目一致",
+            message=msg,
             instance=instance,
             retryable=False,
-            details={"property_name": name},
+            details={"property_name": name,
+                     "suggestions": suggestions or []},
         )
 
 

@@ -184,15 +184,40 @@ class PropertyService:
             pass
         return None
 
+    def suggest_property_names(
+        self, name: str, instance: str | None = None, limit: int = 3
+    ) -> list[str]:
+        """给拼错的属性名找相近的正确名（difflib 模糊匹配）。"""
+        import difflib
+        conn = self._mgr.get_conn(instance)
+        try:
+            candidates: list[str] = []
+            for p in conn.commands.GetAllPropertyNames():
+                nl = getattr(p, "nonLocalizedName", None)
+                if nl:
+                    candidates.append(nl)
+                loc = getattr(p, "localizedName", None)
+                if loc and len(loc) >= 2 and loc[1]:
+                    candidates.append(loc[1])
+        except Exception:
+            return []
+        return difflib.get_close_matches(
+            name, candidates, n=limit, cutoff=0.5
+        )
+
     def get_property_id(self, name: str, instance: str | None = None) -> Any:
         """GetPropertyIds 把属性名换成属性 ID；找不到抛 PropertyNotFoundError。
 
         支持 BuiltIn（nonLocalizedName）和 UserDefined（localizedName[1]）两种属性。
+        报错时附相近属性名建议。
         """
         conn = self._mgr.get_conn(instance)
         uid = self._resolve_user_id(name, instance)
         if uid is None:
-            raise PropertyNotFoundError(name, instance)
+            raise PropertyNotFoundError(
+                name, instance,
+                suggestions=self.suggest_property_names(name, instance),
+            )
         try:
             ids = conn.commands.GetPropertyIds([uid])
         except Exception as exc:

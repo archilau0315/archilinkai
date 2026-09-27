@@ -98,6 +98,24 @@ def _group(
     return sorted(groups.values(), key=lambda g: str(g["group"]))
 
 
+def _flatten(groups: list[dict[str, Any]], quantity: str) -> list[dict[str, Any]]:
+    """把嵌套 group 展平成一行一条，方便直接转表格。
+
+    {"group": {"story": 1}, "count": 2, "sum": 5.0}
+    → {"story": 1, "count": 2, "sum": 5.0, "sum_quantity": "General_NetVolume"}
+    """
+    return [
+        {
+            **g["group"],
+            "count": g["count"],
+            "sum": g["sum"],
+            "avg": g["avg"],
+            "skipped_none": g["skipped_none"],
+        }
+        for g in groups
+    ]
+
+
 class AggregateService:
     """对外：按维度汇总工程量。"""
 
@@ -150,10 +168,12 @@ class AggregateService:
             }
             for s in summaries
         ]
+        groups = _group(rows, group_by, quantity)
         return {
             "unit": quantities.get(guids[0], {}).get(quantity, {}).get("unit")
             if guids else None,
-            "rows": _group(rows, group_by, quantity),
+            "rows": groups,
+            "flat_rows": _flatten(groups, quantity),
         }
 
 

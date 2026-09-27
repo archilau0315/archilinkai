@@ -140,3 +140,54 @@ class TestACVersionSpecificBehavior:
             )
             print(f"{iid} {pname}: {values.get(guid)}")
             assert guid in values
+
+
+class TestQuantityCompatibility:
+    """算量兼容性（V0.18）：量属性与 MEP 命令在各版本可用。"""
+
+    # 通用量：各版本都应存在且类型正确
+    GENERAL_QUANTITIES = {
+        "General_GrossVolume": "volume",
+        "General_NetVolume": "volume",
+        "General_Height": "length",
+        "General_Thickness": "length",
+        "General_SurfaceArea": "area",
+        "General_3DLength": "length",
+    }
+
+    def test_general_quantities_resolvable(self, instances):
+        for iid in instances:
+            for name, expect in self.GENERAL_QUANTITIES.items():
+                ptype = property_service.service.get_property_type(name, iid)
+                assert ptype.value == expect, (
+                    f"{iid} {name}: 期望 {expect}，实际 {ptype.value}"
+                )
+
+    def test_quantities_readable_on_wall(self, instances):
+        for iid in instances:
+            conn = im.get_conn(iid)
+            walls = conn.commands.GetElementsByType("Wall")
+            if not walls:
+                pytest.skip(f"{iid} 项目无墙")
+            guid = str(walls[0].elementId.guid)
+            q = property_service.service.get_quantities(
+                [guid], ["General_GrossVolume"], iid)
+            v = q[guid]["General_GrossVolume"]
+            assert v["unit"] == "m³"
+            assert v["value"] is None or v["value"] > 0
+
+    def test_mep_commands_available(self, instances):
+        """MEP 三命令在 AC26-29 应都存在（Tapir 支持）。"""
+        for iid in instances:
+            for cmd in ("CreateMEPRoutingElements",
+                        "GetMEPRoutingElements",
+                        "GetMEPDistributionSystems"):
+                # 对空请求执行：命令不存在会抛错；存在则返回 dict 或业务错误
+                try:
+                    tapir.execute(cmd, {}, iid)
+                except Exception as e:
+                    msg = str(e)
+                    assert "not found" not in msg.lower() \
+                        and "unknown command" not in msg.lower(), (
+                        f"{iid} 缺少 MEP 命令 {cmd}: {msg}"
+                    )
