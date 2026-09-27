@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 import aggregate_service
+import errors
 import geometry_service
 import gdl_service
 import instance_manager
@@ -255,6 +256,23 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def get_property_definition(
+        property_name: str, instance: str | None = None
+    ) -> dict[str, Any]:
+        """查属性定义：类型/单位/分组/描述；枚举属性附带全部可选项。"""
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            d = property_service.service.get_property_definition(
+                property_name, instance)
+            if d is None:
+                raise errors.PropertyNotFoundError(property_name, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=1, data=d,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
     def aggregate_quantities(
         quantity: str,
         group_by: list[str] | None = None,
@@ -262,6 +280,7 @@ def register(mcp: FastMCP, safe) -> None:
         stories: list[int] | None = None,
         filters: list[dict] | None = None,
         instance: str | None = None,
+        classification: str | None = None,
     ) -> dict[str, Any]:
         """按维度分组汇总工程量（count/sum/avg）。算量出表入口。
 
@@ -269,11 +288,13 @@ def register(mcp: FastMCP, safe) -> None:
         group_by 维度："type"（构件类型）、"story"（楼层）或属性名，可多选，
         缺省 ["type"]。例：按楼层汇总墙的净体积 →
         quantity="General_NetVolume", element_type="Wall", group_by=["story"]
+        classification：只统计挂了该分类项的元素，如 "标准墙"。
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
             data = aggregate_service.service.aggregate(
-                quantity, group_by, element_type, stories, filters, instance
+                quantity, group_by, element_type, stories, filters, instance,
+                classification,
             )
             return success_result(
                 instance=info.instance_id, project=info.project_name,

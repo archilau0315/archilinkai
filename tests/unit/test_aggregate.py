@@ -95,3 +95,15 @@ def test_aggregate_by_type(svc):
     wall = next(g for g in out["rows"] if g["group"]["type"] == "Wall")
     assert wall["count"] == 2
     assert wall["sum"] == 3.0
+
+
+def test_aggregate_with_classification(svc, monkeypatch):
+    # 分类过滤：只保留 g1
+    monkeypatch.setattr(
+        aggregate_service, "_classification_guids",
+        lambda guids, name, instance: {"g1"},
+    )
+    out = svc.aggregate("General_NetVolume", classification="标准墙")
+    assert len(out["rows"]) == 1
+    assert out["rows"][0]["count"] == 1
+    assert out["rows"][0]["sum"] == 1.0

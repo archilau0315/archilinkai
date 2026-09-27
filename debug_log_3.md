@@ -218,3 +218,28 @@
 ### 验证
 - 单测 407 → 414 全过；真机集成 23 过 2 跳
 
+---
+
+## 2026-09-28 V0.17 算量配套：属性缓存提速 + 分类过滤 + 属性定义查询
+
+### 变更（对应算量建议 2/3/5）
+- property_service.py（433 行）：_resolve_user_id 与 get_property_type 加
+  (instance, name) 进程内缓存（重复解析零开销，算量批量读几十列提速明显）；
+  +get_property_definition（类型/单位/分组/描述，枚举附 enum_options 可选项，
+  读 possibleEnumValues，兜底 enumValues）
+- aggregate_service.py（140 行）：aggregate +classification 参数，新增
+  _classification_guids（全系统分类树按 item id 找 GUID →
+  GetClassificationsOfElements 批量比对，找不到分类项抛 ValueError）
+- read_tools.py（280 行）：+get_property_definition 工具（30 个）；
+  aggregate_quantities +classification 参数
+- 单测 +5：缓存命中（命令只调 1 次）、定义查询枚举选项、不存在返回 None、
+  分类过滤 mock；集成 +2（定义查询、不存在报 PROPERTY_NOT_FOUND）
+
+### 注意
+- AC29 未命名项目无任何枚举属性（全量扫描 0 命中），enum_options 结构经
+  mock 验证，真机枚举字段名待有枚举属性的项目复测
+- BuiltIn 枚举名如 StructuralFunction 在 AC29 不存在（探测返回 ErrorItem）
+
+### 验证
+- 单测 414 → 419 全过；真机集成 25 过 2 跳
+

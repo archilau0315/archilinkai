@@ -144,6 +144,9 @@ class PropertyService:
 
     def __init__(self, mgr: instance_manager.InstanceManager) -> None:
         self._mgr = mgr
+        # 属性名解析缓存：{(instance, name): user_id/类型}（V0.17 提速）
+        self._uid_cache: dict[tuple, Any] = {}
+        self._type_cache: dict[tuple, PropertyType] = {}
 
     # --- 属性 ID 与定义 ---------------------------------------------------
 
@@ -152,7 +155,16 @@ class PropertyService:
 
         - BuiltIn 属性：用 nonLocalizedName 直接构造
         - UserDefined 属性：遍历 GetAllPropertyNames 找 localizedName[1]==name
+        结果按 (instance, name) 缓存，重复解析零开销。
         """
+        key = (instance, name)
+        if key in self._uid_cache:
+            return self._uid_cache[key]
+        uid = self._resolve_user_id_uncached(name, instance)
+        self._uid_cache[key] = uid
+        return uid
+
+    def _resolve_user_id_uncached(self, name, instance):
         conn = self._mgr.get_conn(instance)
         # 1. BuiltIn
         try:
@@ -199,7 +211,16 @@ class PropertyService:
             GetDetailsOfProperties([PropertyId]) → [PropertyDefinitionWrapper]
             wrapper.propertyDefinition → PropertyDefinition（含 type 字段）
         同时支持 BuiltIn 和 UserDefined 属性（经 _resolve_user_id）。
+        结果按 (instance, name) 缓存。
         """
+        key = (instance, name)
+        if key in self._type_cache:
+            return self._type_cache[key]
+        t = self._property_type_uncached(name, instance)
+        self._type_cache[key] = t
+        return t
+
+    def _property_type_uncached(self, name, instance) -> PropertyType:
         conn = self._mgr.get_conn(instance)
         uid = self._resolve_user_id(name, instance)
         if uid is None:
@@ -214,6 +235,41 @@ class PropertyService:
         # PropertyDefinitionWrapper → PropertyDefinition
         d = getattr(details[0], "propertyDefinition", details[0])
         return parse_property_type(d)
+
+    def get_property_definition(
+        self, name: str, instance: str | None = None
+    ) -> dict[str, Any] | None:
+        """属性定义：类型/分组/描述/枚举可选项。属性不存在返回 None。"""
+        conn = self._mgr.get_conn(instance)
+        uid = self._resolve_user_id(name, instance)
+        if uid is None:
+            return None
+        try:
+            prop_id = conn.commands.GetPropertyIds([uid])[0].propertyId
+            details = conn.commands.GetDetailsOfProperties([prop_id])
+        except Exception:
+            return None
+        if not details:
+            return None
+        d = getattr(details[0], "propertyDefinition", details[0])
+        ptype = parse_property_type(d)
+        out: dict[str, Any] = {
+            "name": getattr(d, "name", name),
+            "type": ptype.value,
+            "unit": self._TYPE_UNIT.get(ptype),
+            "group": getattr(getattr(d, "group", None), "name", None),
+            "description": getattr(d, "description", None),
+        }
+        if ptype == PropertyType.ENUM:
+            raw = (
+                getattr(d, "possibleEnumValues", None)
+                or getattr(d, "enumValues", None)
+                or []
+            )
+            out["enum_options"] = [
+                getattr(v, "displayValue", None) or str(v) for v in raw
+            ]
+        return out
 
     # --- 读取 -------------------------------------------------------------
 

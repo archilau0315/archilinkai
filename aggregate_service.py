@@ -28,6 +28,45 @@ def _fetch_all(request: QueryRequest, instance: str | None) -> list:
             return out
 
 
+def _classification_guids(
+    guids: list[str], item_name: str, instance: str | None
+) -> set[str]:
+    """按分类项名（分类树中的 id）筛出挂了该分类的元素 GUID。
+
+    先全系统找 item 名 → 拿 item GUID，再批量读元素分类做匹配。
+    """
+    conn = instance_manager.manager.get_conn(instance)
+    t = conn.types
+    target: str | None = None
+    for sys in conn.commands.GetAllClassificationSystems():
+        sid = t.ClassificationSystemId(guid=sys.classificationSystemId.guid)
+        stack = list(conn.commands.GetAllClassificationsInSystem(sid))
+        while stack:
+            it = stack.pop().classificationItem
+            if it.id == item_name:
+                target = str(it.classificationItemId.guid)
+                break
+            stack.extend(getattr(it, "children", None) or [])
+        if target:
+            break
+    if target is None:
+        raise ValueError(f"找不到分类项：{item_name}")
+    elements = [t.ElementIdArrayItem(t.ElementId(guid=g)) for g in guids]
+    system_ids = [
+        t.ClassificationSystemIdArrayItem(
+            t.ClassificationSystemId(guid=s.classificationSystemId.guid))
+        for s in conn.commands.GetAllClassificationSystems()
+    ]
+    res = conn.commands.GetClassificationsOfElements(elements, system_ids)
+    out = set()
+    for g, r in zip(guids, res):
+        for cid in getattr(r, "classificationIds", None) or []:
+            item = getattr(cid.classificationId, "classificationItemId", None)
+            if item and str(item.guid) == target:
+                out.add(g)
+    return out
+
+
 def _group(
     rows: list[dict[str, Any]], group_by: list[str], quantity: str
 ) -> list[dict[str, Any]]:
@@ -70,10 +109,12 @@ class AggregateService:
         stories: list[int] | None = None,
         filters: list[dict] | None = None,
         instance: str | None = None,
+        classification: str | None = None,
     ) -> dict[str, Any]:
         """返回 {"unit": 单位, "rows": [_group 输出]}。
 
         group_by 维度："type"、"story" 或任意属性名（如 "结构类型"）。
+        classification：只统计挂了该分类项的元素（算量归并维度）。
         """
         instance_manager.manager.get_info(instance)  # 实例不存在在此报错
         group_by = group_by or ["type"]
@@ -86,6 +127,10 @@ class AggregateService:
             filters=flt, limit=MAX_LIMIT,
         )
         summaries = _fetch_all(req, instance)
+        if classification:
+            keep = _classification_guids(
+                [s["guid"] for s in summaries], classification, instance)
+            summaries = [s for s in summaries if s["guid"] in keep]
         guids = [s["guid"] for s in summaries]
         svc = property_service.service
 

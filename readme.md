@@ -200,7 +200,7 @@ python -m pytest tests/compatibility/  # AC 版本兼容矩阵，需真机
 ```
 
 无真机时集成/兼容性测试会自动跳过。当前结果（AC28+AC29 真机）：
-单元 404 全过、集成 21 过 2 跳（含建→验→删→还原全链路）、兼容性 9 过 1 跳过。
+单元 419 全过、集成 25 过 2 跳（含建→验→删→还原全链路）、兼容性 9 过 1 跳过。
 
 ## 性能基准
 
@@ -219,7 +219,7 @@ python benchmark.py --instance ac29-1 --rounds 3
 ```
 archicad-mcp/
 ├── server.py              # FastMCP 入口：异常包装 + 四层工具注册
-├── read_tools.py          # P0 只读工具注册（12 个，从 server.py 拆出）
+├── read_tools.py          # P0 只读工具注册（13 个，从 server.py 拆出）
 ├── write_tools.py         # P1 安全写入工具注册（8 个，从 server.py 拆出）
 ├── modify_tools.py        # 构件修改工具注册（2 个，V0.4）
 ├── delete_tools.py        # 构件删除工具注册（2 个，V0.7）
@@ -264,7 +264,7 @@ archicad-mcp/
 
 ## 工具分层
 
-- **P0 只读**：list_instances、project_summary、get_selected_elements、get_elements_by_type、get_element_properties、search_elements_by_criteria、get_element_geometry_info、get_classifications、list_floors、get_gdl_parameters、get_element_quantities（工程量读取：毛/净体积、表面积、长度等，带单位标注）、aggregate_quantities（按 type/story/属性分组汇总，count/sum/avg）
+- **P0 只读**：list_instances、project_summary、get_selected_elements、get_elements_by_type、get_element_properties、search_elements_by_criteria、get_element_geometry_info、get_classifications、list_floors、get_gdl_parameters、get_element_quantities（工程量读取：毛/净体积、表面积、长度等，带单位标注）、aggregate_quantities（按 type/story/属性分组汇总，count/sum/avg，支持分类过滤）、get_property_definition（属性类型/单位/枚举可选项）
 - **P1 安全写入**：preview_property_change、set_element_properties、preview_classification、attach_classification、set_gdl_parameters、highlight_elements、preview_model_plan、create_from_plan
 - **构件修改（V0.4）**：preview_modify_plan、modify_from_plan
 - **构件删除（V0.7）**：preview_delete_plan、delete_from_plan
@@ -330,6 +330,7 @@ offset 方向；屋顶/板建在非当前楼层会假成功（level 填当前楼
 - V0.14 机电管线：建模计划新增 MEPRoute，一类覆盖风管（Ventilation）/水管（Piping）/桥架（CableCarrier）。path 给 3D 路径点（≥2），shape 选矩形/圆形/椭圆/槽形，矩形给 width/height，圆形只给 width（直径）。创建走 MEP 专用命令；验证也走 MEP 专用查询（通道 exists 钩子，不经 GetAllElements）。注意：真机发现 MEP 删除行为与普通构件不同（DeleteElements 返回成功但管网图计数不降），完整的删除还原验证待回机前在 3D 界面核对。单测 404
 - V0.15 工程量读取：新增只读工具 get_element_quantities（工具 28 个）。走 ArchiCAD 内置属性取量（General_GrossVolume/NetVolume/SurfaceArea/3DLength 等，真机枚举验证），默认 14 项通用量，也可传任意 BuiltIn 名（如 Slab_GrossTopSurfaceArea、Zone_CalculatedArea）；每项带单位标注（m/m²/m³/°）。为后续算量功能供原料。单测 407
 - V0.16 工程量汇总：新增只读工具 aggregate_quantities（工具 29 个）。按维度分组求和（count/sum/avg），维度支持 type/story/任意属性名，自动翻页取全量。例：一句"按楼层汇总墙的净体积"直接出表。单测 414
+- V0.17 算量配套：属性名解析/类型查询加进程内缓存（批量读量提速）；aggregate_quantities 支持 classification 过滤（按分类项归并）；新增 get_property_definition 工具（30 个）查属性类型/单位/枚举可选项。单测 419
 
 ## 实机验证进度（2026-09-23）
 

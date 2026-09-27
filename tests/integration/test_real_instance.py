@@ -186,6 +186,19 @@ def test_aggregate_quantities(wall_guids):
     assert any(g["sum"] > 0 for g in groups)
 
 
+def test_get_property_definition(prop_name):
+    r = server.get_property_definition(prop_name, PRIMARY)
+    assert r["status"] == "success", r
+    d = r["data"]
+    assert d["name"] and d["type"]
+
+
+def test_get_property_definition_missing():
+    r = server.get_property_definition("不存在的属性xyz", PRIMARY)
+    assert r["status"] == "error"
+    assert r["error_code"] == "PROPERTY_NOT_FOUND"
+
+
 # --- P1 写入工具（只验证拦截，不实际写入）-----------------------------------
 
 
