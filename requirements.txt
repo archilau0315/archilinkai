@@ -1,0 +1,4 @@
+# ArchiCAD MCP Server 运行依赖
+# Python >= 3.10
+mcp>=1.0.0
+archicad>=29.3000
