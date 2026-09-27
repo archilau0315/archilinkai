@@ -264,3 +264,22 @@
 - python regression.py：456 通过 0 失败（单测 419 + 集成 25 + 兼容 12，
   兼容从 9 涨到 12），性能基准 8 项命令正常输出
 
+---
+
+## 2026-09-28 枚举解析修正（AC28 Tapir 更新后真机复测）
+
+### 背景
+AC28 的 Tapir 插件已更新到新版，实例 ac28-1 当前挂 GDL-28 项目
+（有枚举属性）。借此做真机枚举复测。
+
+### 变更
+- property_service.py get_property_definition：枚举可选项字段确认为
+  possibleEnumValues，且每项需再下钻 .enumValue.enumValueId.displayValue
+  才拿到中文文本；修正解析链，多级 getattr 兜底
+- tests/integration：+test_enum_options_real（限定 ac28-1 在线才跑，
+  断言 耐火等级 返回 一级/二级/三级/四级耐火等级 纯字符串）
+
+### 验证
+- AC28 真机：耐火等级 enum_options = 4 个中文等级名
+- 最终回归 457 通过 0 失败（集成 26 过 2 跳）
+

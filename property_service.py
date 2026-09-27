@@ -291,8 +291,17 @@ class PropertyService:
                 or getattr(d, "enumValues", None)
                 or []
             )
+            # 真机结构：PossibleEnumValuesArrayItem.enumValue.enumValueId.displayValue
             out["enum_options"] = [
-                getattr(v, "displayValue", None) or str(v) for v in raw
+                (
+                    getattr(getattr(v, "enumValue", None), "enumValueId", None)
+                    and getattr(
+                        getattr(v, "enumValue", None).enumValueId,
+                        "displayValue", None)
+                )
+                or getattr(v, "displayValue", None)
+                or str(v)
+                for v in raw
             ]
         return out
 

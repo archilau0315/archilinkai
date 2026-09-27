@@ -199,6 +199,18 @@ def test_get_property_definition_missing():
     assert r["error_code"] == "PROPERTY_NOT_FOUND"
 
 
+@pytest.mark.skipif("ac28-1" not in _ALL, reason="需 ac28-1 在线（GDL-28 有枚举属性）")
+def test_enum_options_real():
+    """真机枚举复测：GDL-28 的 耐火等级 应返回中文可选项。"""
+    r = server.get_property_definition("耐火等级", "ac28-1")
+    assert r["status"] == "success", r
+    d = r["data"]
+    assert d["type"] == "enum"
+    assert "一级耐火等级" in d["enum_options"]
+    # 可选项必须是纯字符串，不是对象 repr
+    assert all(isinstance(o, str) and not o.startswith("PossibleEnum") for o in d["enum_options"])
+
+
 # --- P1 写入工具（只验证拦截，不实际写入）-----------------------------------
 
 
