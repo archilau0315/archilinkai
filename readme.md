@@ -219,7 +219,7 @@ python benchmark.py --instance ac29-1 --rounds 3
 ```
 archicad-mcp/
 ├── server.py              # FastMCP 入口：异常包装 + 四层工具注册
-├── read_tools.py          # P0 只读工具注册（10 个，从 server.py 拆出）
+├── read_tools.py          # P0 只读工具注册（11 个，从 server.py 拆出）
 ├── write_tools.py         # P1 安全写入工具注册（8 个，从 server.py 拆出）
 ├── modify_tools.py        # 构件修改工具注册（2 个，V0.4）
 ├── delete_tools.py        # 构件删除工具注册（2 个，V0.7）
@@ -263,7 +263,7 @@ archicad-mcp/
 
 ## 工具分层
 
-- **P0 只读**：list_instances、project_summary、get_selected_elements、get_elements_by_type、get_element_properties、search_elements_by_criteria、get_element_geometry_info、get_classifications、list_floors、get_gdl_parameters
+- **P0 只读**：list_instances、project_summary、get_selected_elements、get_elements_by_type、get_element_properties、search_elements_by_criteria、get_element_geometry_info、get_classifications、list_floors、get_gdl_parameters、get_element_quantities（工程量读取：毛/净体积、表面积、长度等，带单位标注）
 - **P1 安全写入**：preview_property_change、set_element_properties、preview_classification、attach_classification、set_gdl_parameters、highlight_elements、preview_model_plan、create_from_plan
 - **构件修改（V0.4）**：preview_modify_plan、modify_from_plan
 - **构件删除（V0.7）**：preview_delete_plan、delete_from_plan
@@ -327,6 +327,7 @@ offset 方向；屋顶/板建在非当前楼层会假成功（level 填当前楼
 - V0.12 网面/独立洞口：建模计划新增 Mesh（网面）/ Opening（独立洞口）。Mesh 用 3D 顶点做起伏地形（polygon 各点 z 可不同），支持 3D 洞 holes 与内部等高线 sublines；Opening 在墙/板/梁/网面上开矩形洞（host 给计划序号或已有 GUID + basePoint 基点 + width/height）。真机：墙+板+起伏网面+两个洞口 verify 5/5、删除还原通过。单测 377
 - V0.13 房间区域：建模计划新增 Zone。两种几何：polygon 手画房间轮廓（≥3 点），或 referencePoint 给房间内一点由 ArchiCAD 按周围墙自动识别；可选 category（类别属性 GUID）、stamp（标签落点）。number 编号缺省按序号。真机：两个房间手动+自动各一个，verify 7/7，自动识别轮廓正确收缩到墙内边，删除还原通过。单测 390
 - V0.14 机电管线：建模计划新增 MEPRoute，一类覆盖风管（Ventilation）/水管（Piping）/桥架（CableCarrier）。path 给 3D 路径点（≥2），shape 选矩形/圆形/椭圆/槽形，矩形给 width/height，圆形只给 width（直径）。创建走 MEP 专用命令；验证也走 MEP 专用查询（通道 exists 钩子，不经 GetAllElements）。注意：真机发现 MEP 删除行为与普通构件不同（DeleteElements 返回成功但管网图计数不降），完整的删除还原验证待回机前在 3D 界面核对。单测 404
+- V0.15 工程量读取：新增只读工具 get_element_quantities（工具 28 个）。走 ArchiCAD 内置属性取量（General_GrossVolume/NetVolume/SurfaceArea/3DLength 等，真机枚举验证），默认 14 项通用量，也可传任意 BuiltIn 名（如 Slab_GrossTopSurfaceArea、Zone_CalculatedArea）；每项带单位标注（m/m²/m³/°）。为后续算量功能供原料。单测 407
 
 ## 实机验证进度（2026-09-23）
 

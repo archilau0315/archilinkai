@@ -214,3 +214,41 @@ def register(mcp: FastMCP, safe) -> None:
                 count=len(items), items=items,
             )
         return safe(instance, _run)
+
+    #: 默认工程量清单（BuiltIn 属性名，AC29 真机验证可读）
+    DEFAULT_QUANTITIES = [
+        "General_3DLength", "General_Height", "General_Width",
+        "General_Thickness", "General_GrossVolume", "General_NetVolume",
+        "General_SurfaceArea", "General_Area",
+        "General_GrossTopSurfaceArea", "General_NetTopSurfaceArea",
+        "General_GrossEdgeSurfaceArea", "General_NetEdgeSurfaceArea",
+        "General_GrossBottomSurfaceArea", "General_NetBottomSurfaceArea",
+    ]
+
+    @mcp.tool()
+    def get_element_quantities(
+        element_guids: list[str],
+        quantities: list[str] | None = None,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """批量读取工程量（面积/体积/长度等），带单位标注。算量取数入口。
+
+        quantities 缺省用默认 14 项通用量；也可传任意 BuiltIn 属性名，
+        如 Wall_ReferenceLineLength、Slab_GrossTopSurfaceArea、
+        Zone_CalculatedArea 等。元素不支持某项时该项 value 为 None。
+        单位按项目默认公制：长度 m、面积 m²、体积 m³。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            names = quantities or DEFAULT_QUANTITIES
+            data = property_service.service.get_quantities(
+                element_guids, names, instance
+            )
+            items = [
+                {"guid": g, "quantities": data[g]} for g in element_guids
+            ]
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(items), items=items,
+            )
+        return safe(instance, _run)

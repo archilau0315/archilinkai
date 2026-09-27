@@ -217,6 +217,40 @@ class PropertyService:
 
     # --- 读取 -------------------------------------------------------------
 
+    # 属性类型 → 单位标注（项目默认公制工作单位）
+    _TYPE_UNIT = {
+        PropertyType.LENGTH: "m",
+        PropertyType.AREA: "m²",
+        PropertyType.VOLUME: "m³",
+        PropertyType.ANGLE: "°",
+    }
+
+    def get_quantities(
+        self,
+        element_guids: list[str],
+        quantity_names: list[str],
+        instance: str | None = None,
+    ) -> dict[str, dict[str, Any]]:
+        """批量读取工程量（内置属性），带单位标注。
+
+        quantity_names 为 BuiltIn 属性名（如 General_GrossVolume）；
+        元素不支持某项时该项为 None。返回：
+        {guid: {name: {"value": 数值或None, "unit": "m/m²/m³/°/None"}}}
+        """
+        values = self.get_values(element_guids, quantity_names, instance)
+        units = {
+            n: self._TYPE_UNIT.get(self.get_property_type(n, instance))
+            for n in quantity_names
+        }
+        out: dict[str, dict[str, Any]] = {}
+        for g in element_guids:
+            out[g] = {
+                n: {"value": values.get(g, {}).get(n), "unit": units[n]}
+                for n in quantity_names
+            }
+        return out
+
+
     def get_values(
         self,
         element_guids: list[str],

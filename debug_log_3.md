@@ -175,3 +175,26 @@
 - 真机集成：21 过 2 跳（prop 值过滤、无字符串属性时跳过）
 - 单测 404 全过无回归
 
+---
+
+## 2026-09-28 V0.15 工程量读取 get_element_quantities（算量第 1 步）
+
+### 调研（AC29 真机枚举）
+- 枚举全部 BuiltIn 属性名，量相关 200+ 个：General_* 通用量 + 按类型专有量
+  （Wall_ReferenceLineLength、Slab_GrossTopSurfaceArea、Zone_CalculatedArea 等）
+- 通用量类型核验：General_SurfaceArea/Area/Net|Gross(Top|Edge|Bottom)SurfaceArea
+  为 area；General_3DLength/Height/Width/Thickness 为 length；
+  General_Gross/NetVolume 为 volume
+- 不存在/不可用名：General_GrossArea、General_Length（类型 unknown，忽略）
+
+### 变更
+- property_service.py：+get_quantities（get_values 取数 + get_property_type 定单位，
+  _TYPE_UNIT 标注 m/m²/m³/°）（420 行）
+- read_tools.py：+get_element_quantities 工具 + DEFAULT_QUANTITIES 默认 14 项（253 行）
+- tests/unit/test_quantities.py：+3 用例（mock 值/单位、缺失为 None）
+- tests/integration/test_real_instance.py：+真机用例（墙 GrossVolume>0、单位 m³）
+
+### 验证
+- 单测 404 → 407 全过；真机集成 22 过 2 跳
+- 全部模块 ≤500 行
+

@@ -163,6 +163,17 @@ def test_get_element_geometry_info(wall_guids):
     assert bbox["size"]["z"] == item["summary"]["height"]
 
 
+def test_get_element_quantities(wall_guids):
+    r = server.get_element_quantities(wall_guids[:1], None, PRIMARY)
+    assert r["status"] == "success", r
+    q = r["items"][0]["quantities"]
+    # 墙必有毛体积和高度，单位标注正确
+    assert q["General_GrossVolume"]["value"] > 0
+    assert q["General_GrossVolume"]["unit"] == "m³"
+    assert q["General_Height"]["value"] > 0
+    assert q["General_Height"]["unit"] == "m"
+
+
 # --- P1 写入工具（只验证拦截，不实际写入）-----------------------------------
 
 
