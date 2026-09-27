@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import aggregate_service
 import geometry_service
 import gdl_service
 import instance_manager
@@ -250,5 +251,33 @@ def register(mcp: FastMCP, safe) -> None:
             return success_result(
                 instance=info.instance_id, project=info.project_name,
                 count=len(items), items=items,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def aggregate_quantities(
+        quantity: str,
+        group_by: list[str] | None = None,
+        element_type: str | None = None,
+        stories: list[int] | None = None,
+        filters: list[dict] | None = None,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """按维度分组汇总工程量（count/sum/avg）。算量出表入口。
+
+        quantity 为 BuiltIn 量名（如 General_NetVolume）；
+        group_by 维度："type"（构件类型）、"story"（楼层）或属性名，可多选，
+        缺省 ["type"]。例：按楼层汇总墙的净体积 →
+        quantity="General_NetVolume", element_type="Wall", group_by=["story"]
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            data = aggregate_service.service.aggregate(
+                quantity, group_by, element_type, stories, filters, instance
+            )
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(data["rows"]),
+                data={"unit": data["unit"], "groups": data["rows"]},
             )
         return safe(instance, _run)

@@ -174,6 +174,18 @@ def test_get_element_quantities(wall_guids):
     assert q["General_Height"]["unit"] == "m"
 
 
+def test_aggregate_quantities(wall_guids):
+    r = server.aggregate_quantities(
+        "General_NetVolume", ["story"], "Wall", None, None, PRIMARY
+    )
+    assert r["status"] == "success", r
+    assert r["data"]["unit"] == "m³"
+    groups = r["data"]["groups"]
+    assert len(groups) >= 1
+    # 每面墙净体积为正，分组 sum 也必为正
+    assert any(g["sum"] > 0 for g in groups)
+
+
 # --- P1 写入工具（只验证拦截，不实际写入）-----------------------------------
 
 

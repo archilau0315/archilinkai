@@ -198,3 +198,23 @@
 - 单测 404 → 407 全过；真机集成 22 过 2 跳
 - 全部模块 ≤500 行
 
+---
+
+## 2026-09-28 V0.16 工程量分组汇总 aggregate_quantities（算量第 2 步）
+
+### 变更
+- 新增 aggregate_service.py（98 行）：_fetch_all 循环翻页取全量匹配、
+  _group 纯函数分组求和（None 计入 count 不计入 sum，avg 自动跳过）、
+  AggregateService.aggregate 串查询+取量+分组
+- read_tools.py：+aggregate_quantities 工具（288 行）。group_by 维度：
+  "type"、"story" 或任意属性名，可多选，缺省 ["type"]
+- tests/unit/test_aggregate.py：+7 用例（分组纯函数 5 + 服务层 2，全 mock）
+- tests/integration/test_real_instance.py：+真机用例（按楼层汇总墙净体积）
+
+### 踩坑
+- QueryEngine.query 签名是 query(request)，instance 走 request.instance 字段
+- PageResult 字段是 items（dict 列表）不是 summaries
+
+### 验证
+- 单测 407 → 414 全过；真机集成 23 过 2 跳
+
