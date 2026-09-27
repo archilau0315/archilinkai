@@ -1,10 +1,10 @@
-"""建模通道抽象层（V1.0）。
+"""建模通道抽象层（V0.0）。
 
 把"业务建模计划"和"具体用谁执行"隔开：
 - 上层（create_service）只认 ModelChannel 接口，不关心是 Tapir 还是未来的官方 MCP
 - 新增通道时只需再写一个子类，上层业务逻辑一行不改
 
-V1.0 已实现：tapir_channel.TapirChannel
+V0.0 已实现：tapir_channel.TapirChannel
 预留：官方 MCP 通道、其它自动化通道
 """
 
@@ -87,7 +87,7 @@ class ModelChannel(ABC):
             f"{self.name} 通道未实现存在性查询"
         )
 
-    # --- 修改（V1.4）------------------------------------------------------
+    # --- 修改（V0.4）------------------------------------------------------
 
     def supports_modify(
         self, element_type: str, instance: str | None = None
@@ -111,7 +111,7 @@ class ModelChannel(ABC):
             f"{self.name} 通道未实现构件修改"
         )
 
-    # --- 删除（V1.7）------------------------------------------------------
+    # --- 删除（V0.7）------------------------------------------------------
 
     def supports_delete(self, instance: str | None = None) -> bool:
         """该实例上能否删除构件。默认不支持，通道按需覆盖。"""

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""对象/灯具（Object/Lamp，V1.11）单元测试：计划校验 + 通道参数 + 预览。"""
+"""对象/灯具（Object/Lamp，V0.11）单元测试：计划校验 + 通道参数 + 预览。"""
 
 import pytest
 

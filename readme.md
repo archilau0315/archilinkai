@@ -221,9 +221,9 @@ archicad-mcp/
 ├── server.py              # FastMCP 入口：异常包装 + 四层工具注册
 ├── read_tools.py          # P0 只读工具注册（10 个，从 server.py 拆出）
 ├── write_tools.py         # P1 安全写入工具注册（8 个，从 server.py 拆出）
-├── modify_tools.py        # 构件修改工具注册（2 个，V1.4）
-├── delete_tools.py        # 构件删除工具注册（2 个，V1.7）
-├── plan_tools.py          # 计划辅助工具注册（1 个，V1.10）
+├── modify_tools.py        # 构件修改工具注册（2 个，V0.4）
+├── delete_tools.py        # 构件删除工具注册（2 个，V0.7）
+├── plan_tools.py          # 计划辅助工具注册（1 个，V0.10）
 ├── diagnostic_tools.py    # P2 诊断工具注册（4 个，从 server.py 拆出）
 ├── instance_manager.py    # ArchiCAD 实例发现/连接/重连/健康检查
 ├── tapir_adapter.py       # Tapir 命令统一封装
@@ -234,12 +234,12 @@ archicad-mcp/
 ├── plan_framing.py        # 计划校验：墙/柱/梁/板
 ├── plan_openings.py       # 计划校验：门/窗
 ├── plan_special.py        # 计划校验：楼梯/屋顶/变形体/网面/洞口/区域/机电管线
-├── modify_plan.py         # 构件修改计划：数据结构 + 校验（V1.4）
-├── delete_plan.py         # 构件删除计划：GUID 列表校验（V1.7）
+├── modify_plan.py         # 构件修改计划：数据结构 + 校验（V0.4）
+├── delete_plan.py         # 构件删除计划：GUID 列表校验（V0.7）
 ├── plan_preview.py        # 建模计划预览（人能看懂的明细）
 ├── create_service.py      # 建模计划调度：能力闸门/创建/验证
-├── modify_service.py      # 修改调度：读当前值/修改/逐字段验证（V1.4）
-├── delete_service.py      # 删除调度：预检/删除/details 读回确认（V1.7）
+├── modify_service.py      # 修改调度：读当前值/修改/逐字段验证（V0.4）
+├── delete_service.py      # 删除调度：预检/删除/details 读回确认（V0.7）
 ├── query_engine.py        # BIM 条件查询引擎（含分页）
 ├── property_service.py    # Property 读取/写入与类型校验
 ├── geometry_service.py    # 几何规整：长度/起止点/高程/包围盒
@@ -265,9 +265,9 @@ archicad-mcp/
 
 - **P0 只读**：list_instances、project_summary、get_selected_elements、get_elements_by_type、get_element_properties、search_elements_by_criteria、get_element_geometry_info、get_classifications、list_floors、get_gdl_parameters
 - **P1 安全写入**：preview_property_change、set_element_properties、preview_classification、attach_classification、set_gdl_parameters、highlight_elements、preview_model_plan、create_from_plan
-- **构件修改（V1.4）**：preview_modify_plan、modify_from_plan
-- **构件删除（V1.7）**：preview_delete_plan、delete_from_plan
-- **计划辅助（V1.10）**：lint_model_plan（离线校验，不连 ArchiCAD）
+- **构件修改（V0.4）**：preview_modify_plan、modify_from_plan
+- **构件删除（V0.7）**：preview_delete_plan、delete_from_plan
+- **计划辅助（V0.10）**：lint_model_plan（离线校验，不连 ArchiCAD）
 - **P2 诊断运维**：refresh_instances、validate_instance、get_operation_status、get_operation_log（共 27 个工具）
 - **已支持建模构件（15 类）**：墙、柱、梁、板、门、窗、楼梯、屋顶、变形体、对象（家具）、灯具、网面、独立洞口、房间区域、机电管线（风管/水管/桥架）
 
@@ -301,7 +301,7 @@ offset 方向；屋顶/板建在非当前楼层会假成功（level 填当前楼
 - 写入走 archicad 原生 API（`SetPropertyValuesOfElements`，内部已包
   ACAPI_CallUndoableCommand，Ctrl+Z 可撤销）；读操作走 Tapir 通道
   （Tapir 写命令的参数 schema 与原生不一致，实测会拒绝，见 debug_log.md）
-- 构件修改（V1.4）：项目身份与构件存在性分开校验，构件已删除时报
+- 构件修改（V0.4）：项目身份与构件存在性分开校验，构件已删除时报
   直白错误；改后用 GetDetailsOfElements 逐字段读回比对（容差 1 厘米）
 - 所有写操作生成唯一 Operation ID 并记录日志
 
@@ -311,22 +311,22 @@ offset 方向；屋顶/板建在非当前楼层会假成功（level 填当前楼
 - V0.2：基于官方包与 Tapir 源码查证修订
 - V0.3：工程化设计（InstanceManager、Query Engine、四阶段写入、结构化返回、Property 类型系统、分页、Operation Log、统一错误码、测试矩阵、Benchmark、GDL Engine 分层）
 - V0.3 实机验证（2026-09-23）：双版本 AC28+AC29 实测通过，详见下方「实机验证进度」
-- V1.0：对话建模第一阶段。建模计划（model_plan）、通道抽象层（channel_base，可插拔，便于将来接入官方 MCP）、Tapir 通道（墙/柱）、预览与创建调度；新增 preview_model_plan / create_from_plan，共 22 工具。AC29 真机闭环通过，单测 182/182
-- V1.1：建模计划扩展梁、板（默认梁截面 0.2×0.3、板厚 0.2）。复合结构板厚以结构层为准。单测 194
-- V1.2：门、窗（可挂墙）。门窗的 wall 支持"计划墙序号"或"已有墙 GUID"双引用，调度按"先墙后门窗"两轮创建。门默认 1.0×2.1 门槛 0，窗默认 1.2×1.5 窗台 0.9。AC29 真机关联通过（门窗 ownerElementId 指向新墙），单测 212
-- V1.3：楼梯（Stair）、屋顶（Roof）、变形体（Morph）。楼梯按基线生成、可选踏步数；屋顶给坡度=单坡（转轴默认多边形第1边，可 pivot 覆盖），不给=多平面；变形体目前只支持方块。屋顶底标高必须填当前楼层（首层 0），否则假成功。楼梯详情 Tapir 暂不支持读取。AC29 真机 3/3，单测 228
-- V1.3.1 重构：拆 server.py（493→62 行）为纯入口，新增 read_tools.py（P0 10个）、write_tools.py（P1 8个），与已有 diagnostic_tools（P2 4个）统一 register(mcp, safe) 注册模式。工具总数仍 22，单测 228
-- V1.4：构件修改。新增 modify_plan（修改计划校验）、modify_service（读当前值/修改/读回验证）、modify_tools 两个工具 preview_modify_plan / modify_from_plan。支持墙（端点/高/厚）、柱（平移/高/截面宽深）、门和窗（洞口宽高/窗台）。真机 4 类混合 4/4 改后改回均通过，假 GUID 报"构件不存在"。工具 24 个，单测 265
-- V1.5：修改扩到梁/板/屋顶 + 变形体任意形状。梁改端点/截面宽高，板改绝对标高/厚，多平面屋顶改厚/檐出（ModifyRoofs 只支持多平面，单坡不在范围）。变形体除方块外可用 body 描述任意形状：vertices（相对基点的 3D 点）+ faces（点序号面）+ solid（实体/曲面）。真机：梁端点/截面、板标高、屋顶檐出、四面体变形体均通过；复合结构构件的 thickness 改不动（读回如实报失败，非 bug）。单测 287
-- V1.6 还债：清理项目根 21 个历史探查脚本；拆 model_plan（488→139 行）为计划骨架，新增 plan_values（基础数值校验）、plan_framing（墙柱梁板）、plan_openings（门窗）、plan_special（楼梯屋顶变形体）。纯结构整理、无行为变化，24 工具与 287 单测不变
-- V1.7 构件删除：新增 delete_plan（GUID 列表校验/去重）、delete_service（项目与构件预检→删除→读回确认，最多重试 3 次）、delete_tools 两个工具 preview_delete_plan / delete_from_plan。通道用 Tapir DeleteElements（整批一个 success）。真机：单根/批量均一次成功并确认消失。关键坑：构件删除后 Tapir 仍返回 details 为空的占位项，存在性必须看 details 非空，否则误判。工具 26 个，单测 310
-- V1.8 板/屋顶开洞：Slab 创建/修改均支持 holes（洞列表，每个洞是多边形顶点，≥3 点）；单坡屋顶创建时支持 holes；多平面屋顶给 holes 计划校验阶段报错（Tapir 会静默忽略）。修改 holes 为全量替换语义。真机 4 项全过：板创建+修改、单坡屋顶创建、多平面拦截。新增洞比对算法（去闭合点+集合容差匹配）。单测 334
-- V1.9 L 形楼梯：Stair 新增 path 字段（≥2 点折线），支持 L 形/多段基线楼梯；start+end 仍兼容直梯。真机创建成功，数量增减正常。单测 342
-- V1.10 计划辅助（P2 起点）：新增 plan_tools 与 lint_model_plan 工具——离线校验建模计划（不连 ArchiCAD），返回构件统计或具体字段错误，供识图生成计划后快速迭代。readme 新增「图片识别 → 建模计划」工作流节。工具 27 个，单测 348
-- V1.11 对象/灯具：建模计划新增 Object（家具）/ Lamp（灯具）两类构件，字段 name（库部件名）+ x/y/z 落点，走既有 lint→预览→创建链路，无新增工具。name 必须与项目已加载库部件名完全一致（中文库如 '沙发 01'），否则报 Not found library part。真机：沙发+餐椅创建/读回/删除还原通过。已补扫出 16 个灯具名（吊灯、壁灯、日光灯、床头灯、聚光灯、日式灯、天花板灯、墙射灯、区域灯光等，见 debug_log_3）。单测 359
-- V1.12 网面/独立洞口：建模计划新增 Mesh（网面）/ Opening（独立洞口）。Mesh 用 3D 顶点做起伏地形（polygon 各点 z 可不同），支持 3D 洞 holes 与内部等高线 sublines；Opening 在墙/板/梁/网面上开矩形洞（host 给计划序号或已有 GUID + basePoint 基点 + width/height）。真机：墙+板+起伏网面+两个洞口 verify 5/5、删除还原通过。单测 377
-- V1.13 房间区域：建模计划新增 Zone。两种几何：polygon 手画房间轮廓（≥3 点），或 referencePoint 给房间内一点由 ArchiCAD 按周围墙自动识别；可选 category（类别属性 GUID）、stamp（标签落点）。number 编号缺省按序号。真机：两个房间手动+自动各一个，verify 7/7，自动识别轮廓正确收缩到墙内边，删除还原通过。单测 390
-- V1.14 机电管线：建模计划新增 MEPRoute，一类覆盖风管（Ventilation）/水管（Piping）/桥架（CableCarrier）。path 给 3D 路径点（≥2），shape 选矩形/圆形/椭圆/槽形，矩形给 width/height，圆形只给 width（直径）。创建走 MEP 专用命令；验证也走 MEP 专用查询（通道 exists 钩子，不经 GetAllElements）。注意：真机发现 MEP 删除行为与普通构件不同（DeleteElements 返回成功但管网图计数不降），完整的删除还原验证待回机前在 3D 界面核对。单测 404
+- V0.0：对话建模第一阶段。建模计划（model_plan）、通道抽象层（channel_base，可插拔，便于将来接入官方 MCP）、Tapir 通道（墙/柱）、预览与创建调度；新增 preview_model_plan / create_from_plan，共 22 工具。AC29 真机闭环通过，单测 182/182
+- V0.1：建模计划扩展梁、板（默认梁截面 0.2×0.3、板厚 0.2）。复合结构板厚以结构层为准。单测 194
+- V0.2：门、窗（可挂墙）。门窗的 wall 支持"计划墙序号"或"已有墙 GUID"双引用，调度按"先墙后门窗"两轮创建。门默认 1.0×2.1 门槛 0，窗默认 1.2×1.5 窗台 0.9。AC29 真机关联通过（门窗 ownerElementId 指向新墙），单测 212
+- V0.3：楼梯（Stair）、屋顶（Roof）、变形体（Morph）。楼梯按基线生成、可选踏步数；屋顶给坡度=单坡（转轴默认多边形第1边，可 pivot 覆盖），不给=多平面；变形体目前只支持方块。屋顶底标高必须填当前楼层（首层 0），否则假成功。楼梯详情 Tapir 暂不支持读取。AC29 真机 3/3，单测 228
+- V0.3.1 重构：拆 server.py（493→62 行）为纯入口，新增 read_tools.py（P0 10个）、write_tools.py（P1 8个），与已有 diagnostic_tools（P2 4个）统一 register(mcp, safe) 注册模式。工具总数仍 22，单测 228
+- V0.4：构件修改。新增 modify_plan（修改计划校验）、modify_service（读当前值/修改/读回验证）、modify_tools 两个工具 preview_modify_plan / modify_from_plan。支持墙（端点/高/厚）、柱（平移/高/截面宽深）、门和窗（洞口宽高/窗台）。真机 4 类混合 4/4 改后改回均通过，假 GUID 报"构件不存在"。工具 24 个，单测 265
+- V0.5：修改扩到梁/板/屋顶 + 变形体任意形状。梁改端点/截面宽高，板改绝对标高/厚，多平面屋顶改厚/檐出（ModifyRoofs 只支持多平面，单坡不在范围）。变形体除方块外可用 body 描述任意形状：vertices（相对基点的 3D 点）+ faces（点序号面）+ solid（实体/曲面）。真机：梁端点/截面、板标高、屋顶檐出、四面体变形体均通过；复合结构构件的 thickness 改不动（读回如实报失败，非 bug）。单测 287
+- V0.6 还债：清理项目根 21 个历史探查脚本；拆 model_plan（488→139 行）为计划骨架，新增 plan_values（基础数值校验）、plan_framing（墙柱梁板）、plan_openings（门窗）、plan_special（楼梯屋顶变形体）。纯结构整理、无行为变化，24 工具与 287 单测不变
+- V0.7 构件删除：新增 delete_plan（GUID 列表校验/去重）、delete_service（项目与构件预检→删除→读回确认，最多重试 3 次）、delete_tools 两个工具 preview_delete_plan / delete_from_plan。通道用 Tapir DeleteElements（整批一个 success）。真机：单根/批量均一次成功并确认消失。关键坑：构件删除后 Tapir 仍返回 details 为空的占位项，存在性必须看 details 非空，否则误判。工具 26 个，单测 310
+- V0.8 板/屋顶开洞：Slab 创建/修改均支持 holes（洞列表，每个洞是多边形顶点，≥3 点）；单坡屋顶创建时支持 holes；多平面屋顶给 holes 计划校验阶段报错（Tapir 会静默忽略）。修改 holes 为全量替换语义。真机 4 项全过：板创建+修改、单坡屋顶创建、多平面拦截。新增洞比对算法（去闭合点+集合容差匹配）。单测 334
+- V0.9 L 形楼梯：Stair 新增 path 字段（≥2 点折线），支持 L 形/多段基线楼梯；start+end 仍兼容直梯。真机创建成功，数量增减正常。单测 342
+- V0.10 计划辅助（P2 起点）：新增 plan_tools 与 lint_model_plan 工具——离线校验建模计划（不连 ArchiCAD），返回构件统计或具体字段错误，供识图生成计划后快速迭代。readme 新增「图片识别 → 建模计划」工作流节。工具 27 个，单测 348
+- V0.11 对象/灯具：建模计划新增 Object（家具）/ Lamp（灯具）两类构件，字段 name（库部件名）+ x/y/z 落点，走既有 lint→预览→创建链路，无新增工具。name 必须与项目已加载库部件名完全一致（中文库如 '沙发 01'），否则报 Not found library part。真机：沙发+餐椅创建/读回/删除还原通过。已补扫出 16 个灯具名（吊灯、壁灯、日光灯、床头灯、聚光灯、日式灯、天花板灯、墙射灯、区域灯光等，见 debug_log_3）。单测 359
+- V0.12 网面/独立洞口：建模计划新增 Mesh（网面）/ Opening（独立洞口）。Mesh 用 3D 顶点做起伏地形（polygon 各点 z 可不同），支持 3D 洞 holes 与内部等高线 sublines；Opening 在墙/板/梁/网面上开矩形洞（host 给计划序号或已有 GUID + basePoint 基点 + width/height）。真机：墙+板+起伏网面+两个洞口 verify 5/5、删除还原通过。单测 377
+- V0.13 房间区域：建模计划新增 Zone。两种几何：polygon 手画房间轮廓（≥3 点），或 referencePoint 给房间内一点由 ArchiCAD 按周围墙自动识别；可选 category（类别属性 GUID）、stamp（标签落点）。number 编号缺省按序号。真机：两个房间手动+自动各一个，verify 7/7，自动识别轮廓正确收缩到墙内边，删除还原通过。单测 390
+- V0.14 机电管线：建模计划新增 MEPRoute，一类覆盖风管（Ventilation）/水管（Piping）/桥架（CableCarrier）。path 给 3D 路径点（≥2），shape 选矩形/圆形/椭圆/槽形，矩形给 width/height，圆形只给 width（直径）。创建走 MEP 专用命令；验证也走 MEP 专用查询（通道 exists 钩子，不经 GetAllElements）。注意：真机发现 MEP 删除行为与普通构件不同（DeleteElements 返回成功但管网图计数不降），完整的删除还原验证待回机前在 3D 界面核对。单测 404
 
 ## 实机验证进度（2026-09-23）
 

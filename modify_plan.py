@@ -1,4 +1,4 @@
-"""构件修改计划模块（V1.4）。
+"""构件修改计划模块（V0.4）。
 
 只做一件事：描述并校验"修改计划 JSON"。
 - 每项用 GUID 锁定一个已有构件，只写要改的字段
@@ -34,7 +34,7 @@ from typing import Any
 
 from errors import InvalidArgumentError
 
-#: V1.4 开放修改的构件类型
+#: V0.4 开放修改的构件类型
 SUPPORTED_TYPES = frozenset({
     "Wall", "Column", "Beam", "Slab", "Roof", "Door", "Window"
 })
@@ -123,7 +123,7 @@ def _build_item(raw: Any, index: int) -> ModifyItem:
     if element_type not in SUPPORTED_TYPES:
         allowed = ", ".join(sorted(SUPPORTED_TYPES))
         raise InvalidArgumentError(
-            f"{prefix}.type", element_type, f"V1.4 仅支持：{allowed}"
+            f"{prefix}.type", element_type, f"V0.4 仅支持：{allowed}"
         )
     guid = raw.get("guid")
     if not isinstance(guid, str) or not guid.strip():

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""网面 Mesh / 独立洞口 Opening（V1.12）单元测试。"""
+"""网面 Mesh / 独立洞口 Opening（V0.12）单元测试。"""
 
 import pytest
 

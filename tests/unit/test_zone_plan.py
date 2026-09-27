@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""房间区域 Zone（V1.13）单元测试。"""
+"""房间区域 Zone（V0.13）单元测试。"""
 
 import pytest
 

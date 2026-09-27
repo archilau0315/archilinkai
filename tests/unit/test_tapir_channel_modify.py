@@ -1,4 +1,4 @@
-"""tapir_channel 修改链路单元测试（V1.4）。
+"""tapir_channel 修改链路单元测试（V0.4）。
 
 真机命令执行留给集成测试；这里只测：
 - 业务 {guid, changes} → Tapir Modify 入参

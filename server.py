@@ -4,9 +4,9 @@
 工具按层拆到独立模块注册：
 - read_tools：P0 只读（10 个）
 - write_tools：P1 安全写入（8 个，均需 confirm）
-- modify_tools：构件几何修改（2 个，V1.4）
-- delete_tools：构件删除（2 个，V1.7）
-- plan_tools：计划辅助（1 个，V1.10）
+- modify_tools：构件几何修改（2 个，V0.4）
+- delete_tools：构件删除（2 个，V0.7）
+- plan_tools：计划辅助（1 个，V0.10）
 - diagnostic_tools：P2 诊断运维（4 个）
 
 启动时尝试 discover_instances；无真机时允许启动，工具调用时报错。

@@ -1,4 +1,4 @@
-"""P0 只读工具注册（V1.3 从 server.py 拆出，控制入口行数）。
+"""P0 只读工具注册（V0.3 从 server.py 拆出，控制入口行数）。
 
 只做一件事：向 FastMCP 注册 10 个只读工具。
 通过 register(mcp, safe) 调用，复用 server 的统一异常包装。

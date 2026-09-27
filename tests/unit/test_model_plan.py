@@ -142,7 +142,7 @@ def test_non_object_element_rejected():
     assert _error_code(["not-an-object"]) == ErrorCode.INVALID_ARGUMENT
 
 
-# --- 梁（V1.1 新增）------------------------------------------------------
+# --- 梁（V0.1 新增）------------------------------------------------------
 
 
 def test_beam_defaults():
@@ -186,7 +186,7 @@ def test_beam_bad_height_rejected():
     ]) == ErrorCode.INVALID_ARGUMENT
 
 
-# --- 板（V1.1 新增）------------------------------------------------------
+# --- 板（V0.1 新增）------------------------------------------------------
 
 
 def test_slab_defaults():
@@ -225,7 +225,7 @@ def test_slab_bad_point_rejected():
     ]) == ErrorCode.INVALID_ARGUMENT
 
 
-# --- 门 / 窗（V1.2 新增）-------------------------------------------------
+# --- 门 / 窗（V0.2 新增）-------------------------------------------------
 
 
 def _wall_and_window():
@@ -333,7 +333,7 @@ def test_opening_bad_width_or_sill_rejected():
     ]) == ErrorCode.INVALID_ARGUMENT
 
 
-# --- 楼梯 / 屋顶 / 变形体（V1.3 新增）------------------------------------
+# --- 楼梯 / 屋顶 / 变形体（V0.3 新增）------------------------------------
 
 
 def test_stair_defaults():

@@ -27,7 +27,7 @@ MEP_SHAPES = frozenset({"Rectangular", "Circular", "Oval", "UShape"})
 
 
 def build_object(data: dict[str, Any], index: int) -> dict[str, Any]:
-    """对象/灯具（V1.11）：库部件名 name + 落点 x/y/z（默认原点地面）。
+    """对象/灯具（V0.11）：库部件名 name + 落点 x/y/z（默认原点地面）。
 
     name 必须与项目已加载库里的部件名完全一致（中文库如 '沙发 01'），
     名字不对 Tapir 会报 Not found library part。
@@ -49,7 +49,7 @@ def build_object(data: dict[str, Any], index: int) -> dict[str, Any]:
 
 
 def build_mesh(data: dict[str, Any], index: int) -> dict[str, Any]:
-    """网面（V1.12）：3D 多边形 polygon（≥3 点，点可带高程 z）+ 底标高 level。
+    """网面（V0.12）：3D 多边形 polygon（≥3 点，点可带高程 z）+ 底标高 level。
 
     holes 给内部洞（3D 多边形）；sublines 给内部等高线
     （每条线是一串 3D 点），用来做起伏地形。
@@ -92,7 +92,7 @@ def _mesh_sublines(raw: Any, prefix: str) -> list[list[dict[str, float]]]:
 
 
 def build_opening(data: dict[str, Any], index: int) -> dict[str, Any]:
-    """独立洞口（V1.12）：宿主 host + 基点 basePoint + 洞口宽高。
+    """独立洞口（V0.12）：宿主 host + 基点 basePoint + 洞口宽高。
 
     host 为本计划构件序号（整数）或项目中已有构件 GUID（字符串），
     宿主只能是墙、板、梁、网面。basePoint 是 3D 点（洞口定位点）。
@@ -120,7 +120,7 @@ def build_opening(data: dict[str, Any], index: int) -> dict[str, Any]:
 
 
 def build_zone(data: dict[str, Any], index: int) -> dict[str, Any]:
-    """房间区域（V1.13）：name 房间名 + number 编号，几何二选一。
+    """房间区域（V0.13）：name 房间名 + number 编号，几何二选一。
 
     - polygon：手动给房间轮廓（≥3 个 2D 点）
     - referencePoint：给房间内一个点，ArchiCAD 自动按周围墙识别房间边界
@@ -174,7 +174,7 @@ def build_zone(data: dict[str, Any], index: int) -> dict[str, Any]:
 
 
 def build_mep_route(data: dict[str, Any], index: int) -> dict[str, Any]:
-    """机电管线路由（V1.14）：domain 专业 + path 3D 折线（≥2 点）。
+    """机电管线路由（V0.14）：domain 专业 + path 3D 折线（≥2 点）。
 
     domain：Ventilation 风管 / Piping 水管 / CableCarrier 桥架。
     shape 截面形状（默认矩形），width/height 截面尺寸；

@@ -1,4 +1,4 @@
-"""P2 诊断 / 运维工具注册（V1.0 从 server.py 拆出，控制 server 行数）。
+"""P2 诊断 / 运维工具注册（V0.0 从 server.py 拆出，控制 server 行数）。
 
 只做一件事：向 FastMCP 注册 4 个诊断工具。
 通过 register(mcp, safe) 调用，复用 server 的统一异常包装。

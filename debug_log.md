@@ -899,7 +899,7 @@ readme.md「待实机验证」清单剩余的「写入流程验证」。选了**
 ### 验证结果 ✓
 
 #### 1. initialize 握手
-- server: `archicad-mcp` v1.27.1
+- server: `archicad-mcp` V0.27.1
 - protocol: `2025-11-25`
 
 #### 2. list_tools：18 个工具全部注册

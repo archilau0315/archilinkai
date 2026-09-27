@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""tapir_channel 删除链路单元测试（V1.7）。"""
+"""tapir_channel 删除链路单元测试（V0.7）。"""
 
 import pytest
 

@@ -1,12 +1,12 @@
-"""Tapir 建模通道（V1.2）：ModelChannel 的 Tapir 实现。
+"""Tapir 建模通道（V0.2）：ModelChannel 的 Tapir 实现。
 
 职责（只做这一件事）：把已校验的计划元素翻译成 Tapir 创建命令并解析结果。
 能力与参数结构来自 Tapir 1.5.9 源码 + AC29 真机实测。
 
-V1.3 支持：Wall、Column、Beam、Slab、Door、Window、Stair、Roof、Morph。
+V0.3 支持：Wall、Column、Beam、Slab、Door、Window、Stair、Roof、Morph。
 门、窗由 create_service 先把"墙引用"解析成真实 GUID，再交给本通道。
-变形体 V1.3 只支持方块；屋顶支持多平面和单坡。
-V1.11 新增：Object（家具）、Lamp（灯具），按库部件名放置。
+变形体 V0.3 只支持方块；屋顶支持多平面和单坡。
+V0.11 新增：Object（家具）、Lamp（灯具），按库部件名放置。
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ _COMMAND: dict[str, tuple[str, str]] = {
     "MEPRoute": ("CreateMEPRoutingElements", "routingElementsData"),
 }
 
-# 业务元素类型 →（Tapir 修改命令名，请求数组字段名），V1.4
+# 业务元素类型 →（Tapir 修改命令名，请求数组字段名），V0.4
 _MODIFY_COMMAND: dict[str, tuple[str, str]] = {
     "Wall": ("ModifyWalls", "wallsWithDetails"),
     "Column": ("ModifyColumns", "columnsWithDetails"),
@@ -141,7 +141,7 @@ class TapirChannel(ModelChannel):
         rows = raw.get("routingElements", []) if isinstance(raw, dict) else []
         return bool(rows) and "error" not in rows[0]
 
-    # --- 修改（V1.4）------------------------------------------------------
+    # --- 修改（V0.4）------------------------------------------------------
 
     def modify(
         self,
@@ -298,7 +298,7 @@ class TapirChannel(ModelChannel):
         if element_type == "Roof":
             return self._build_roof_param(item)
         if element_type in ("Object", "Lamp"):
-            # 对象/灯具：库部件名 + 落点坐标（V1.11）
+            # 对象/灯具：库部件名 + 落点坐标（V0.11）
             return {
                 "libraryPartName": item["name"],
                 "coordinates": {"x": item["x"], "y": item["y"], "z": item["z"]},

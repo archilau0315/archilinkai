@@ -36,7 +36,7 @@ SUPPORTED_TYPES = frozenset({"Wall", "Column", "Beam", "Slab",
 #: 必须挂墙的构件（门窗），用于墙引用校验
 WALL_BASED = frozenset({"Door", "Window"})
 
-#: 依赖宿主、需在宿主建成后再建的构件（V1.12 加 Opening）
+#: 依赖宿主、需在宿主建成后再建的构件（V0.12 加 Opening）
 HOST_BASED = frozenset({"Door", "Window", "Opening"})
 
 #: 独立洞口允许挂的宿主类型

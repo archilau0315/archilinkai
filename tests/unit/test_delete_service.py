@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""delete_service.py 单元测试（V1.7）。"""
+"""delete_service.py 单元测试（V0.7）。"""
 
 from unittest.mock import MagicMock
 

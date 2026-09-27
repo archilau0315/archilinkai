@@ -257,7 +257,7 @@ def test_check_supports_passes_and_raises():
         channel.check_supports("Column")
 
 
-# --- 门 / 窗挂墙（V1.2 新增）---------------------------------------------
+# --- 门 / 窗挂墙（V0.2 新增）---------------------------------------------
 
 
 def _all_types_channel():
@@ -339,7 +339,7 @@ def test_window_blocked_when_wall_fails(tmp_path):
 
 
 def test_stair_roof_morph_created_as_independent(tmp_path):
-    """V1.3 三类都是独立构件：字段原样透传，结果按序号排。"""
+    """V0.3 三类都是独立构件：字段原样透传，结果按序号排。"""
     channel = _all_types_channel()
     service = _service(
         channel=channel,

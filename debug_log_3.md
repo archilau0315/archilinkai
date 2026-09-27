@@ -2,7 +2,7 @@
 
 ---
 
-## 2026-09-27 V1.11 对象/灯具（Object/Lamp）
+## 2026-09-27 V0.11 对象/灯具（Object/Lamp）
 
 ### 调研（真机探测）
 - Tapir CreateObjects/CreateLamps/GetLibraries 均可用（AC29+Tapir 1.5.9）
@@ -32,7 +32,7 @@
 
 ---
 
-## 2026-09-27 V1.11 补扫：灯具部件名清单（16 个，真机验证）
+## 2026-09-27 V0.11 补扫：灯具部件名清单（16 个，真机验证）
 
 ### 过程
 - 盲猜 38 个中英名全灭；从 Light Sources.libpack 二进制找路子
@@ -52,7 +52,7 @@
 
 ---
 
-## 2026-09-27 V1.12 网面 Mesh + 独立洞口 Opening
+## 2026-09-27 V0.12 网面 Mesh + 独立洞口 Opening
 
 ### 调研（Tapir 源码 + 真机）
 - CreateMeshes/ModifyMeshes/CreateOpenings 真机可用；无 ModifyOpenings
@@ -82,7 +82,7 @@
 
 ---
 
-## 2026-09-27 V1.13 房间区域 Zone
+## 2026-09-27 V0.13 房间区域 Zone
 
 ### 调研（Tapir 源码 schema + GH 组件 + 真机）
 - CreateZones 真机可用；无 ModifyZones
@@ -109,7 +109,7 @@
 
 ---
 
-## 2026-09-28 V1.14 机电管线 MEPRoute（风管/水管/桥架）
+## 2026-09-28 V0.14 机电管线 MEPRoute（风管/水管/桥架）
 
 ### 调研（Tapir 源码 + AC29 真机）
 - CreateMEPRoutingElements / CreateMEPElements / ModifyMEPRoutingElements 真机可用
@@ -143,4 +143,16 @@
   已怀疑分布图缓存，真相需在 AC29 界面（3D 视图）确认，AC29 以管理员身份运行，
   程序无法操作其界面，已交用户在界面核对/清理
 - 全部模块 ≤500 行（最大 tapir_channel 427）
+
+---
+
+## 2026-09-28 版本号统一降级：V1.x → V0.x
+
+### 变更
+- 项目仍在开发期，全部版本号由 V1.x 统一改为 V0.x（如 V0.14）
+- 批量替换 33 个 py/md 文件中的 "V1." 共 155 处
+- 文件改名：开发计划_对话建模V1.0.md → 开发计划_对话建模V0.0.md
+
+### 验证
+- 全库 V1. 零残留；单测 404 全过
 

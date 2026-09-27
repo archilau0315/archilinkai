@@ -1,4 +1,4 @@
-"""modify_service.py 单元测试（V1.4）。
+"""modify_service.py 单元测试（V0.4）。
 
 真机依赖全部 mock：
 - instance_manager：validate_instance / check_project_identity

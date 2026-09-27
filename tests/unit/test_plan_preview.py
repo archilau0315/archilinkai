@@ -61,7 +61,7 @@ def test_no_channel_omits_field():
     assert "channel" not in build_preview(plan)
 
 
-# --- 梁板（V1.1 新增）----------------------------------------------------
+# --- 梁板（V0.1 新增）----------------------------------------------------
 
 
 def test_beam_slab_summary_and_details():
@@ -90,7 +90,7 @@ def test_slab_detail_shows_bounding_box():
     assert "(1,2)~(7,5)" in text
 
 
-# --- 门 / 窗（V1.2 新增）-------------------------------------------------
+# --- 门 / 窗（V0.2 新增）-------------------------------------------------
 
 
 def test_door_window_preview_details():
