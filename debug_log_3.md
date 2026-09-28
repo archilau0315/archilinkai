@@ -447,3 +447,46 @@ AC28 的 Tapir 插件已更新到新版，实例 ac28-1 当前挂 GDL-28 项目
   打开 xlsx 核对清单格式（标题/合计/单位）
 - 可选优化：模板分类小计（如 0105 混凝土工程小计）
 
+---
+
+## 2026-09-28 V0.27 复合墙分层算量（模板层扩展）
+
+### 调研结论
+- 官方 API GetAllBuildingMaterials / GetAllCompositeStructures / GetAllProfiles 均不存在
+- Tapir 仅 GetBuildingMaterials 命令存在但参数不识别（其他候选 GetAllBuildingMaterials /
+  GetCompositeStructures / GetCompositeElements / GetElementBuildingMaterials 全报"Add-On 未加载"）
+- 关键发现：墙体 BuiltIn 属性已含复合层数据，直接走 property_service 即可：
+  - Wall_InsideSkinVolume / Wall_OutsideSkinVolume（内/外饰面层体积）
+  - Wall_ConditionalInsideSkinVolume / OutsideSkinVolume（条件层体积）
+  - General_InsulationSkinThickness（保温层厚度）
+  - Construction_CompositeName（复合结构名）
+  - BuildingMaterial_Name/ID/Description/Manufacturer（建材信息）
+
+### 变更文件
+- aggregate_service.py（579→609 行）：QUANTITY_TEMPLATES 新增 3 个复合墙分层模板
+  - wall_composite_layers：3 量同表（内层/外层/净体积），with_code=True
+  - wall_insulation_thickness：保温层厚度，with_code=True
+  - wall_core_volume：公式法（General_NetVolume - Inside - Outside）→ 核心层体积
+- tests/unit/test_aggregate.py（+6 测试，44→50 单文件 / 455→461 全套件）：3 模板注册、
+  公式正确性（4.5-0.2-0.1=4.2）、None 跳过、模板总数 13
+- 真机验证：首面墙 GUID 0f777f0c 属性 InsideSkin=0.2 / OutsideSkin=0.1 /
+  NetVolume=4.5 / InsulationThickness=0.2 / CompositeName="test-wall"
+
+### 设计说明
+- 复合结构分层算量不需要新 Tapir 命令，复用 V0.25 formula + V0.26 with_code 现有能力
+- wall_core_volume 公式法典型用法：净体积 - 各分层体积 = 核心结构层（如混凝土层）
+- 复合墙分层体积与 GB 50500 清单编码对应：核心层用 010502001（与 Wall 同），
+  保温/饰面层若需独立编码，可在 code_table 按 layer 字段细分（待用户反馈后扩展）
+
+### 备注
+- 单测 455→461 全过（+6）
+- 模板总数 10→13（+3）
+- 工具数仍 34（无新增工具，仅扩模板）
+- aggregate_service.py 609 行（+30，仍未超 800）
+- 真机 AC29 验证：复合墙分层属性全可读，分层体积和核心层公式正确
+
+### 待办
+- 真机：aggregate_by_template("wall_core_volume") → export_table fmt=report
+  → 核对核心层体积 = 4.2 m³ 是否在报表中正确合计
+- 可选：扩展 code_table 支持按 layer 细分清单编码（保温层/饰面层独立编码）
+

@@ -590,3 +590,61 @@ def test_report_service_no_total_when_unit_mixed(tmp_path):
     # 末行不是合计（合计只在单位一致时出现），最后一行是数据行 Door
     assert ws.cell(ws.max_row, 4).value == "樘"
     assert ws.cell(ws.max_row, 5).value == 2.0
+
+
+# --- V0.27 复合墙分层算量 ---------------------------------------------
+
+def test_template_wall_composite_layers_registered():
+    """wall_composite_layers 模板已注册，含 3 个量。"""
+    from aggregate_service import QUANTITY_TEMPLATES
+    tpl = QUANTITY_TEMPLATES["wall_composite_layers"]
+    assert tpl["quantities"] == [
+        "Wall_InsideSkinVolume", "Wall_OutsideSkinVolume", "General_NetVolume"]
+    assert tpl["with_code"] is True
+
+
+def test_template_wall_insulation_thickness_registered():
+    """wall_insulation_thickness 模板已注册。"""
+    from aggregate_service import QUANTITY_TEMPLATES
+    tpl = QUANTITY_TEMPLATES["wall_insulation_thickness"]
+    assert tpl["quantity"] == "General_InsulationSkinThickness"
+    assert tpl["with_code"] is True
+
+
+def test_template_wall_core_volume_formula():
+    """wall_core_volume 用公式：净体积-内层-外层。"""
+    from aggregate_service import QUANTITY_TEMPLATES
+    tpl = QUANTITY_TEMPLATES["wall_core_volume"]
+    assert "General_NetVolume - Wall_InsideSkinVolume - Wall_OutsideSkinVolume" \
+        == tpl["formula"]
+    assert tpl["formula_name"] == "核心层体积"
+    assert tpl["formula_unit"] == "m³"
+    assert tpl["with_code"] is True
+
+
+def test_wall_core_volume_formula_eval():
+    """核心层体积公式正确求值：4.5 - 0.2 - 0.1 = 4.2。"""
+    from formula_eval import eval_formula
+    result = eval_formula(
+        "General_NetVolume - Wall_InsideSkinVolume - Wall_OutsideSkinVolume",
+        {"General_NetVolume": 4.5,
+         "Wall_InsideSkinVolume": 0.2,
+         "Wall_OutsideSkinVolume": 0.1})
+    assert result == 4.2
+
+
+def test_wall_core_volume_formula_none_skipped():
+    """复合墙非复合层属性为 None 时公式结果为 None。"""
+    from formula_eval import eval_formula
+    result = eval_formula(
+        "General_NetVolume - Wall_InsideSkinVolume - Wall_OutsideSkinVolume",
+        {"General_NetVolume": 4.5,
+         "Wall_InsideSkinVolume": None,
+         "Wall_OutsideSkinVolume": 0.1})
+    assert result is None
+
+
+def test_template_count_after_v027():
+    """V0.27 后模板总数应为 13（10+3）。"""
+    from aggregate_service import QUANTITY_TEMPLATES
+    assert len(QUANTITY_TEMPLATES) == 13
