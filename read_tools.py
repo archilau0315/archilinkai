@@ -387,13 +387,20 @@ def register(mcp: FastMCP, safe) -> None:
         sheets: list[dict[str, Any]] | None = None,
         filename: str = "export",
         fmt: str = "csv",
+        value_column: str | None = None,
+        project_name: str | None = None,
         instance: str | None = None,
     ) -> dict[str, Any]:
         """把算量结果导出为文件，返回路径。
 
-        单表：传 rows（flat 数组），fmt 选 csv 或 xlsx（Excel），默认 csv。
+        单表：传 rows（flat 数组），fmt 选 csv / xlsx / report，默认 csv。
         多表：传 sheets=[{"name":"表名","rows":[...]}, ...]，自动用 xlsx，
           一次写多张表到同一 Excel 文件。
+        report：fmt=report 时按 GB 50500 工程量清单格式排版（标题/项目信息
+          /表头/数据行/合计），rows 须含 code/code_name/code_unit 列
+          （由模板 with_code=true 触发 aggregate 自动附加）；
+          value_column 指定量值列名（缺省自动探测 sum/sum_xxx/formula_result）；
+          project_name 写到报表项目信息行。
         filename 不含扩展名，存到项目同级 output 目录。
         """
         import os
@@ -429,6 +436,23 @@ def register(mcp: FastMCP, safe) -> None:
             ts = time.strftime("%Y%m%d_%H%M%S")
             total_rows = 0
             columns: list[str] = []
+            if fmt == "report":
+                # GB 50500 工程量清单报表
+                import report_service
+                source_rows = rows or (sheets[0].get("rows", []) if sheets else [])
+                path = report_service.build_report(
+                    source_rows, value_column=value_column,
+                    project_name=project_name, filename=safe_name,
+                    out_dir=out_dir)
+                total_rows = len(source_rows)
+                columns = ["序号", "项目编码", "项目名称", "计量单位", "工程量"]
+                return success_result(
+                    instance=instance,
+                    count=total_rows,
+                    data={"file_path": path, "rows": total_rows,
+                          "format": "report", "columns": columns,
+                          "sheets": 1},
+                )
             if fmt == "xlsx":
                 from openpyxl import Workbook
                 path = os.path.join(out_dir, f"{safe_name}_{ts}.xlsx")

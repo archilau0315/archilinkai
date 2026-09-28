@@ -399,3 +399,51 @@ AC28 的 Tapir 插件已更新到新版，实例 ac28-1 当前挂 GDL-28 项目
 - 工具数仍 34（无新增工具，仅扩展现有工具参数）
 - aggregate_service.py 519 行（+17，接近上限但未超 800）
 
+---
+
+## 2026-09-28 V0.26 GB 50500 清单编码 + 工程量清单报表
+
+### 变更文件
+- code_table.py（新增，52 行）：GB 50500 构件类型→清单编码映射表
+  （Wall 010502001/Column 010503001/Beam 010504001/Slab 010505001 等 16 类），
+  lookup() 按 type 取 code/code_name/code_unit
+- report_service.py（新增，135 行）：工程量清单报表排版
+  - build_report(rows, value_column, project_name, filename, out_dir) 生成 xlsx
+  - 结构：标题（合并居中）→项目信息行→表头（序号/项目编码/项目名称/计量单位/工程量）→
+    数据行（同 code 合并求和，按 code 升序）→合计行（仅当所有项单位一致）
+  - _pick_value_column：自动探测 sum/sum_xxx/formula_result 量值列
+  - _aggregate_by_code：同 code 求和合并
+- aggregate_service.py（555→579 行）：+ with_code 参数
+  - aggregate()：with_code=True 时强制 group_by 含 type（清单按项分列），
+    每个 group 按 type 查 code_table 附加 code/code_name/code_unit 列
+  - aggregate_by_template / aggregate_by_custom_template 透传 with_code
+  - 8 个预设模板（concrete_volume/wall_area/wall_length/slab_area/door_count/
+    zone_area/column_count/mep_length）加 with_code: True
+  - validate_template 文档说明接受 with_code
+- read_tools.py：export_table 新增 fmt=report 模式 + value_column/project_name 参数
+- tests/unit/test_aggregate.py（+11 测试，444→455）：code_table 查表、with_code
+  自动加 type 维度、模板带 code 列、自定义 with_code、报表生成/合并/合计/拒空
+
+### 设计说明
+- with_code 与 group_by 的关系：with_code=True 强制按 type 分项（清单按项分列是
+  GB 50500 标准格式）。concrete_volume 等原"按 story 合并多 type"的模板改为
+  "按 story+type 分项"，每种类型一项；若仍想合并总体积，直接调用 aggregate() 不传
+  with_code 即可
+- 报表 fmt=report 是 xlsx 之上的"清单标准排版"层：标题+项目信息+表头+数据+合计，
+  配合模板 with_code=true 自动附 code/code_name/code_unit 列，一键出 GB 50500 报表
+- value_column 参数：当模板用 formula 或 quantities 多量时，flat_rows 的量值列名
+  不固定（formula_result / sum_General_NetVolume 等），报表自动探测；复杂场景由
+  调用方显式传 value_column 指定
+
+### 备注
+- 单测 444→455 全过（+11）
+- 工具数仍 34（仅扩 export_table 参数，无新增工具）
+- 模板数仍 11（无新增，8 个加 with_code 字段）
+- aggregate_service.py 579 行（+24，仍未超 800）
+- 真机验证待跑（AC29/AC28）：concrete_volume 报表导出对照清单格式
+
+### 待办
+- 真机：aggregate_by_template("concrete_volume") → export_table fmt=report →
+  打开 xlsx 核对清单格式（标题/合计/单位）
+- 可选优化：模板分类小计（如 0105 混凝土工程小计）
+

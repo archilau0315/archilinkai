@@ -144,11 +144,17 @@ def test_aggregate_by_template(svc):
 
 
 def test_aggregate_by_template_merges_types(svc):
-    # concrete_volume 含 Wall + Slab，合并后 story 1 应有 Wall(2.0) + Slab(5.0)
+    # concrete_volume 含 Wall + Slab + with_code=True → 按 story+type 分项
+    # story 1 有 Wall(2.0) 和 Slab(5.0) 两项，不合并
     out = svc.aggregate_by_template("concrete_volume")
-    s1 = next(g for g in out["rows"] if g["group"]["story"] == 1)
-    assert s1["count"] == 2
-    assert s1["sum"] == 7.0
+    s1_rows = [g for g in out["rows"] if g["group"]["story"] == 1]
+    assert len(s1_rows) == 2
+    by_type = {g["group"]["type"]: g for g in s1_rows}
+    assert by_type["Wall"]["sum"] == 2.0
+    assert by_type["Slab"]["sum"] == 5.0
+    # 每行都带清单编码（GB 50500）
+    assert by_type["Wall"]["group"]["code"] == "010502001"
+    assert by_type["Slab"]["group"]["code_name"] == "现浇混凝土板"
 
 
 def test_aggregate_by_template_unknown(svc):
@@ -409,3 +415,178 @@ def test_validate_template_accepts_formula():
         "group_by": ["story"],
         "element_types": ["Wall"],
     })
+
+
+# --- V0.26 清单编码 + 报表 ---------------------------------------------
+
+def test_code_table_lookup():
+    """code_table 提供 GB 50500 清单编码。"""
+    import code_table
+    assert code_table.lookup("Wall")["code"] == "010502001"
+    assert code_table.lookup("Wall")["unit"] == "m³"
+    assert code_table.lookup("NotAType") is None
+    assert code_table.lookup(None) is None
+
+
+def test_aggregate_with_code_adds_type_dim(svc):
+    """with_code=True 时强制 group_by 含 type，每组附 code 列。"""
+    out = svc.aggregate(
+        quantity="General_NetVolume",
+        group_by=["story"],
+        element_type="Wall",
+        with_code=True,
+    )
+    g = out["rows"][0]
+    assert "type" in g["group"]  # 自动加 type 维度
+    assert g["group"]["code"] == "010502001"
+    assert g["group"]["code_name"] == "现浇混凝土墙"
+    assert g["group"]["code_unit"] == "m³"
+
+
+def test_aggregate_with_code_no_type_dim_if_already_present(svc):
+    """group_by 已含 type 时不再重复添加。"""
+    out = svc.aggregate(
+        quantity="General_NetVolume",
+        group_by=["type"],
+        element_type="Wall",
+        with_code=True,
+    )
+    assert out["rows"][0]["group"]["code"] == "010502001"
+
+
+def test_template_concrete_volume_has_code(svc):
+    """concrete_volume 模板带 with_code=True。"""
+    out = svc.aggregate_by_template("concrete_volume")
+    # 每行都有清单编码
+    for g in out["rows"]:
+        assert g["group"].get("code")
+        assert g["group"].get("code_name")
+
+
+def test_custom_template_with_code(svc):
+    """自定义模板支持 with_code 字段。"""
+    tpl = {
+        "quantity": "General_NetVolume",
+        "group_by": ["story"],
+        "element_types": ["Wall", "Slab"],
+        "with_code": True,
+    }
+    out = svc.aggregate_by_custom_template(tpl)
+    # 多 type 时按 story+type 分项
+    by_st = {}
+    for g in out["rows"]:
+        key = (g["group"]["story"], g["group"]["type"])
+        by_st[key] = g
+    assert by_st[(1, "Wall")]["group"]["code"] == "010502001"
+    assert by_st[(1, "Slab")]["group"]["code"] == "010505001"
+
+
+def test_report_service_build(tmp_path):
+    """report_service 生成清单格式 xlsx。"""
+    import os
+    import report_service
+
+    rows = [
+        {"story": 0, "type": "Wall", "count": 2,
+         "sum": 3.0, "code": "010502001",
+         "code_name": "现浇混凝土墙", "code_unit": "m³"},
+        {"story": 1, "type": "Wall", "count": 1,
+         "sum": 5.0, "code": "010502001",
+         "code_name": "现浇混凝土墙", "code_unit": "m³"},
+        {"story": 1, "type": "Slab", "count": 1,
+         "sum": 2.0, "code": "010505001",
+         "code_name": "现浇混凝土板", "code_unit": "m³"},
+    ]
+    path = report_service.build_report(
+        rows, value_column="sum", project_name="测试工程",
+        filename="test_report", out_dir=str(tmp_path))
+    assert os.path.exists(path)
+    assert path.endswith(".xlsx")
+
+    from openpyxl import load_workbook
+    wb = load_workbook(path)
+    ws = wb.active
+    # 标题
+    assert ws.cell(1, 1).value == "工程量清单"
+    # 项目信息行
+    assert "测试工程" in ws.cell(2, 1).value
+    # 表头
+    assert ws.cell(3, 1).value == "序号"
+    assert ws.cell(3, 5).value == "工程量"
+    # 数据行：Wall 同 code 合并 = 8.0，Slab = 2.0
+    wall_row = next(r for r in range(4, ws.max_row + 1)
+                    if ws.cell(r, 2).value == "010502001")
+    assert ws.cell(wall_row, 5).value == 8.0
+    slab_row = next(r for r in range(4, ws.max_row + 1)
+                    if ws.cell(r, 2).value == "010505001")
+    assert ws.cell(slab_row, 5).value == 2.0
+
+
+def test_report_service_picks_value_column_auto(tmp_path):
+    """未传 value_column 时自动探测 sum 列。"""
+    import os
+    import report_service
+
+    rows = [
+        {"type": "Wall", "sum": 3.0, "code": "010502001",
+         "code_name": "现浇混凝土墙", "code_unit": "m³"},
+    ]
+    path = report_service.build_report(
+        rows, filename="auto", out_dir=str(tmp_path))
+    assert os.path.exists(path)
+
+
+def test_report_service_rejects_empty():
+    """rows 空时报错。"""
+    import report_service
+    with pytest.raises(ValueError, match="为空"):
+        report_service.build_report([])
+
+
+def test_report_service_rejects_missing_value_column(tmp_path):
+    """rows 无量值列时报错。"""
+    import report_service
+    rows = [{"type": "Wall", "code": "010502001",
+             "code_name": "墙", "code_unit": "m³"}]
+    with pytest.raises(ValueError, match="量值列"):
+        report_service.build_report(rows, out_dir=str(tmp_path))
+
+
+def test_report_service_total_when_unit_consistent(tmp_path):
+    """所有项单位一致时显示合计行。"""
+    import report_service
+    from openpyxl import load_workbook
+
+    rows = [
+        {"type": "Wall", "sum": 3.0, "code": "010502001",
+         "code_name": "现浇混凝土墙", "code_unit": "m³"},
+        {"type": "Slab", "sum": 5.0, "code": "010505001",
+         "code_name": "现浇混凝土板", "code_unit": "m³"},
+    ]
+    path = report_service.build_report(
+        rows, value_column="sum", filename="total", out_dir=str(tmp_path))
+    wb = load_workbook(path)
+    ws = wb.active
+    last_val = ws.cell(ws.max_row, 5).value
+    # 合计 = 8.0
+    assert last_val == 8.0
+
+
+def test_report_service_no_total_when_unit_mixed(tmp_path):
+    """单位不一致时不显示合计。"""
+    import report_service
+    from openpyxl import load_workbook
+
+    rows = [
+        {"type": "Wall", "sum": 3.0, "code": "010502001",
+         "code_name": "现浇混凝土墙", "code_unit": "m³"},
+        {"type": "Door", "sum": 2.0, "code": "010801001",
+         "code_name": "木质门", "code_unit": "樘"},
+    ]
+    path = report_service.build_report(
+        rows, value_column="sum", filename="mixed", out_dir=str(tmp_path))
+    wb = load_workbook(path)
+    ws = wb.active
+    # 末行不是合计（合计只在单位一致时出现），最后一行是数据行 Door
+    assert ws.cell(ws.max_row, 4).value == "樘"
+    assert ws.cell(ws.max_row, 5).value == 2.0

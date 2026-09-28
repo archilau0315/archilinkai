@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import code_table
 import formula_eval
 import instance_manager
 import property_service
@@ -47,48 +48,56 @@ QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
         "group_by": ["story"],
         "element_types": ["Wall", "Column", "Beam", "Slab"],
         "waste_factor": 0.03,
+        "with_code": True,
     },
     "wall_area": {
         "description": "墙体面积：按楼层汇总所有墙的表面积",
         "quantity": "General_SurfaceArea",
         "group_by": ["story"],
         "element_types": ["Wall"],
+        "with_code": True,
     },
     "wall_length": {
         "description": "墙体长度：按楼层汇总所有墙的 3D 长度",
         "quantity": "General_3DLength",
         "group_by": ["story"],
         "element_types": ["Wall"],
+        "with_code": True,
     },
     "slab_area": {
         "description": "楼板面积：按楼层汇总板的净顶面积",
         "quantity": "General_NetTopSurfaceArea",
         "group_by": ["story"],
         "element_types": ["Slab"],
+        "with_code": True,
     },
     "door_count": {
         "description": "门窗计数：按类型统计门和窗的数量",
         "quantity": "General_3DLength",
         "group_by": ["type"],
         "element_types": ["Door", "Window"],
+        "with_code": True,
     },
     "zone_area": {
         "description": "房间面积：按楼层汇总房间区域的计算面积",
         "quantity": "Zone_CalculatedArea",
         "group_by": ["story"],
         "element_types": ["Zone"],
+        "with_code": True,
     },
     "column_count": {
         "description": "柱计数：按楼层统计柱的数量",
         "quantity": "General_Height",
         "group_by": ["story"],
         "element_types": ["Column"],
+        "with_code": True,
     },
     "mep_length": {
         "description": "机电管线长度：按专业汇总风管/水管/桥架的长度",
         "quantity": "General_3DLength",
         "group_by": ["type"],
         "element_types": ["MEPRoutingElement"],
+        "with_code": True,
     },
     "wall_summary": {
         "description": "墙体综合：体积+面积+长度按楼层同时出表",
@@ -116,6 +125,7 @@ def validate_template(tpl: dict[str, Any]) -> None:
     """校验自定义模板字段，不合法抛 ValueError。
 
     必须含 quantity/quantities 或 formula 三者之一。
+    可选 with_code（True 时按 GB 50500 清单编码附加 code 列）。
     """
     has_qty = "quantity" in tpl or "quantities" in tpl
     if not has_qty and "formula" not in tpl:
@@ -276,6 +286,7 @@ class AggregateService:
         formula: str | None = None,
         formula_name: str | None = None,
         formula_unit: str | None = None,
+        with_code: bool | None = None,
     ) -> dict[str, Any]:
         """返回 {"unit"/"units", "rows", "flat_rows"}。
 
@@ -283,6 +294,8 @@ class AggregateService:
         formula: 算量规则公式（如 "General_NetVolume * 1.03"），优先于 quantity。
           formula 需配 formula_name（结果列名）和 formula_unit（单位）。
         waste_factor: 损耗系数（如 0.03=3%），结果加 sum_with_waste 字段。
+        with_code: True 时按 GB 50500 清单编码附加 code/code_name/code_unit 列。
+          每组按 type 查 code_table.lookup，要求 group_by 含 type（缺则自动加）。
         """
         if quantities and not quantity:
             quantity = quantities
@@ -300,6 +313,9 @@ class AggregateService:
             qty_list = quantity if is_multi else [quantity]
         instance_manager.manager.get_info(instance)
         group_by = group_by or ["type"]
+        # with_code：要求按 type 分项，每组唯一 type 才能查清单编码
+        if with_code and "type" not in group_by:
+            group_by = [*group_by, "type"]
         flt = [
             Filter(f["field"], Operator(f.get("operator", "=")), f["value"])
             for f in (filters or [])
@@ -367,6 +383,12 @@ class AggregateService:
             if "type" in g["group"]:
                 g["group"]["type_name"] = _TYPE_CN.get(
                     g["group"]["type"], g["group"]["type"])
+                if with_code:
+                    info = code_table.lookup(g["group"]["type"])
+                    if info:
+                        g["group"]["code"] = info["code"]
+                        g["group"]["code_name"] = info["name"]
+                        g["group"]["code_unit"] = info["unit"]
         # 单位
         if use_formula:
             units = formula_unit
@@ -400,6 +422,7 @@ class AggregateService:
         quantity = tpl.get("quantities", tpl.get("quantity"))
         group_by = tpl["group_by"]
         waste = tpl.get("waste_factor")
+        with_code = tpl.get("with_code")
         # formula 模式：合成单量列
         formula = tpl.get("formula")
         formula_name = tpl.get("formula_name")
@@ -417,6 +440,7 @@ class AggregateService:
                 waste_factor=waste,
                 formula=formula, formula_name=formula_name,
                 formula_unit=formula_unit,
+                with_code=with_code,
             )
             if is_multi:
                 units.update(r.get("units", {}))
@@ -475,13 +499,14 @@ class AggregateService:
         instance: str | None = None,
     ) -> dict[str, Any]:
         """用户自定义模板算量。template 须含 quantity/quantities/formula + group_by + element_types，
-        可选 description / waste_factor / formula_name / formula_unit。"""
+        可选 description / waste_factor / formula_name / formula_unit / with_code。"""
         validate_template(template)
         element_types = template["element_types"]
         is_multi = "quantities" in template
         quantity = template.get("quantities", template.get("quantity"))
         group_by = template["group_by"]
         waste = template.get("waste_factor")
+        with_code = template.get("with_code")
         formula = template.get("formula")
         formula_name = template.get("formula_name")
         formula_unit = template.get("formula_unit")
@@ -497,6 +522,7 @@ class AggregateService:
                 waste_factor=waste,
                 formula=formula, formula_name=formula_name,
                 formula_unit=formula_unit,
+                with_code=with_code,
             )
             if is_multi:
                 units.update(r.get("units", {}))

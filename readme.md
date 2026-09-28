@@ -244,6 +244,8 @@ archicad-mcp/
 ├── query_engine.py        # BIM 条件查询引擎（含分页）
 ├── property_service.py    # Property 读取/写入与类型校验
 ├── aggregate_service.py   # 工程量分组汇总（V0.16）
+├── code_table.py          # GB 50500 构件类型→清单编码映射（V0.26）
+├── report_service.py      # 工程量清单报表排版（V0.26）
 ├── formula_eval.py        # 算量规则公式安全求值（V0.25）
 ├── geometry_service.py    # 几何规整：长度/起止点/高程/包围盒
 ├── benchmark.py           # 性能基准：命令耗时统计（avg/min/max）
@@ -267,7 +269,7 @@ archicad-mcp/
 
 ## 工具分层
 
-- **P0 只读**：list_instances、project_summary、get_selected_elements、get_elements_by_type、get_element_properties、search_elements_by_criteria、get_element_geometry_info、get_classifications、list_floors、get_gdl_parameters、get_element_quantities（工程量读取：毛/净体积、表面积、长度等，带单位标注）、aggregate_quantities（按 type/story/属性分组汇总，count/sum/avg，支持分类过滤和 formula 公式，结果含 flat 平铺行）、get_property_definition（属性类型/单位/枚举可选项，报错带相近名建议）、list_quantity_templates（列出预设算量模板）、aggregate_by_template（按模板名一键算量）、aggregate_by_custom_template（传 JSON 自定义模板，支持 formula 公式）、export_table（算量结果导出 CSV 或 Excel，支持多表一次导出到同一 xlsx）
+- **P0 只读**：list_instances、project_summary、get_selected_elements、get_elements_by_type、get_element_properties、search_elements_by_criteria、get_element_geometry_info、get_classifications、list_floors、get_gdl_parameters、get_element_quantities（工程量读取：毛/净体积、表面积、长度等，带单位标注）、aggregate_quantities（按 type/story/属性分组汇总，count/sum/avg，支持分类过滤和 formula 公式，结果含 flat 平铺行）、get_property_definition（属性类型/单位/枚举可选项，报错带相近名建议）、list_quantity_templates（列出预设算量模板）、aggregate_by_template（按模板名一键算量，含 with_code 字段时附 GB 50500 清单编码列）、aggregate_by_custom_template（传 JSON 自定义模板，支持 formula 公式和 with_code）、export_table（算量结果导出 CSV/Excel/工程量清单报表，支持多表一次导出到同一 xlsx，fmt=report 出 GB 50500 标准清单格式含标题/项目信息/合计行）
 - **P1 安全写入**：preview_property_change、set_element_properties、preview_classification、attach_classification、set_gdl_parameters、highlight_elements、preview_model_plan、create_from_plan
 - **构件修改（V0.4）**：preview_modify_plan、modify_from_plan
 - **构件删除（V0.7）**：preview_delete_plan、delete_from_plan
@@ -343,6 +345,7 @@ offset 方向；屋顶/板建在非当前楼层会假成功（level 填当前楼
 - V0.23 损耗系数+多量合并：aggregate() 新增 waste_factor 参数（损耗系数，结果含 sum_with_waste 列）；支持多量合并（quantities 参数 / 模板 quantities 字段，一张表同时出体积+面积+长度）。concrete_volume 模板带 3% 损耗；新增 wall_summary 模板。单测 428 全过
 - V0.24 自定义模板+Excel 导出：新增 aggregate_by_custom_template 工具（传 JSON 自定义算量模板，含 quantity/quantities/group_by/element_types/waste_factor）；export_table 支持 fmt=xlsx 导出 Excel（表头加粗+列宽自适应）。单测 431 全过。工具 34 个
 - V0.25 算量规则公式+多表导出：新增 formula_eval.py（ast 安全求值器，支持 + - * / 四则运算）；aggregate() / aggregate_by_template() / aggregate_by_custom_template() 支持 formula 字段（如 `General_NetVolume * 1.03`），比 waste_factor 更灵活；aggregate_quantities 工具加 formula/formula_name 参数；export_table 加 sheets 参数（一次导出多张表到同一 xlsx）。新增 wall_paint_area 模板（表面积*2 公式演示）。单测 444 全过
+- V0.26 GB 50500 清单编码+工程量清单报表：新增 code_table.py（16 类构件→清单编码映射，如 Wall 010502001/Slab 010505001）；新增 report_service.py（GB 50500 标准清单报表排版：标题/项目信息/表头/数据行/合计）；aggregate() / 模板支持 with_code 参数（True 时按 type 分项，自动附加 code/code_name/code_unit 列）；8 个预设模板启用 with_code；export_table 加 fmt=report 模式（一键出 GB 50500 清单 xlsx）+ value_column/project_name 参数。单测 455 全过
 
 ## 实机验证进度（2026-09-23）
 
