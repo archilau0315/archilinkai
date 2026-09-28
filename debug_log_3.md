@@ -617,3 +617,40 @@ Wall_InsideSkinVolume/Wall_OutsideSkinVolume（体积）是错的。GB 50500 清
 - aggregate_service.py：609 行（+30，未超 800）
 - 单测：455 → 461（+6）全过
 
+---
+
+## 2026-09-28 V0.28 幕墙专属算量模板（curtain_wall_area）
+
+### 背景
+用户反馈"幕墙，你是如何统计，怎没提"。V0.27 是复合墙分层算量（针对 Wall
+类型多层结构），幕墙是独立的 CurtainWall 类型，结构不同（框架/面板/节点/附件）。
+V0.19 已实现幕墙读取+算量（通用 aggregate 路径，CW002 验证 SurfaceArea=10.0 m²），
+但 QUANTITY_TEMPLATES 缺幕墙专属模板，用户得手动传参数调 aggregate，不能一键
+aggregate_by_template。
+
+### 变更
+- aggregate_service.py（609→615 行，+6）：QUANTITY_TEMPLATES 新增 curtain_wall_area
+  - quantity: "General_SurfaceArea"
+  - group_by: ["story"]
+  - element_types: ["CurtainWall"]
+  - with_code: True（自动附 010805001 / 幕墙 / m²）
+- tests/unit/test_aggregate.py（+1 测试 + 修正总数断言，51 个测试）：模板注册、
+  element_types、with_code 验证，模板总数 13→14
+
+### 真机验证（AC29 testwall，CW002 幕墙）
+- sum = 10.0 m² ✓（与 V0.19 验证一致）
+- with_code 自动附 code=010805001 / code_name=幕墙 / code_unit=m² ✓
+- type_name="幕墙" ✓
+
+### 设计说明
+- 幕墙无体积属性（General_GrossVolume = None，V0.19 已确认），仅按面积 m² 算
+- 清单编码 010805001 已在 V0.26 code_table.py 注册，V0.28 直接复用
+- 幕墙子构件（框架/面板/节点/附件）的独立算量暂未实现，可通过 GetConnectedElements
+  取子构件 GUID 后分别读属性，待用户反馈后扩展
+
+### 备注
+- 单测 461→462 全过（+1）
+- 模板总数 13→14（+1）
+- 工具数仍 34
+- aggregate_service.py 615 行（+6，未超 800）
+

@@ -136,6 +136,13 @@ QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
         "element_types": ["Wall"],
         "with_code": True,
     },
+    "curtain_wall_area": {
+        "description": "幕墙面积：按楼层汇总幕墙表面积（V0.28，幕墙无体积属性）",
+        "quantity": "General_SurfaceArea",
+        "group_by": ["story"],
+        "element_types": ["CurtainWall"],
+        "with_code": True,
+    },
 }
 
 

@@ -645,6 +645,15 @@ def test_wall_core_volume_formula_none_skipped():
 
 
 def test_template_count_after_v027():
-    """V0.27 后模板总数应为 13（10+3）。"""
+    """V0.28 后模板总数应为 14（10+3+1 幕墙）。"""
     from aggregate_service import QUANTITY_TEMPLATES
-    assert len(QUANTITY_TEMPLATES) == 13
+    assert len(QUANTITY_TEMPLATES) == 14
+
+
+def test_template_curtain_wall_area_registered():
+    """curtain_wall_area 模板已注册（V0.28 幕墙专属）。"""
+    from aggregate_service import QUANTITY_TEMPLATES
+    tpl = QUANTITY_TEMPLATES["curtain_wall_area"]
+    assert tpl["quantity"] == "General_SurfaceArea"
+    assert tpl["element_types"] == ["CurtainWall"]
+    assert tpl["with_code"] is True
