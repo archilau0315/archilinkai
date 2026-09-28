@@ -202,6 +202,45 @@ def test_template_wall_summary_multi(svc):
 
 # --- CSV 导出 -----------------------------------------------------------
 
+def test_aggregate_custom_template(svc):
+    """自定义模板：单量+损耗+多类型合并。"""
+    tpl = {
+        "quantity": "General_NetVolume",
+        "group_by": ["story"],
+        "element_types": ["Wall", "Slab"],
+        "waste_factor": 0.05,
+        "description": "自定义测试",
+    }
+    out = svc.aggregate_by_custom_template(tpl)
+    assert out["template"] == "自定义测试"
+    g = out["rows"][0]
+    assert "sum" in g
+    assert "sum_with_waste" in g
+    assert g["sum_with_waste"] > g["sum"]
+
+
+def test_aggregate_custom_template_multi(svc):
+    """自定义多量模板。"""
+    tpl = {
+        "quantities": ["General_NetVolume", "General_SurfaceArea"],
+        "group_by": ["type"],
+        "element_types": ["Wall"],
+    }
+    out = svc.aggregate_by_custom_template(tpl)
+    assert "units" in out
+    g = out["rows"][0]
+    assert "sum_General_NetVolume" in g
+    assert "sum_General_SurfaceArea" in g
+
+
+def test_aggregate_custom_template_invalid(svc):
+    """缺字段报错。"""
+    with pytest.raises(ValueError, match="quantity"):
+        svc.aggregate_by_custom_template({"group_by": ["type"]})
+
+
+# --- CSV 导出 -----------------------------------------------------------
+
 def test_export_csv_logic(tmp_path):
     """验证 export_table 内部的 CSV 写入逻辑（字段、内容、编码）。"""
     import csv

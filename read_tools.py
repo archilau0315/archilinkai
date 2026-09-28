@@ -341,40 +341,93 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def aggregate_by_custom_template(
+        template: dict[str, Any],
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """按自定义模板算量。
+
+        template 须含：
+        - quantity（单量 str）或 quantities（多量 list）
+        - group_by：分组维度（type/story/属性名）
+        - element_types：构件类型列表（如 ["Wall","Column"]）
+        可选：description / waste_factor（损耗系数）
+
+        示例：
+        {"quantity":"General_NetVolume","group_by":["story"],
+         "element_types":["Wall"],"waste_factor":0.05,
+         "description":"墙体体积含5%损耗"}
+        """
+        def _run() -> dict[str, Any]:
+            data = aggregate_service.service.aggregate_by_custom_template(
+                template, instance)
+            return success_result(
+                instance=instance,
+                count=len(data["rows"]),
+                data={"rows": data["rows"],
+                      "flat_rows": data["flat_rows"],
+                      "unit" if "unit" in data else "units":
+                          data.get("unit", data.get("units")),
+                      "template": data["template"],
+                      "description": data["description"]},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
     def export_table(
         rows: list[dict[str, Any]],
         filename: str = "export",
+        fmt: str = "csv",
         instance: str | None = None,
     ) -> dict[str, Any]:
-        """把算量结果（flat_rows）导出为 CSV 文件，返回文件路径。
+        """把算量结果（flat_rows）导出为文件，返回路径。
 
         rows 传 aggregate_quantities / aggregate_by_template 返回的 flat 数组。
-        filename 不含扩展名，默认 export，存到项目同级 output 目录。
+        fmt 选 csv 或 xlsx（Excel），默认 csv。
+        filename 不含扩展名，存到项目同级 output 目录。
         """
-        import csv
         import os
         import time
 
         def _run() -> dict[str, Any]:
             if not rows:
                 raise errors.InvalidArgumentError("rows", "rows 为空，无可导出数据")
-            # 输出目录：archicad-mcp/output/
             out_dir = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), "output")
             os.makedirs(out_dir, exist_ok=True)
             safe_name = "".join(
                 c for c in filename if c.isalnum() or c in "-_") or "export"
             ts = time.strftime("%Y%m%d_%H%M%S")
-            path = os.path.join(out_dir, f"{safe_name}_{ts}.csv")
             fieldnames = list(rows[0].keys())
-            with open(path, "w", newline="", encoding="utf-8-sig") as f:
-                w = csv.DictWriter(f, fieldnames=fieldnames)
-                w.writeheader()
-                w.writerows(rows)
+            if fmt == "xlsx":
+                from openpyxl import Workbook
+                path = os.path.join(out_dir, f"{safe_name}_{ts}.xlsx")
+                wb = Workbook()
+                ws = wb.active
+                ws.title = safe_name[:31]
+                ws.append(fieldnames)
+                for row in rows:
+                    ws.append([row.get(k) for k in fieldnames])
+                # 表头加粗
+                from openpyxl.styles import Font
+                for cell in ws[1]:
+                    cell.font = Font(bold=True)
+                # 列宽自适应
+                for i, col in enumerate(ws.columns, 1):
+                    mx = max(len(str(c.value or "")) for c in col)
+                    ws.column_dimensions[ws.cell(1, i).column_letter].width = min(mx + 4, 40)
+                wb.save(path)
+            else:
+                import csv
+                path = os.path.join(out_dir, f"{safe_name}_{ts}.csv")
+                with open(path, "w", newline="", encoding="utf-8-sig") as f:
+                    w = csv.DictWriter(f, fieldnames=fieldnames)
+                    w.writeheader()
+                    w.writerows(rows)
             return success_result(
                 instance=instance,
                 count=len(rows),
                 data={"file_path": path, "rows": len(rows),
-                      "columns": fieldnames},
+                      "format": fmt, "columns": fieldnames},
             )
         return safe(instance, _run)

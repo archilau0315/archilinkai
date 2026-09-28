@@ -99,8 +99,23 @@ QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
 
 
 def get_template(name: str) -> dict[str, Any]:
-    """按名取模板，找不到返回 None。"""
+    """按名取预设模板，找不到返回 None。"""
     return QUANTITY_TEMPLATES.get(name)
+
+
+def validate_template(tpl: dict[str, Any]) -> None:
+    """校验自定义模板字段，不合法抛 ValueError。"""
+    if "quantity" not in tpl and "quantities" not in tpl:
+        raise ValueError("模板缺少 quantity 或 quantities 字段")
+    if "group_by" not in tpl:
+        raise ValueError("模板缺少 group_by 字段")
+    if "element_types" not in tpl:
+        raise ValueError("模板缺少 element_types 字段")
+    qty = tpl.get("quantities", tpl.get("quantity"))
+    if isinstance(qty, str):
+        tpl.setdefault("quantity", qty)
+    elif isinstance(qty, list):
+        tpl["quantities"] = qty
 
 
 def _fetch_all(request: QueryRequest, instance: str | None) -> list:
@@ -407,6 +422,80 @@ class AggregateService:
             "flat_rows": _flatten(rows, quantity),
             "template": template_name,
             "description": tpl["description"],
+        }
+
+    def aggregate_by_custom_template(
+        self,
+        template: dict[str, Any],
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """用户自定义模板算量。template 须含 quantity/quantities + group_by + element_types，
+        可选 description / waste_factor。"""
+        validate_template(template)
+        element_types = template["element_types"]
+        is_multi = "quantities" in template
+        quantity = template.get("quantities", template.get("quantity"))
+        group_by = template["group_by"]
+        waste = template.get("waste_factor")
+        merged: dict[tuple, dict[str, Any]] = {}
+        units: dict[str, str | None] = {}
+        for et in element_types:
+            r = self.aggregate(
+                quantity=quantity, group_by=group_by,
+                element_type=et, instance=instance,
+                waste_factor=waste,
+            )
+            if is_multi:
+                units.update(r.get("units", {}))
+            else:
+                units["_default"] = r.get("unit") or units.get("_default")
+            for row in r["rows"]:
+                key = tuple(sorted(row["group"].items()))
+                g = merged.setdefault(
+                    key, {"group": row["group"], "count": 0,
+                          "element_names": []})
+                g["count"] += row["count"]
+                g["element_names"].extend(row.get("element_names", []))
+                qty_list = quantity if is_multi else [quantity]
+                for q in qty_list:
+                    if is_multi:
+                        g.setdefault(f"sum_{q}", 0.0)
+                        g.setdefault(f"skipped_none_{q}", 0)
+                        g[f"sum_{q}"] += row.get(f"sum_{q}", 0) or 0
+                        g[f"skipped_none_{q}"] += row.get(f"skipped_none_{q}", 0)
+                        if waste:
+                            g.setdefault(f"sum_with_waste_{q}", 0.0)
+                            g[f"sum_with_waste_{q}"] += row.get(f"sum_with_waste_{q}", 0) or 0
+                    else:
+                        g.setdefault("sum", 0.0)
+                        g.setdefault("skipped_none", 0)
+                        g["sum"] += row.get("sum", 0) or 0
+                        g["skipped_none"] += row.get("skipped_none", 0)
+                        if waste:
+                            g.setdefault("sum_with_waste", 0.0)
+                            g["sum_with_waste"] += row.get("sum_with_waste", 0) or 0
+        for g in merged.values():
+            qty_list = quantity if is_multi else [quantity]
+            for q in qty_list:
+                if is_multi:
+                    denom = g["count"] - g[f"skipped_none_{q}"]
+                    g[f"avg_{q}"] = round(g[f"sum_{q}"] / denom, 4) if denom > 0 else None
+                    g[f"sum_{q}"] = round(g[f"sum_{q}"], 4)
+                    if waste:
+                        g[f"sum_with_waste_{q}"] = round(g[f"sum_with_waste_{q}"], 4)
+                else:
+                    denom = g["count"] - g["skipped_none"]
+                    g["avg"] = round(g["sum"] / denom, 4) if denom > 0 else None
+                    g["sum"] = round(g["sum"], 4)
+                    if waste:
+                        g["sum_with_waste"] = round(g["sum_with_waste"], 4)
+        rows = sorted(merged.values(), key=lambda g: str(g["group"]))
+        return {
+            "units" if is_multi else "unit": units if is_multi else units.get("_default"),
+            "rows": rows,
+            "flat_rows": _flatten(rows, quantity),
+            "template": template.get("description", "custom"),
+            "description": template.get("description", "自定义模板"),
         }
 
 

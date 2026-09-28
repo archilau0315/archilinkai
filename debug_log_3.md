@@ -359,3 +359,21 @@ AC28 的 Tapir 插件已更新到新版，实例 ac28-1 当前挂 GDL-28 项目
 ### 备注
 - 单测 424→428 全过
 - 模板总数 9→10（新增 wall_summary）
+
+---
+
+## 2026-09-28 V0.24 自定义模板+Excel 导出
+
+### 变更文件
+- aggregate_service.py：新增 validate_template() 校验自定义模板字段；新增 aggregate_by_custom_template() 方法（支持用户传 JSON 定义模板，含 quantity/quantities/group_by/element_types/waste_factor/description）
+- read_tools.py：新增 aggregate_by_custom_template 工具（34 个）；export_table 新增 fmt 参数（csv/xlsx），xlsx 用 openpyxl 写 Excel（表头加粗+列宽自适应）
+- tests/unit/test_aggregate.py：+3 测试（自定义单量+损耗、自定义多量、缺字段报错）
+
+### 真机验证（AC29）
+- 自定义模板"墙体积含5%损耗"：sum=8.55 → sum_with_waste=8.9775
+- 自定义多量模板：体积 8.55 m³ + 面积 19.0 m²
+- Excel 导出：10 列含 story_name/多量列/element_names，表头加粗列宽自适应
+
+### 备注
+- 单测 428→431 全过
+- 工具总数 33→34
