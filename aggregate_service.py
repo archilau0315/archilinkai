@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import formula_eval
 import instance_manager
 import property_service
 from query_engine import engine, MAX_LIMIT
@@ -95,6 +96,14 @@ QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
         "group_by": ["story"],
         "element_types": ["Wall"],
     },
+    "wall_paint_area": {
+        "description": "墙面涂刷面积：表面积*2（双面），公式法演示",
+        "formula": "General_SurfaceArea * 2",
+        "formula_name": "涂刷面积",
+        "formula_unit": "m²",
+        "group_by": ["story"],
+        "element_types": ["Wall"],
+    },
 }
 
 
@@ -104,9 +113,13 @@ def get_template(name: str) -> dict[str, Any]:
 
 
 def validate_template(tpl: dict[str, Any]) -> None:
-    """校验自定义模板字段，不合法抛 ValueError。"""
-    if "quantity" not in tpl and "quantities" not in tpl:
-        raise ValueError("模板缺少 quantity 或 quantities 字段")
+    """校验自定义模板字段，不合法抛 ValueError。
+
+    必须含 quantity/quantities 或 formula 三者之一。
+    """
+    has_qty = "quantity" in tpl or "quantities" in tpl
+    if not has_qty and "formula" not in tpl:
+        raise ValueError("模板缺少 quantity/quantities 或 formula 字段")
     if "group_by" not in tpl:
         raise ValueError("模板缺少 group_by 字段")
     if "element_types" not in tpl:
@@ -260,18 +273,31 @@ class AggregateService:
         classification: str | None = None,
         waste_factor: float | None = None,
         quantities: list[str] | None = None,
+        formula: str | None = None,
+        formula_name: str | None = None,
+        formula_unit: str | None = None,
     ) -> dict[str, Any]:
         """返回 {"unit"/"units", "rows", "flat_rows"}。
 
         quantity: 单量名(str) 或 quantities: 多量名(list)。
+        formula: 算量规则公式（如 "General_NetVolume * 1.03"），优先于 quantity。
+          formula 需配 formula_name（结果列名）和 formula_unit（单位）。
         waste_factor: 损耗系数（如 0.03=3%），结果加 sum_with_waste 字段。
         """
         if quantities and not quantity:
             quantity = quantities
-        if not quantity:
-            raise ValueError("quantity 或 quantities 至少传一个")
-        is_multi = isinstance(quantity, list)
-        qty_list = quantity if is_multi else [quantity]
+        # formula 模式：提取公式引用的量名，合成单量列
+        use_formula = bool(formula)
+        if use_formula:
+            formula_name = formula_name or "formula_result"
+            qty_list = formula_eval.formula_vars(formula)
+            quantity = formula_name
+            is_multi = False
+        else:
+            if not quantity:
+                raise ValueError("quantity 或 quantities 或 formula 至少传一个")
+            is_multi = isinstance(quantity, list)
+            qty_list = quantity if is_multi else [quantity]
         instance_manager.manager.get_info(instance)
         group_by = group_by or ["type"]
         flt = [
@@ -296,17 +322,25 @@ class AggregateService:
             svc.get_values(guids, prop_dims, instance) if prop_dims else {}
         )
 
-        rows = [
-            {
+        rows = []
+        for s in summaries:
+            row = {
                 "name": s.get("name") or "",
                 "type": s.get("element_type"),
                 "story": s.get("story_index"),
-                **{d: prop_vals.get(s["guid"], {}).get(d) for d in prop_dims},
-                **{q: qvals.get(s["guid"], {}).get(q, {}).get("value")
-                   for q in qty_list},
             }
-            for s in summaries
-        ]
+            for d in prop_dims:
+                row[d] = prop_vals.get(s["guid"], {}).get(d)
+            if use_formula:
+                vars_dict = {
+                    q: qvals.get(s["guid"], {}).get(q, {}).get("value")
+                    for q in qty_list
+                }
+                row[formula_name] = formula_eval.eval_formula(formula, vars_dict)
+            else:
+                for q in qty_list:
+                    row[q] = qvals.get(s["guid"], {}).get(q, {}).get("value")
+            rows.append(row)
         groups = _group(rows, group_by, quantity)
         # 损耗系数
         if waste_factor:
@@ -334,7 +368,9 @@ class AggregateService:
                 g["group"]["type_name"] = _TYPE_CN.get(
                     g["group"]["type"], g["group"]["type"])
         # 单位
-        if is_multi:
+        if use_formula:
+            units = formula_unit
+        elif is_multi:
             units = {q: qvals.get(guids[0], {}).get(q, {}).get("unit")
                      if guids else None for q in qty_list}
         else:
@@ -362,9 +398,16 @@ class AggregateService:
         element_types = tpl["element_types"]
         is_multi = "quantities" in tpl
         quantity = tpl.get("quantities", tpl.get("quantity"))
-        qty_list = quantity if is_multi else [quantity]
         group_by = tpl["group_by"]
         waste = tpl.get("waste_factor")
+        # formula 模式：合成单量列
+        formula = tpl.get("formula")
+        formula_name = tpl.get("formula_name")
+        formula_unit = tpl.get("formula_unit")
+        if formula:
+            quantity = formula_name or "formula_result"
+            is_multi = False
+        qty_list = quantity if is_multi else [quantity]
         merged: dict[tuple, dict[str, Any]] = {}
         units: dict[str, str | None] = {}
         for et in element_types:
@@ -372,6 +415,8 @@ class AggregateService:
                 quantity=quantity, group_by=group_by,
                 element_type=et, instance=instance,
                 waste_factor=waste,
+                formula=formula, formula_name=formula_name,
+                formula_unit=formula_unit,
             )
             if is_multi:
                 units.update(r.get("units", {}))
@@ -429,14 +474,20 @@ class AggregateService:
         template: dict[str, Any],
         instance: str | None = None,
     ) -> dict[str, Any]:
-        """用户自定义模板算量。template 须含 quantity/quantities + group_by + element_types，
-        可选 description / waste_factor。"""
+        """用户自定义模板算量。template 须含 quantity/quantities/formula + group_by + element_types，
+        可选 description / waste_factor / formula_name / formula_unit。"""
         validate_template(template)
         element_types = template["element_types"]
         is_multi = "quantities" in template
         quantity = template.get("quantities", template.get("quantity"))
         group_by = template["group_by"]
         waste = template.get("waste_factor")
+        formula = template.get("formula")
+        formula_name = template.get("formula_name")
+        formula_unit = template.get("formula_unit")
+        if formula:
+            quantity = formula_name or "formula_result"
+            is_multi = False
         merged: dict[tuple, dict[str, Any]] = {}
         units: dict[str, str | None] = {}
         for et in element_types:
@@ -444,6 +495,8 @@ class AggregateService:
                 quantity=quantity, group_by=group_by,
                 element_type=et, instance=instance,
                 waste_factor=waste,
+                formula=formula, formula_name=formula_name,
+                formula_unit=formula_unit,
             )
             if is_multi:
                 units.update(r.get("units", {}))

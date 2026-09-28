@@ -244,6 +244,7 @@ archicad-mcp/
 ├── query_engine.py        # BIM 条件查询引擎（含分页）
 ├── property_service.py    # Property 读取/写入与类型校验
 ├── aggregate_service.py   # 工程量分组汇总（V0.16）
+├── formula_eval.py        # 算量规则公式安全求值（V0.25）
 ├── geometry_service.py    # 几何规整：长度/起止点/高程/包围盒
 ├── benchmark.py           # 性能基准：命令耗时统计（avg/min/max）
 ├── regression.py          # 一键回归：单测+集成+兼容+基准，汇总报告
@@ -266,12 +267,12 @@ archicad-mcp/
 
 ## 工具分层
 
-- **P0 只读**：list_instances、project_summary、get_selected_elements、get_elements_by_type、get_element_properties、search_elements_by_criteria、get_element_geometry_info、get_classifications、list_floors、get_gdl_parameters、get_element_quantities（工程量读取：毛/净体积、表面积、长度等，带单位标注）、aggregate_quantities（按 type/story/属性分组汇总，count/sum/avg，支持分类过滤，结果含 flat 平铺行）、get_property_definition（属性类型/单位/枚举可选项，报错带相近名建议）、list_quantity_templates（列出预设算量模板）、aggregate_by_template（按模板名一键算量）、export_table（算量结果导出 CSV）
+- **P0 只读**：list_instances、project_summary、get_selected_elements、get_elements_by_type、get_element_properties、search_elements_by_criteria、get_element_geometry_info、get_classifications、list_floors、get_gdl_parameters、get_element_quantities（工程量读取：毛/净体积、表面积、长度等，带单位标注）、aggregate_quantities（按 type/story/属性分组汇总，count/sum/avg，支持分类过滤和 formula 公式，结果含 flat 平铺行）、get_property_definition（属性类型/单位/枚举可选项，报错带相近名建议）、list_quantity_templates（列出预设算量模板）、aggregate_by_template（按模板名一键算量）、aggregate_by_custom_template（传 JSON 自定义模板，支持 formula 公式）、export_table（算量结果导出 CSV 或 Excel，支持多表一次导出到同一 xlsx）
 - **P1 安全写入**：preview_property_change、set_element_properties、preview_classification、attach_classification、set_gdl_parameters、highlight_elements、preview_model_plan、create_from_plan
 - **构件修改（V0.4）**：preview_modify_plan、modify_from_plan
 - **构件删除（V0.7）**：preview_delete_plan、delete_from_plan
 - **计划辅助（V0.10）**：lint_model_plan（离线校验，不连 ArchiCAD）
-- **P2 诊断运维**：refresh_instances、validate_instance、get_operation_status、get_operation_log（共 33 个工具）
+- **P2 诊断运维**：refresh_instances、validate_instance、get_operation_status、get_operation_log（共 34 个工具）
 - **已支持建模构件（15 类）**：墙、柱、梁、板、门、窗、楼梯、屋顶、变形体、对象（家具）、灯具、网面、独立洞口、房间区域、机电管线（风管/水管/桥架）
 - **只读可算量构件（Tapir 不支持创建）**：幕墙（CurtainWall）、栏杆（Railing）、壳体（Shell）、天窗（Skylight）——可查询、可取工程量、可分组汇总，但不能通过建模计划创建（Tapir 未实现对应 Create 命令）
 
@@ -341,6 +342,7 @@ offset 方向；屋顶/板建在非当前楼层会假成功（level 填当前楼
 - V0.22 楼层名+构件名补全：汇总结果新增 story_name（楼层中文名，如"一层"）、type_name（构件类型中文名，如"墙"）、element_names（构件名列表，如"墙01,外墙01"）。flat_rows 同步带名称，CSV 导出直接可读。真机验证通过
 - V0.23 损耗系数+多量合并：aggregate() 新增 waste_factor 参数（损耗系数，结果含 sum_with_waste 列）；支持多量合并（quantities 参数 / 模板 quantities 字段，一张表同时出体积+面积+长度）。concrete_volume 模板带 3% 损耗；新增 wall_summary 模板。单测 428 全过
 - V0.24 自定义模板+Excel 导出：新增 aggregate_by_custom_template 工具（传 JSON 自定义算量模板，含 quantity/quantities/group_by/element_types/waste_factor）；export_table 支持 fmt=xlsx 导出 Excel（表头加粗+列宽自适应）。单测 431 全过。工具 34 个
+- V0.25 算量规则公式+多表导出：新增 formula_eval.py（ast 安全求值器，支持 + - * / 四则运算）；aggregate() / aggregate_by_template() / aggregate_by_custom_template() 支持 formula 字段（如 `General_NetVolume * 1.03`），比 waste_factor 更灵活；aggregate_quantities 工具加 formula/formula_name 参数；export_table 加 sheets 参数（一次导出多张表到同一 xlsx）。新增 wall_paint_area 模板（表面积*2 公式演示）。单测 444 全过
 
 ## 实机验证进度（2026-09-23）
 

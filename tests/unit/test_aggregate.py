@@ -265,3 +265,147 @@ def test_export_csv_logic(tmp_path):
         content = f.read()
     assert "story,count,sum,avg" in content
     assert "3.0" in content
+
+
+# --- 公式求值 -----------------------------------------------------------
+
+def test_formula_vars():
+    from formula_eval import formula_vars
+    assert formula_vars("General_NetVolume * 1.03") == ["General_NetVolume"]
+    vars2 = formula_vars("General_SurfaceArea + General_NetVolume")
+    assert set(vars2) == {"General_SurfaceArea", "General_NetVolume"}
+    assert formula_vars("1.03 * 2") == []
+
+
+def test_eval_formula_basic():
+    from formula_eval import eval_formula
+    assert eval_formula("General_NetVolume * 1.03",
+                        {"General_NetVolume": 10.0}) == 10.3
+    assert eval_formula("General_SurfaceArea * 2",
+                        {"General_SurfaceArea": 5.0}) == 10.0
+    assert eval_formula("General_NetVolume + General_SurfaceArea",
+                        {"General_NetVolume": 3.0, "General_SurfaceArea": 4.0}) == 7.0
+
+
+def test_eval_formula_none():
+    from formula_eval import eval_formula
+    assert eval_formula("General_NetVolume * 1.03",
+                        {"General_NetVolume": None}) is None
+    assert eval_formula("General_NetVolume * 1.03", {}) is None
+
+
+def test_eval_formula_sub_div():
+    from formula_eval import eval_formula
+    assert eval_formula("General_GrossVolume - General_NetVolume",
+                        {"General_GrossVolume": 10.0, "General_NetVolume": 8.0}) == 2.0
+    assert eval_formula("General_SurfaceArea / 2",
+                        {"General_SurfaceArea": 10.0}) == 5.0
+
+
+def test_eval_formula_rejects_call():
+    """公式不允许函数调用等危险操作。"""
+    from formula_eval import eval_formula
+    with pytest.raises(ValueError):
+        eval_formula("__import__('os')", {})
+    with pytest.raises(ValueError):
+        eval_formula("open('x')", {})
+
+
+def test_eval_formula_rejects_syntax():
+    from formula_eval import eval_formula
+    with pytest.raises(ValueError, match="语法错误"):
+        eval_formula("1 +", {})
+
+
+# --- aggregate 公式模式 -------------------------------------------------
+
+def test_aggregate_with_formula(svc):
+    """公式法：NetVolume * 2，按类型汇总墙。"""
+    out = svc.aggregate(
+        formula="General_NetVolume * 2",
+        formula_name="双倍体积",
+        formula_unit="m³",
+        group_by=["type"], element_type="Wall",
+    )
+    assert out["unit"] == "m³"
+    g = out["rows"][0]
+    # g1(1.0)+g2(2.0)=3.0, *2=6.0
+    assert g["sum"] == 6.0
+    assert "avg" in g
+
+
+def test_aggregate_formula_none_skipped(svc, monkeypatch):
+    """公式引用的量值为 None 时计入 skipped_none。"""
+    class FakePropNone:
+        def get_quantities(self, guids, names, instance=None):
+            return {g: {n: {"value": None, "unit": "m"} for n in names}
+                    for g in guids}
+        def get_values(self, guids, names, instance=None):
+            return {g: {} for g in guids}
+    monkeypatch.setattr(aggregate_service.property_service, "service", FakePropNone())
+    out = svc.aggregate(
+        formula="General_Height * 2",
+        formula_name="高度*2",
+        group_by=["type"], element_type="Wall",
+    )
+    g = out["rows"][0]
+    assert g["skipped_none"] == g["count"]
+    assert g["sum"] == 0.0
+
+
+def test_aggregate_formula_missing_both():
+    """不传 quantity 也不传 formula 报错。"""
+    s = aggregate_service.AggregateService()
+    with pytest.raises(ValueError, match="formula"):
+        s.aggregate(group_by=["type"])
+
+
+# --- 公式模板 -----------------------------------------------------------
+
+def test_template_wall_paint_area(svc):
+    """wall_paint_area 模板：表面积*2，按楼层分组。"""
+    out = svc.aggregate_by_template("wall_paint_area")
+    assert out["template"] == "wall_paint_area"
+    assert out["unit"] == "m²"
+    # story 0: g1 SurfaceArea=1.0 *2=2.0; story 1: g2 SurfaceArea=2.0 *2=4.0
+    s0 = next(g for g in out["rows"] if g["group"]["story"] == 0)
+    assert s0["sum"] == 2.0
+    s1 = next(g for g in out["rows"] if g["group"]["story"] == 1)
+    assert s1["sum"] == 4.0
+
+
+def test_template_paint_in_list():
+    from aggregate_service import QUANTITY_TEMPLATES
+    assert "wall_paint_area" in QUANTITY_TEMPLATES
+    tpl = QUANTITY_TEMPLATES["wall_paint_area"]
+    assert "formula" in tpl
+
+
+# --- 公式自定义模板 -----------------------------------------------------
+
+def test_aggregate_custom_template_formula(svc):
+    """自定义公式模板：NetVolume * 1.03，多类型合并。"""
+    tpl = {
+        "formula": "General_NetVolume * 1.03",
+        "formula_name": "含损耗体积",
+        "formula_unit": "m³",
+        "group_by": ["story"],
+        "element_types": ["Wall", "Slab"],
+        "description": "公式法含3%损耗",
+    }
+    out = svc.aggregate_by_custom_template(tpl)
+    assert out["template"] == "公式法含3%损耗"
+    assert out["unit"] == "m³"
+    # story 1: Wall(2.0)+Slab(5.0)=7.0, *1.03=7.21
+    s1 = next(g for g in out["rows"] if g["group"]["story"] == 1)
+    assert s1["sum"] == round(7.0 * 1.03, 4)
+
+
+def test_validate_template_accepts_formula():
+    """有 formula 无 quantity 也能通过校验。"""
+    from aggregate_service import validate_template
+    validate_template({
+        "formula": "General_NetVolume * 1.03",
+        "group_by": ["story"],
+        "element_types": ["Wall"],
+    })

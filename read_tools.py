@@ -278,17 +278,20 @@ def register(mcp: FastMCP, safe) -> None:
 
     @mcp.tool()
     def aggregate_quantities(
-        quantity: str,
+        quantity: str | None = None,
         group_by: list[str] | None = None,
         element_type: str | None = None,
         stories: list[int] | None = None,
         filters: list[dict] | None = None,
         instance: str | None = None,
         classification: str | None = None,
+        formula: str | None = None,
+        formula_name: str | None = None,
     ) -> dict[str, Any]:
         """按维度分组汇总工程量（count/sum/avg）。算量出表入口。
 
-        quantity 为 BuiltIn 量名（如 General_NetVolume）；
+        quantity 为 BuiltIn 量名（如 General_NetVolume）；或用 formula 自定义公式
+        （如 "General_NetVolume * 1.03"），需配 formula_name（结果列名）。
         group_by 维度："type"（构件类型）、"story"（楼层）或属性名，可多选，
         缺省 ["type"]。例：按楼层汇总墙的净体积 →
         quantity="General_NetVolume", element_type="Wall", group_by=["story"]
@@ -298,7 +301,7 @@ def register(mcp: FastMCP, safe) -> None:
             info = instance_manager.manager.get_info(instance)
             data = aggregate_service.service.aggregate(
                 quantity, group_by, element_type, stories, filters, instance,
-                classification,
+                classification, formula=formula, formula_name=formula_name,
             )
             return success_result(
                 instance=info.instance_id, project=info.project_name,
@@ -347,16 +350,21 @@ def register(mcp: FastMCP, safe) -> None:
     ) -> dict[str, Any]:
         """按自定义模板算量。
 
-        template 须含：
-        - quantity（单量 str）或 quantities（多量 list）
+        template 须含（三选一）：
+        - quantity（单量 str）或 quantities（多量 list）或 formula（规则公式 str）
         - group_by：分组维度（type/story/属性名）
         - element_types：构件类型列表（如 ["Wall","Column"]）
         可选：description / waste_factor（损耗系数）
+              formula_name（公式结果列名）/ formula_unit（公式结果单位）
 
-        示例：
+        示例1（普通量）：
         {"quantity":"General_NetVolume","group_by":["story"],
          "element_types":["Wall"],"waste_factor":0.05,
          "description":"墙体体积含5%损耗"}
+        示例2（公式法）：
+        {"formula":"General_NetVolume * 1.03","formula_name":"含损耗体积",
+         "formula_unit":"m³","group_by":["story"],
+         "element_types":["Wall","Column"],"description":"混凝土含3%损耗"}
         """
         def _run() -> dict[str, Any]:
             data = aggregate_service.service.aggregate_by_custom_template(
@@ -375,59 +383,86 @@ def register(mcp: FastMCP, safe) -> None:
 
     @mcp.tool()
     def export_table(
-        rows: list[dict[str, Any]],
+        rows: list[dict[str, Any]] | None = None,
+        sheets: list[dict[str, Any]] | None = None,
         filename: str = "export",
         fmt: str = "csv",
         instance: str | None = None,
     ) -> dict[str, Any]:
-        """把算量结果（flat_rows）导出为文件，返回路径。
+        """把算量结果导出为文件，返回路径。
 
-        rows 传 aggregate_quantities / aggregate_by_template 返回的 flat 数组。
-        fmt 选 csv 或 xlsx（Excel），默认 csv。
+        单表：传 rows（flat 数组），fmt 选 csv 或 xlsx（Excel），默认 csv。
+        多表：传 sheets=[{"name":"表名","rows":[...]}, ...]，自动用 xlsx，
+          一次写多张表到同一 Excel 文件。
         filename 不含扩展名，存到项目同级 output 目录。
         """
         import os
         import time
 
+        def _write_sheet(ws, sheet_rows: list[dict[str, Any]]) -> list[str]:
+            """写一张表：表头+数据+加粗+列宽。返回列名列表。"""
+            if not sheet_rows:
+                return []
+            fieldnames = list(sheet_rows[0].keys())
+            ws.append(fieldnames)
+            for row in sheet_rows:
+                ws.append([row.get(k) for k in fieldnames])
+            from openpyxl.styles import Font
+            for cell in ws[1]:
+                cell.font = Font(bold=True)
+            for i, col in enumerate(ws.columns, 1):
+                mx = max(len(str(c.value or "")) for c in col)
+                ws.column_dimensions[ws.cell(1, i).column_letter].width = min(mx + 4, 40)
+            return fieldnames
+
         def _run() -> dict[str, Any]:
-            if not rows:
-                raise errors.InvalidArgumentError("rows", "rows 为空，无可导出数据")
+            if sheets and fmt != "xlsx":
+                fmt = "xlsx"  # 多表自动 xlsx
+            if not rows and not sheets:
+                raise errors.InvalidArgumentError(
+                    "rows", "rows 和 sheets 均为空，无可导出数据")
             out_dir = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), "output")
             os.makedirs(out_dir, exist_ok=True)
             safe_name = "".join(
                 c for c in filename if c.isalnum() or c in "-_") or "export"
             ts = time.strftime("%Y%m%d_%H%M%S")
-            fieldnames = list(rows[0].keys())
+            total_rows = 0
+            columns: list[str] = []
             if fmt == "xlsx":
                 from openpyxl import Workbook
                 path = os.path.join(out_dir, f"{safe_name}_{ts}.xlsx")
                 wb = Workbook()
-                ws = wb.active
-                ws.title = safe_name[:31]
-                ws.append(fieldnames)
-                for row in rows:
-                    ws.append([row.get(k) for k in fieldnames])
-                # 表头加粗
-                from openpyxl.styles import Font
-                for cell in ws[1]:
-                    cell.font = Font(bold=True)
-                # 列宽自适应
-                for i, col in enumerate(ws.columns, 1):
-                    mx = max(len(str(c.value or "")) for c in col)
-                    ws.column_dimensions[ws.cell(1, i).column_letter].width = min(mx + 4, 40)
+                if sheets:
+                    for i, sheet in enumerate(sheets):
+                        ws = wb.active if i == 0 else wb.create_sheet()
+                        ws.title = (sheet.get("name") or f"Sheet{i+1}")[:31]
+                        sr = sheet.get("rows", [])
+                        total_rows += len(sr)
+                        if i == 0:
+                            columns = _write_sheet(ws, sr)
+                        else:
+                            _write_sheet(ws, sr)
+                else:
+                    ws = wb.active
+                    ws.title = safe_name[:31]
+                    columns = _write_sheet(ws, rows)
+                    total_rows = len(rows)
                 wb.save(path)
             else:
                 import csv
                 path = os.path.join(out_dir, f"{safe_name}_{ts}.csv")
+                columns = list(rows[0].keys())
                 with open(path, "w", newline="", encoding="utf-8-sig") as f:
-                    w = csv.DictWriter(f, fieldnames=fieldnames)
+                    w = csv.DictWriter(f, fieldnames=columns)
                     w.writeheader()
                     w.writerows(rows)
+                total_rows = len(rows)
             return success_result(
                 instance=instance,
-                count=len(rows),
-                data={"file_path": path, "rows": len(rows),
-                      "format": fmt, "columns": fieldnames},
+                count=total_rows,
+                data={"file_path": path, "rows": total_rows,
+                      "format": fmt, "columns": columns,
+                      "sheets": len(sheets) if sheets else 1},
             )
         return safe(instance, _run)

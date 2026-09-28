@@ -377,3 +377,25 @@ AC28 的 Tapir 插件已更新到新版，实例 ac28-1 当前挂 GDL-28 项目
 ### 备注
 - 单测 428→431 全过
 - 工具总数 33→34
+
+---
+
+## 2026-09-28 V0.25 算量规则公式+Excel 多表导出
+
+### 变更文件
+- formula_eval.py（新增，59 行）：基于 ast 模块的安全公式求值器，只允许 + - * / 四则运算、数字、变量名；formula_vars() 提取公式引用的量名，eval_formula() 安全求值
+- aggregate_service.py：aggregate() 新增 formula/formula_name/formula_unit 参数，公式模式提取量名→取量→逐构件算公式→合成单量列走 _group；validate_template() 接受 formula 字段；aggregate_by_template() 和 aggregate_by_custom_template() 透传 formula；新增 wall_paint_area 模板（表面积*2 公式演示）
+- read_tools.py：aggregate_quantities 工具新增 formula/formula_name 参数；export_table 新增 sheets 参数（多表一次导出到同一 xlsx，自动切 xlsx）；aggregate_by_custom_template 文档补公式示例
+- tests/unit/test_aggregate.py：+13 测试（formula_vars、eval_formula 基础/None/减除/拒绝调用/语法错误、aggregate 公式模式/None 跳过/缺参报错、公式模板、公式自定义模板、validate 接受 formula）
+
+### 设计说明
+- 公式模式与 waste_factor 互补：waste_factor 只能加百分比（×(1+n)），公式支持任意四则运算（如 SurfaceArea*2 双面、NetVolume+GrossVolume 组合量）
+- 公式安全性：ast 解析后逐节点判断，仅允许 BinOp/UnaryOp/Constant/Name，拒绝函数调用、属性访问等
+- 多表导出：sheets=[{"name":"表名","rows":[...]}, ...]，首个表用 wb.active，后续 create_sheet，每张表独立表头加粗+列宽自适应
+
+### 备注
+- 单测 431→444 全过（+13）
+- 模板总数 10→11（新增 wall_paint_area）
+- 工具数仍 34（无新增工具，仅扩展现有工具参数）
+- aggregate_service.py 519 行（+17，接近上限但未超 800）
+
