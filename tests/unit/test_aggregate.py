@@ -595,19 +595,19 @@ def test_report_service_no_total_when_unit_mixed(tmp_path):
 # --- V0.27 复合墙分层算量 ---------------------------------------------
 
 def test_template_wall_composite_layers_registered():
-    """wall_composite_layers 模板已注册，含 3 个量。"""
+    """wall_composite_layers 模板已注册，含 3 个量（按面积+面积+体积）。"""
     from aggregate_service import QUANTITY_TEMPLATES
     tpl = QUANTITY_TEMPLATES["wall_composite_layers"]
     assert tpl["quantities"] == [
-        "Wall_InsideSkinVolume", "Wall_OutsideSkinVolume", "General_NetVolume"]
+        "Wall_NetInsideSurfaceArea", "Wall_NetOutsideSurfaceArea", "General_NetVolume"]
     assert tpl["with_code"] is True
 
 
-def test_template_wall_insulation_thickness_registered():
-    """wall_insulation_thickness 模板已注册。"""
+def test_template_wall_insulation_area_registered():
+    """wall_insulation_area 模板已注册（按面积算，不是厚度）。"""
     from aggregate_service import QUANTITY_TEMPLATES
-    tpl = QUANTITY_TEMPLATES["wall_insulation_thickness"]
-    assert tpl["quantity"] == "General_InsulationSkinThickness"
+    tpl = QUANTITY_TEMPLATES["wall_insulation_area"]
+    assert tpl["quantity"] == "Wall_NetOutsideSurfaceArea"
     assert tpl["with_code"] is True
 
 

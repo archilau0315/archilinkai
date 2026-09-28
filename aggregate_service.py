@@ -114,15 +114,15 @@ QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
         "element_types": ["Wall"],
     },
     "wall_composite_layers": {
-        "description": "复合墙分层体积：内层/外层/净体积按楼层同时出表（V0.27）",
-        "quantities": ["Wall_InsideSkinVolume", "Wall_OutsideSkinVolume", "General_NetVolume"],
+        "description": "复合墙分层算量：内饰面面积/外饰面面积/核心层体积（V0.27 修正）",
+        "quantities": ["Wall_NetInsideSurfaceArea", "Wall_NetOutsideSurfaceArea", "General_NetVolume"],
         "group_by": ["story"],
         "element_types": ["Wall"],
         "with_code": True,
     },
-    "wall_insulation_thickness": {
-        "description": "墙保温层厚度：按楼层汇总保温层厚度（V0.27）",
-        "quantity": "General_InsulationSkinThickness",
+    "wall_insulation_area": {
+        "description": "墙保温层面积：贴外墙外侧，按外饰面面积算（V0.27 修正）",
+        "quantity": "Wall_NetOutsideSurfaceArea",
         "group_by": ["story"],
         "element_types": ["Wall"],
         "with_code": True,

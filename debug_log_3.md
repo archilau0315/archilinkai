@@ -490,3 +490,51 @@ AC28 的 Tapir 插件已更新到新版，实例 ac28-1 当前挂 GDL-28 项目
   → 核对核心层体积 = 4.2 m³ 是否在报表中正确合计
 - 可选：扩展 code_table 支持按 layer 细分清单编码（保温层/饰面层独立编码）
 
+---
+
+## 2026-09-28 V0.27 修正：饰面/保温层按面积算（不是体积）
+
+### 用户反馈
+"复合墙除核心层，都是按面积算的"——V0.27 初版 wall_composite_layers 用
+Wall_InsideSkinVolume/Wall_OutsideSkinVolume（体积）是错的。GB 50500 清单规则：
+核心结构层按体积（m³），内/外饰面层、保温层按面积（m²）。
+
+### 真机探测（probe_skin_area.py，已删除）
+- Wall_NetInsideSurfaceArea = 10.0 m²（内饰面净面积）
+- Wall_NetOutsideSurfaceArea = 10.0 m²（外饰面净面积）
+- Wall_GrossInsideSurfaceArea / GrossOutsideSurfaceArea = 10.0 m²
+- Wall_ConditionalInsideSurfaceArea / ConditionalOutsideSurfaceArea = 10.0 m²
+- General_InsulationSkinThickness = 0.2 m（厚度，无面积属性）
+- General_InsulationSkinArea / Wall_InsulationSkinArea = None（不存在）
+
+### 修正
+- wall_composite_layers：3 量从体积改为面积+面积+体积
+  - 旧：["Wall_InsideSkinVolume", "Wall_OutsideSkinVolume", "General_NetVolume"]
+  - 新：["Wall_NetInsideSurfaceArea", "Wall_NetOutsideSurfaceArea", "General_NetVolume"]
+- wall_insulation_thickness → wall_insulation_area：从厚度改为面积
+  - 旧 quantity："General_InsulationSkinThickness"（m，厚度）
+  - 新 quantity："Wall_NetOutsideSurfaceArea"（m²，外饰面面积=保温层面积）
+  - 设计依据：保温层贴外墙外侧，面积=外饰面面积
+- wall_core_volume：保持（核心层体积公式，仍用 InsideSkinVolume/OutsideSkinVolume
+  作为体积扣减项——这正确，因为公式是减体积，不是按面积算）
+
+### 设计说明
+- 复合墙分层算量按清单规则分两类计量：
+  - 体积（m³）：核心结构层（混凝土）→ wall_core_volume 公式
+  - 面积（m²）：内/外饰面层、保温层 → wall_composite_layers / wall_insulation_area
+- wall_core_volume 公式里仍用体积字段做减法是合理的：核心体积 = 净体积 - 内层体积
+  - 外层体积（各分层体积相加=净体积），不是按面积算
+- General_InsulationSkinThickness（厚度 m）暂未在模板中用，若需要按厚度算保温板
+  数量可后续扩展
+
+### 变更文件
+- aggregate_service.py：3 个模板字段修正（仍 609 行）
+- tests/unit/test_aggregate.py：2 个测试断言更新（仍 50 个测试）
+
+### 备注
+- 单测 50 个仍全过
+- 模板数仍 13
+- 工具数仍 34
+- 真机 AC29 验证：分层面积属性 Wall_NetInsideSurfaceArea /
+  Wall_NetOutsideSurfaceArea 均可读，值为 10.0 m²
+
