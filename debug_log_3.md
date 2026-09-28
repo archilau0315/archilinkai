@@ -654,3 +654,71 @@ aggregate_by_template。
 - 工具数仍 34
 - aggregate_service.py 615 行（+6，未超 800）
 
+---
+
+## V0.28 完整提交说明（release notes 汇总）
+
+提交：4b07996 V0.28 幕墙专属算量模板 curtain_wall_area
+
+### 背景
+用户反馈："幕墙，你是如何统计，怎没提"。
+- V0.27 是复合墙分层算量（针对 Wall 类型的多层结构：混凝土+保温+饰面），
+  幕墙是 CurtainWall 类型，结构不同（框架/面板/节点/附件），不属于"复合墙分层"范畴
+- V0.19 已实现幕墙读取+算量（通用 aggregate 路径，CW002 验证 SurfaceArea=10.0 m²），
+  但 QUANTITY_TEMPLATES 缺专属模板，用户得手动传参数调 aggregate，不能一键
+  aggregate_by_template
+
+### 新增模板
+| 字段 | 值 |
+|---|---|
+| 模板名 | curtain_wall_area |
+| quantity | General_SurfaceArea |
+| group_by | ["story"] |
+| element_types | ["CurtainWall"] |
+| with_code | True（自动附 010805001 / 幕墙 / m²） |
+| description | 幕墙面积：按楼层汇总幕墙表面积（V0.28，幕墙无体积属性） |
+
+### 设计要点
+- 幕墙无体积属性：General_GrossVolume = None（V0.19 已确认），仅按面积 m² 算，与墙不同
+- 清单编码复用：010805001 / 幕墙 / m² 已在 V0.26 code_table.py#L24 注册，V0.28 直接复用
+- type_name 中文化：CurtainWall → "幕墙" 已在 V0.26 _TYPE_CN 注册，输出自动中文化
+- 子构件算量暂未实现：幕墙的框架/面板/节点/附件可通过 GetConnectedElements 取子构件
+  GUID 后分别读属性，待用户反馈后扩展
+
+### 变更文件
+- aggregate_service.py（609→615 行，+6）：QUANTITY_TEMPLATES 新增 curtain_wall_area 模板
+- tests/unit/test_aggregate.py（+1 测试 + 修正总数断言，50→51 单文件 / 461→462 全套件）：
+  - test_template_curtain_wall_area_registered：验证模板注册、quantity、element_types、with_code
+  - test_template_count_after_v027：总数断言 13→14
+- debug_log_3.md：V0.28 完整记录（背景/变更/真机验证/设计说明 + 本提交说明）
+- readme.md：V0.28 版本历史条目
+
+### 真机端到端验证（AC29 testwall，CW002 幕墙）
+| 输出字段 | 值 | 验证 |
+|---|---|---|
+| sum | 10.0 m² | ✓（与 V0.19 验证一致） |
+| code | 010805001 | ✓ |
+| code_name | 幕墙 | ✓ |
+| code_unit | m² | ✓ |
+| type_name | 幕墙 | ✓ |
+| element_names | CW002 | ✓ |
+
+### 统计
+- 模板总数：13 → 14（+1）
+- 工具数：34（无新增工具）
+- aggregate_service.py：615 行（+6，未超 800）
+- 单测：461 → 462（+1）全过
+
+### 算量模板全景（V0.28 后 14 个）
+| 类别 | 模板 |
+|---|---|
+| 通用 | concrete_volume / wall_area / wall_length / slab_area / door_count / zone_area / column_count / mep_length / wall_summary |
+| 公式法 | wall_paint_area（表面积×2）/ wall_core_volume（净体积-内层-外层） |
+| 复合墙分层 | wall_composite_layers / wall_insulation_area / wall_core_volume |
+| 幕墙 | curtain_wall_area |
+
+### 待办（可选）
+- 幕墙子构件算量（框架体积/面板面积，通过 GetConnectedElements 取子构件 GUID 后分别读属性）
+- 复合结构名 Construction_CompositeName 作为附加分组维度（同 type 不同 composite 分项出表）
+- 扩展 code_table 支持按 layer 细分清单编码（保温层/饰面层独立编码，如保温层 011001003）
+
