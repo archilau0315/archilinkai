@@ -283,3 +283,26 @@ AC28 的 Tapir 插件已更新到新版，实例 ac28-1 当前挂 GDL-28 项目
 - AC28 真机：耐火等级 enum_options = 4 个中文等级名
 - 最终回归 457 通过 0 失败（集成 26 过 2 跳）
 
+
+---
+
+## 2026-09-28 V0.19 幕墙只读支持（CurtainWall）
+
+### 调研
+- 下载 Tapir command_definitions.js，搜遍全文无 CreateCurtainWalls / ModifyCurtainWalls
+- Tapir 仅支持 CurtainWall 的读取（GetElementsByType）和子构件查询（GetConnectedElements）
+- 结论：幕墙无法通过 Tapir 创建，只能做只读+算量
+
+### 变更
+- readme.md：新增"只读可算量构件"条目，标注 CurtainWall 可查可算不可建
+- readme.md：工具总数 27→30（修正遗漏）
+- 版本历史补 V0.19 条目
+
+### 真机验证（AC29）
+- 查询 CurtainWall：1 个（CW002，楼层 0）
+- 工程量：General_SurfaceArea = 10.0 m²；General_GrossVolume = None（幕墙无体积属性，正常）
+- aggregate 按楼层汇总：正常返回 flat_rows
+
+### 备注
+- 代码无需改动：query_engine 和 aggregate_service 均用通用 GetElementsByType，天然支持 CurtainWall
+- 后续若 Tapir 实现 CreateCurtainWalls，可按 add-archicad-element-type 流程补建模能力
