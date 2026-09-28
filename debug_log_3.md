@@ -306,3 +306,23 @@ AC28 的 Tapir 插件已更新到新版，实例 ac28-1 当前挂 GDL-28 项目
 ### 备注
 - 代码无需改动：query_engine 和 aggregate_service 均用通用 GetElementsByType，天然支持 CurtainWall
 - 后续若 Tapir 实现 CreateCurtainWalls，可按 add-archicad-element-type 流程补建模能力
+
+---
+
+## 2026-09-28 V0.20 栏杆/壳体/天窗只读支持
+
+### 调研
+- Tapir command_definitions.js 全文搜索：无 CreateRailings / CreateShells / CreateSkylights
+- 结论：栏杆、壳体、天窗与幕墙同属 Tapir 不支持创建的层级构件
+
+### 变更
+- readme.md：只读可算量构件清单扩展为 幕墙/栏杆/壳体/天窗 四类
+- readme.md：版本历史补 V0.20 条目
+
+### 真机验证（AC28+AC29）
+- 查询 Railing：两项目均返回 0 个（无报错，查询通道正常）
+- 工程量：项目内无栏杆实例，待有数据时补测
+- 算量逻辑与 CurtainWall（已验证）完全一致，预期正常
+
+### 备注
+- 代码无需改动，查询和算量均走通用 GetElementsByType 接口

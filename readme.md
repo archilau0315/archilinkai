@@ -273,7 +273,7 @@ archicad-mcp/
 - **计划辅助（V0.10）**：lint_model_plan（离线校验，不连 ArchiCAD）
 - **P2 诊断运维**：refresh_instances、validate_instance、get_operation_status、get_operation_log（共 30 个工具）
 - **已支持建模构件（15 类）**：墙、柱、梁、板、门、窗、楼梯、屋顶、变形体、对象（家具）、灯具、网面、独立洞口、房间区域、机电管线（风管/水管/桥架）
-- **只读可算量构件（Tapir 不支持创建）**：幕墙（CurtainWall）——可查询、可取工程量、可分组汇总，但不能通过建模计划创建（Tapir 未实现 CreateCurtainWalls 命令）
+- **只读可算量构件（Tapir 不支持创建）**：幕墙（CurtainWall）、栏杆（Railing）、壳体（Shell）、天窗（Skylight）——可查询、可取工程量、可分组汇总，但不能通过建模计划创建（Tapir 未实现对应 Create 命令）
 
 ## 图片识别 → 建模计划（P2 工作流）
 
@@ -336,6 +336,7 @@ offset 方向；屋顶/板建在非当前楼层会假成功（level 填当前楼
 - V0.17 算量配套：属性名解析/类型查询加进程内缓存（批量读量提速）；aggregate_quantities 支持 classification 过滤（按分类项归并）；新增 get_property_definition 工具（30 个）查属性类型/单位/枚举可选项。单测 419
 - V0.18 算量收尾：aggregate 结果新增 flat 平铺行（直接转表）；属性名报错自动附相近名建议（如 General_GrossArea → General_SurfaceArea）；兼容性矩阵补量属性类型核验与 MEP 命令存在性；新增 regression.py 一键回归（单测+集成+兼容+基准，456 通过 0 失败）
 - V0.19 幕墙只读支持：确认 Tapir 未实现 CreateCurtainWalls，幕墙（CurtainWall）仅支持查询/工程量/汇总，不支持建模创建。查询与算量走通用 GetElementsByType 接口，无需代码改动，仅文档标注。真机验证：AC29 幕墙表面积读取正常
+- V0.20 栏杆等只读支持：确认 Tapir 未实现 CreateRailings/CreateShells/CreateSkylights，栏杆/壳体/天窗与幕墙同属只读可算量类型。查询通道真机验证通过（AC28+AC29 返回 0 无报错），算量逻辑与 CurtainWall 一致。项目内无栏杆实例，工程量待有数据时补测
 
 ## 实机验证进度（2026-09-23）
 
