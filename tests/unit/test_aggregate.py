@@ -57,9 +57,9 @@ def svc(monkeypatch):
         lambda instance=None: None,
     )
     _BASE = [
-        {"guid": "g1", "element_type": "Wall", "story_index": 0},
-        {"guid": "g2", "element_type": "Wall", "story_index": 1},
-        {"guid": "g3", "element_type": "Slab", "story_index": 1},
+        {"guid": "g1", "element_type": "Wall", "story_index": 0, "name": "W1"},
+        {"guid": "g2", "element_type": "Wall", "story_index": 1, "name": "W2"},
+        {"guid": "g3", "element_type": "Slab", "story_index": 1, "name": "S1"},
     ]
     monkeypatch.setattr(
         aggregate_service, "_fetch_all",
@@ -79,6 +79,10 @@ def svc(monkeypatch):
             return {g: {} for g in guids}
 
     monkeypatch.setattr(aggregate_service.property_service, "service", FakeProp())
+    monkeypatch.setattr(
+        aggregate_service, "_fetch_story_names",
+        lambda instance: {0: "一层", 1: "二层"},
+    )
     return s
 
 
@@ -88,6 +92,10 @@ def test_aggregate_by_story(svc):
     assert len(out["rows"]) == 2
     s1 = next(g for g in out["rows"] if g["group"]["story"] == 1)
     assert s1["sum"] == 2.0
+    # 楼层名补全
+    assert s1["group"]["story_name"] == "二层"
+    # 构件名列表
+    assert "W2" in s1["element_names"]
 
 
 def test_aggregate_by_type(svc):
@@ -95,6 +103,11 @@ def test_aggregate_by_type(svc):
     wall = next(g for g in out["rows"] if g["group"]["type"] == "Wall")
     assert wall["count"] == 2
     assert wall["sum"] == 3.0
+    # 类型中文名
+    assert wall["group"]["type_name"] == "墙"
+    # flat_rows 含 element_names
+    flat_wall = next(f for f in out["flat_rows"] if f["type"] == "Wall")
+    assert "W1" in flat_wall["element_names"]
 
 
 def test_aggregate_with_classification(svc, monkeypatch):

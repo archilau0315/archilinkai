@@ -12,9 +12,32 @@ from typing import Any
 import instance_manager
 import property_service
 from query_engine import engine, MAX_LIMIT
+from tapir_adapter import _to_dict, adapter as _tapir
 from schemas import Filter, Operator, QueryRequest
 
-# 算量规则模板：预设常用算量场景，LLM 直接按模板名调用即可
+# 构件类型英→中映射
+_TYPE_CN: dict[str, str] = {
+    "Wall": "墙", "Column": "柱", "Beam": "梁", "Slab": "板",
+    "Door": "门", "Window": "窗", "Stair": "楼梯", "Roof": "屋顶",
+    "Morph": "变形体", "Mesh": "网面", "Opening": "洞口",
+    "Zone": "房间区域", "Object": "对象", "Lamp": "灯具",
+    "CurtainWall": "幕墙", "Railing": "栏杆", "Shell": "壳体",
+    "Skylight": "天窗", "MEPRoutingElement": "机电管线",
+}
+
+
+def _fetch_story_names(instance: str | None) -> dict[int, str]:
+    """取楼层 index→name 映射，失败返回空 dict。"""
+    try:
+        result = _tapir.execute("GetStories", None, instance)
+        data = _to_dict(result)
+        stories = data.get("stories", []) if isinstance(data, dict) else []
+        return {s["index"]: s["name"] for s in stories if "index" in s and "name" in s}
+    except Exception:
+        return {}
+
+
+
 # 字段与 aggregate() 参数一一对应；description 供人/模型理解用途
 QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
     "concrete_volume": {
@@ -159,8 +182,8 @@ def _group(
 def _flatten(groups: list[dict[str, Any]], quantity: str) -> list[dict[str, Any]]:
     """把嵌套 group 展平成一行一条，方便直接转表格。
 
-    {"group": {"story": 1}, "count": 2, "sum": 5.0}
-    → {"story": 1, "count": 2, "sum": 5.0, "sum_quantity": "General_NetVolume"}
+    {"group": {"story": 1, "story_name": "二层"}, "count": 2, "sum": 5.0}
+    → {"story": 1, "story_name": "二层", "count": 2, "sum": 5.0}
     """
     return [
         {
@@ -169,6 +192,7 @@ def _flatten(groups: list[dict[str, Any]], quantity: str) -> list[dict[str, Any]
             "sum": g["sum"],
             "avg": g["avg"],
             "skipped_none": g["skipped_none"],
+            "element_names": ", ".join(g.get("element_names", [])),
         }
         for g in groups
     ]
@@ -219,14 +243,30 @@ class AggregateService:
 
         rows = [
             {
-                "type": s["element_type"],
-                "story": s["story_index"],
+                "name": s.get("name") or "",
+                "type": s.get("element_type"),
+                "story": s.get("story_index"),
                 **{d: prop_vals.get(s["guid"], {}).get(d) for d in prop_dims},
                 quantity: quantities.get(s["guid"], {}).get(quantity, {}).get("value"),
             }
             for s in summaries
         ]
         groups = _group(rows, group_by, quantity)
+        # 补全楼层名、类型中文名、构件名列表
+        story_map = _fetch_story_names(instance) if "story" in group_by else {}
+        name_map: dict[tuple, list[str]] = {}
+        for row in rows:
+            key = tuple(row.get(d) for d in group_by)
+            name_map.setdefault(key, []).append(row.get("name", ""))
+        for g in groups:
+            key = tuple(g["group"].get(d) for d in group_by)
+            g["element_names"] = name_map.get(key, [])
+            if "story" in g["group"]:
+                g["group"]["story_name"] = story_map.get(
+                    g["group"]["story"], str(g["group"]["story"]))
+            if "type" in g["group"]:
+                g["group"]["type_name"] = _TYPE_CN.get(
+                    g["group"]["type"], g["group"]["type"])
         return {
             "unit": quantities.get(guids[0], {}).get(quantity, {}).get("unit")
             if guids else None,
@@ -262,10 +302,12 @@ class AggregateService:
                 key = tuple(sorted(row["group"].items()))
                 g = merged.setdefault(
                     key, {"group": row["group"], "count": 0,
-                          "sum": 0.0, "skipped_none": 0})
+                          "sum": 0.0, "skipped_none": 0,
+                          "element_names": []})
                 g["count"] += row["count"]
                 g["sum"] += row["sum"]
                 g["skipped_none"] += row.get("skipped_none", 0)
+                g["element_names"].extend(row.get("element_names", []))
         for g in merged.values():
             denom = g["count"] - g["skipped_none"]
             g["avg"] = round(g["sum"] / denom, 4) if denom > 0 else None
