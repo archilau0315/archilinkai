@@ -339,6 +339,7 @@ offset 方向；屋顶/板建在非当前楼层会假成功（level 填当前楼
 - V0.20 栏杆等只读支持：确认 Tapir 未实现 CreateRailings/CreateShells/CreateSkylights，栏杆/壳体/天窗与幕墙同属只读可算量类型。查询通道真机验证通过（AC28+AC29 返回 0 无报错），算量逻辑与 CurtainWall 一致。项目内无栏杆实例，工程量待有数据时补测
 - V0.21 算量模板+导出：新增 list_quantity_templates（8 个预设模板：混凝土体积/墙体面积/墙体长度/楼板面积/门窗计数/房间面积/柱计数/机电长度）、aggregate_by_template（按模板名一键算量，多构件类型自动合并）、export_table（算量结果导出 CSV 到 output/ 目录）。工具总数 30→33。真机：wall_length 8.0m、concrete_volume 8.55m³，CSV 导出正常。单测 424 全过
 - V0.22 楼层名+构件名补全：汇总结果新增 story_name（楼层中文名，如"一层"）、type_name（构件类型中文名，如"墙"）、element_names（构件名列表，如"墙01,外墙01"）。flat_rows 同步带名称，CSV 导出直接可读。真机验证通过
+- V0.23 损耗系数+多量合并：aggregate() 新增 waste_factor 参数（损耗系数，结果含 sum_with_waste 列）；支持多量合并（quantities 参数 / 模板 quantities 字段，一张表同时出体积+面积+长度）。concrete_volume 模板带 3% 损耗；新增 wall_summary 模板。单测 428 全过
 
 ## 实机验证进度（2026-09-23）
 

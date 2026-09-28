@@ -71,8 +71,12 @@ def svc(monkeypatch):
     class FakeProp:
         def get_quantities(self, guids, names, instance=None):
             v = {"g1": 1.0, "g2": 2.0, "g3": 5.0}
+            units = {"General_NetVolume": "m³", "General_SurfaceArea": "m²",
+                     "General_3DLength": "m", "General_Height": "m"}
             return {
-                g: {names[0]: {"value": v[g], "unit": "m³"}} for g in guids
+                g: {n: {"value": v[g], "unit": units.get(n, "m³")}
+                    for n in names}
+                for g in guids
             }
 
         def get_values(self, guids, names, instance=None):
@@ -134,7 +138,7 @@ def test_templates_exist():
 def test_aggregate_by_template(svc):
     out = svc.aggregate_by_template("wall_area")
     assert out["template"] == "wall_area"
-    assert out["unit"] == "m³"
+    assert out["unit"] == "m²"
     # Wall 在 story 0/1 各 1
     assert len(out["rows"]) == 2
 
@@ -150,6 +154,50 @@ def test_aggregate_by_template_merges_types(svc):
 def test_aggregate_by_template_unknown(svc):
     with pytest.raises(ValueError, match="未知算量模板"):
         svc.aggregate_by_template("no_such")
+
+
+# --- 损耗系数 -----------------------------------------------------------
+
+def test_aggregate_with_waste_factor(svc):
+    out = svc.aggregate("General_NetVolume", ["story"], "Wall", waste_factor=0.03)
+    g = out["rows"][0]
+    assert "sum_with_waste" in g
+    assert g["sum_with_waste"] == round(g["sum"] * 1.03, 4)
+
+
+def test_template_concrete_has_waste(svc):
+    """concrete_volume 模板带 3% 损耗。"""
+    out = svc.aggregate_by_template("concrete_volume")
+    g = out["rows"][0]
+    assert "sum_with_waste" in g
+    assert g["sum_with_waste"] > g["sum"]
+
+
+# --- 多量合并 ------------------------------------------------------------
+
+def test_aggregate_multi_quantities(svc):
+    out = svc.aggregate(
+        quantities=["General_NetVolume", "General_SurfaceArea"],
+        group_by=["type"], element_type="Wall")
+    assert "units" in out
+    g = out["rows"][0]
+    assert "sum_General_NetVolume" in g
+    assert "sum_General_SurfaceArea" in g
+    assert "avg_General_NetVolume" in g
+    # flat_rows 也含多量列
+    flat = out["flat_rows"][0]
+    assert "sum_General_NetVolume" in flat
+    assert "sum_General_SurfaceArea" in flat
+
+
+def test_template_wall_summary_multi(svc):
+    """wall_summary 模板出体积+面积+长度三列。"""
+    out = svc.aggregate_by_template("wall_summary")
+    assert "units" in out
+    g = out["rows"][0]
+    assert "sum_General_NetVolume" in g
+    assert "sum_General_SurfaceArea" in g
+    assert "sum_General_3DLength" in g
 
 
 # --- CSV 导出 -----------------------------------------------------------

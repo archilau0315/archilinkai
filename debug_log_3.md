@@ -342,3 +342,20 @@ AC28 的 Tapir 插件已更新到新版，实例 ac28-1 当前挂 GDL-28 项目
 
 ### 备注
 - 单测 424 全过（新增断言在已有测试中扩展，无新增用例数）
+
+---
+
+## 2026-09-28 V0.23 损耗系数+多量合并
+
+### 变更文件
+- aggregate_service.py：_group() 支持单量(str)和多量(list)；_flatten() 同步多量；aggregate() 新增 waste_factor + quantities 参数；aggregate_by_template() 支持模板 waste_factor 和 quantities 字段；concrete_volume 模板加 waste_factor=0.03；新增 wall_summary 模板（体积+面积+长度）
+- tests/unit/test_aggregate.py：FakeProp 支持多量名；+4 测试（waste_factor、模板损耗、多量 aggregate、多量模板）
+
+### 真机验证（AC29）
+- concrete_volume：sum=8.55 m³ → sum_with_waste=8.8065 m³（×1.03）
+- wall_summary：体积 8.55 m³ + 面积 19.0 m² + 长度 8.0 m，一张表
+- flat_rows 含 sum_{qty}/avg_{qty}/skipped_none_{qty}，CSV 可直接导出
+
+### 备注
+- 单测 424→428 全过
+- 模板总数 9→10（新增 wall_summary）

@@ -41,10 +41,11 @@ def _fetch_story_names(instance: str | None) -> dict[int, str]:
 # 字段与 aggregate() 参数一一对应；description 供人/模型理解用途
 QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
     "concrete_volume": {
-        "description": "混凝土体积：按楼层汇总墙/柱/梁/板的净体积",
+        "description": "混凝土体积：按楼层汇总墙/柱/梁/板的净体积（含 3% 损耗）",
         "quantity": "General_NetVolume",
         "group_by": ["story"],
         "element_types": ["Wall", "Column", "Beam", "Slab"],
+        "waste_factor": 0.03,
     },
     "wall_area": {
         "description": "墙体面积：按楼层汇总所有墙的表面积",
@@ -87,6 +88,12 @@ QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
         "quantity": "General_3DLength",
         "group_by": ["type"],
         "element_types": ["MEPRoutingElement"],
+    },
+    "wall_summary": {
+        "description": "墙体综合：体积+面积+长度按楼层同时出表",
+        "quantities": ["General_NetVolume", "General_SurfaceArea", "General_3DLength"],
+        "group_by": ["story"],
+        "element_types": ["Wall"],
     },
 }
 
@@ -149,53 +156,79 @@ def _classification_guids(
 
 
 def _group(
-    rows: list[dict[str, Any]], group_by: list[str], quantity: str
+    rows: list[dict[str, Any]], group_by: list[str],
+    quantity: str | list[str],
 ) -> list[dict[str, Any]]:
-    """纯函数分组求和。rows 每项含 guid/type/story/量值。
+    """纯函数分组求和。rows 每项含维度字段 + 量值。
 
-    返回 [{"group": {维度: 值}, "count": n, "sum": 和, "avg": 均}]，
-    量值为 None 的元素计入 count 但不计入 sum（skipped_none 标注）。
+    quantity 支持 str（单量）或 list[str]（多量）。
+    单量：每组 sum/avg/skipped_none
+    多量：每组 sum_{qty}/avg_{qty}/skipped_none_{qty} + count
     """
+    is_multi = isinstance(quantity, list)
+    quantities = quantity if is_multi else [quantity]
     groups: dict[tuple, dict[str, Any]] = {}
     for row in rows:
         key = tuple(row.get(dim) for dim in group_by)
         g = groups.setdefault(
             key,
-            {"group": dict(zip(group_by, key)), "count": 0,
-             "sum": 0.0, "skipped_none": 0},
+            {"group": dict(zip(group_by, key)), "count": 0},
         )
         g["count"] += 1
-        v = row.get(quantity)
-        if isinstance(v, (int, float)):
-            g["sum"] += v
-        else:
-            g["skipped_none"] += 1
+        for qty in quantities:
+            v = row.get(qty)
+            if is_multi:
+                g.setdefault(f"sum_{qty}", 0.0)
+                g.setdefault(f"skipped_none_{qty}", 0)
+            else:
+                g.setdefault("sum", 0.0)
+                g.setdefault("skipped_none", 0)
+            if isinstance(v, (int, float)):
+                if is_multi:
+                    g[f"sum_{qty}"] += v
+                else:
+                    g["sum"] += v
+            else:
+                if is_multi:
+                    g[f"skipped_none_{qty}"] += 1
+                else:
+                    g["skipped_none"] += 1
     for g in groups.values():
-        g["avg"] = (g["sum"] / (g["count"] - g["skipped_none"])) \
-            if g["count"] > g["skipped_none"] else None
-        g["sum"] = round(g["sum"], 4)
-        if isinstance(g["avg"], float):
-            g["avg"] = round(g["avg"], 4)
+        for qty in quantities:
+            if is_multi:
+                denom = g["count"] - g[f"skipped_none_{qty}"]
+                g[f"avg_{qty}"] = round(g[f"sum_{qty}"] / denom, 4) \
+                    if denom > 0 else None
+                g[f"sum_{qty}"] = round(g[f"sum_{qty}"], 4)
+            else:
+                denom = g["count"] - g["skipped_none"]
+                g["avg"] = (g["sum"] / denom) if denom > 0 else None
+                g["sum"] = round(g["sum"], 4)
+                if isinstance(g["avg"], float):
+                    g["avg"] = round(g["avg"], 4)
     return sorted(groups.values(), key=lambda g: str(g["group"]))
 
 
-def _flatten(groups: list[dict[str, Any]], quantity: str) -> list[dict[str, Any]]:
-    """把嵌套 group 展平成一行一条，方便直接转表格。
-
-    {"group": {"story": 1, "story_name": "二层"}, "count": 2, "sum": 5.0}
-    → {"story": 1, "story_name": "二层", "count": 2, "sum": 5.0}
-    """
-    return [
-        {
-            **g["group"],
-            "count": g["count"],
-            "sum": g["sum"],
-            "avg": g["avg"],
-            "skipped_none": g["skipped_none"],
-            "element_names": ", ".join(g.get("element_names", [])),
-        }
-        for g in groups
-    ]
+def _flatten(groups: list[dict[str, Any]],
+             quantity: str | list[str]) -> list[dict[str, Any]]:
+    """把嵌套 group 展平成一行一条，方便直接转表格。"""
+    is_multi = isinstance(quantity, list)
+    quantities = quantity if is_multi else [quantity]
+    out = []
+    for g in groups:
+        row = {**g["group"], "count": g["count"]}
+        for qty in quantities:
+            if is_multi:
+                row[f"sum_{qty}"] = g.get(f"sum_{qty}")
+                row[f"avg_{qty}"] = g.get(f"avg_{qty}")
+                row[f"skipped_none_{qty}"] = g.get(f"skipped_none_{qty}")
+            else:
+                row["sum"] = g["sum"]
+                row["avg"] = g["avg"]
+                row["skipped_none"] = g["skipped_none"]
+        row["element_names"] = ", ".join(g.get("element_names", []))
+        out.append(row)
+    return out
 
 
 class AggregateService:
@@ -203,20 +236,28 @@ class AggregateService:
 
     def aggregate(
         self,
-        quantity: str,
+        quantity: str | list[str] | None = None,
         group_by: list[str] | None = None,
         element_type: str | None = None,
         stories: list[int] | None = None,
         filters: list[dict] | None = None,
         instance: str | None = None,
         classification: str | None = None,
+        waste_factor: float | None = None,
+        quantities: list[str] | None = None,
     ) -> dict[str, Any]:
-        """返回 {"unit": 单位, "rows": [_group 输出]}。
+        """返回 {"unit"/"units", "rows", "flat_rows"}。
 
-        group_by 维度："type"、"story" 或任意属性名（如 "结构类型"）。
-        classification：只统计挂了该分类项的元素（算量归并维度）。
+        quantity: 单量名(str) 或 quantities: 多量名(list)。
+        waste_factor: 损耗系数（如 0.03=3%），结果加 sum_with_waste 字段。
         """
-        instance_manager.manager.get_info(instance)  # 实例不存在在此报错
+        if quantities and not quantity:
+            quantity = quantities
+        if not quantity:
+            raise ValueError("quantity 或 quantities 至少传一个")
+        is_multi = isinstance(quantity, list)
+        qty_list = quantity if is_multi else [quantity]
+        instance_manager.manager.get_info(instance)
         group_by = group_by or ["type"]
         flt = [
             Filter(f["field"], Operator(f.get("operator", "=")), f["value"])
@@ -234,8 +275,7 @@ class AggregateService:
         guids = [s["guid"] for s in summaries]
         svc = property_service.service
 
-        quantities = svc.get_quantities(guids, [quantity], instance)
-        # 属性分组维度需另取属性值
+        qvals = svc.get_quantities(guids, qty_list, instance)
         prop_dims = [d for d in group_by if d not in ("type", "story")]
         prop_vals = (
             svc.get_values(guids, prop_dims, instance) if prop_dims else {}
@@ -247,11 +287,22 @@ class AggregateService:
                 "type": s.get("element_type"),
                 "story": s.get("story_index"),
                 **{d: prop_vals.get(s["guid"], {}).get(d) for d in prop_dims},
-                quantity: quantities.get(s["guid"], {}).get(quantity, {}).get("value"),
+                **{q: qvals.get(s["guid"], {}).get(q, {}).get("value")
+                   for q in qty_list},
             }
             for s in summaries
         ]
         groups = _group(rows, group_by, quantity)
+        # 损耗系数
+        if waste_factor:
+            for g in groups:
+                if is_multi:
+                    for q in qty_list:
+                        raw = g.get(f"sum_{q}", 0) or 0
+                        g[f"sum_with_waste_{q}"] = round(raw * (1 + waste_factor), 4)
+                else:
+                    raw = g.get("sum", 0) or 0
+                    g["sum_with_waste"] = round(raw * (1 + waste_factor), 4)
         # 补全楼层名、类型中文名、构件名列表
         story_map = _fetch_story_names(instance) if "story" in group_by else {}
         name_map: dict[tuple, list[str]] = {}
@@ -267,9 +318,15 @@ class AggregateService:
             if "type" in g["group"]:
                 g["group"]["type_name"] = _TYPE_CN.get(
                     g["group"]["type"], g["group"]["type"])
+        # 单位
+        if is_multi:
+            units = {q: qvals.get(guids[0], {}).get(q, {}).get("unit")
+                     if guids else None for q in qty_list}
+        else:
+            units = qvals.get(guids[0], {}).get(quantity, {}).get("unit") \
+                if guids else None
         return {
-            "unit": quantities.get(guids[0], {}).get(quantity, {}).get("unit")
-            if guids else None,
+            "unit" if not is_multi else "units": units,
             "rows": groups,
             "flat_rows": _flatten(groups, quantity),
         }
@@ -279,42 +336,73 @@ class AggregateService:
         template_name: str,
         instance: str | None = None,
     ) -> dict[str, Any]:
-        """按预设模板算量。模板含 quantity/group_by/element_types。
+        """按预设模板算量。模板含 quantity 或 quantities + group_by + element_types。
 
-        多 element_types 时分别汇总再合并（相同维度键的 sum 相加、count 相加）。
+        多 element_types 时分别汇总再合并。支持 waste_factor（损耗系数）。
         """
         tpl = get_template(template_name)
         if tpl is None:
             available = ", ".join(QUANTITY_TEMPLATES)
             raise ValueError(f"未知算量模板：{template_name}，可选：{available}")
         element_types = tpl["element_types"]
-        quantity = tpl["quantity"]
+        is_multi = "quantities" in tpl
+        quantity = tpl.get("quantities", tpl.get("quantity"))
+        qty_list = quantity if is_multi else [quantity]
         group_by = tpl["group_by"]
+        waste = tpl.get("waste_factor")
         merged: dict[tuple, dict[str, Any]] = {}
-        unit = None
+        units: dict[str, str | None] = {}
         for et in element_types:
             r = self.aggregate(
                 quantity=quantity, group_by=group_by,
                 element_type=et, instance=instance,
+                waste_factor=waste,
             )
-            unit = r.get("unit") or unit
+            if is_multi:
+                units.update(r.get("units", {}))
+            else:
+                units["_default"] = r.get("unit") or units.get("_default")
             for row in r["rows"]:
                 key = tuple(sorted(row["group"].items()))
                 g = merged.setdefault(
                     key, {"group": row["group"], "count": 0,
-                          "sum": 0.0, "skipped_none": 0,
                           "element_names": []})
                 g["count"] += row["count"]
-                g["sum"] += row["sum"]
-                g["skipped_none"] += row.get("skipped_none", 0)
                 g["element_names"].extend(row.get("element_names", []))
+                for q in qty_list:
+                    if is_multi:
+                        g.setdefault(f"sum_{q}", 0.0)
+                        g.setdefault(f"skipped_none_{q}", 0)
+                        g[f"sum_{q}"] += row.get(f"sum_{q}", 0) or 0
+                        g[f"skipped_none_{q}"] += row.get(f"skipped_none_{q}", 0)
+                        if waste:
+                            g.setdefault(f"sum_with_waste_{q}", 0.0)
+                            g[f"sum_with_waste_{q}"] += row.get(f"sum_with_waste_{q}", 0) or 0
+                    else:
+                        g.setdefault("sum", 0.0)
+                        g.setdefault("skipped_none", 0)
+                        g["sum"] += row.get("sum", 0) or 0
+                        g["skipped_none"] += row.get("skipped_none", 0)
+                        if waste:
+                            g.setdefault("sum_with_waste", 0.0)
+                            g["sum_with_waste"] += row.get("sum_with_waste", 0) or 0
         for g in merged.values():
-            denom = g["count"] - g["skipped_none"]
-            g["avg"] = round(g["sum"] / denom, 4) if denom > 0 else None
-            g["sum"] = round(g["sum"], 4)
+            for q in qty_list:
+                if is_multi:
+                    denom = g["count"] - g[f"skipped_none_{q}"]
+                    g[f"avg_{q}"] = round(g[f"sum_{q}"] / denom, 4) if denom > 0 else None
+                    g[f"sum_{q}"] = round(g[f"sum_{q}"], 4)
+                    if waste:
+                        g[f"sum_with_waste_{q}"] = round(g[f"sum_with_waste_{q}"], 4)
+                else:
+                    denom = g["count"] - g["skipped_none"]
+                    g["avg"] = round(g["sum"] / denom, 4) if denom > 0 else None
+                    g["sum"] = round(g["sum"], 4)
+                    if waste:
+                        g["sum_with_waste"] = round(g["sum_with_waste"], 4)
         rows = sorted(merged.values(), key=lambda g: str(g["group"]))
         return {
-            "unit": unit,
+            "units" if is_multi else "unit": units if is_multi else units.get("_default"),
             "rows": rows,
             "flat_rows": _flatten(rows, quantity),
             "template": template_name,
