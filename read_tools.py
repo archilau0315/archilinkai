@@ -423,6 +423,7 @@ def register(mcp: FastMCP, safe) -> None:
             return fieldnames
 
         def _run() -> dict[str, Any]:
+            nonlocal fmt
             if sheets and fmt != "xlsx":
                 fmt = "xlsx"  # 多表自动 xlsx
             if not rows and not sheets:
