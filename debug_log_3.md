@@ -538,3 +538,82 @@ Wall_InsideSkinVolume/Wall_OutsideSkinVolume（体积）是错的。GB 50500 清
 - 真机 AC29 验证：分层面积属性 Wall_NetInsideSurfaceArea /
   Wall_NetOutsideSurfaceArea 均可读，值为 10.0 m²
 
+---
+
+## V0.27 完整提交说明（release notes 汇总）
+
+提交：fa6a482（初版） + 43d00a5（修正版）
+
+### 背景调研
+- 官方 API GetAllBuildingMaterials / GetAllCompositeStructures / GetAllProfiles 均不存在
+- Tapir 仅 GetBuildingMaterials 命令存在但参数不识别（其他候选 GetAllBuildingMaterials /
+  GetCompositeStructures / GetCompositeElements / GetElementBuildingMaterials 全部"Add-On 未加载"）
+- 关键发现：墙体 BuiltIn 属性已含复合层信息，无需新命令，直接走 property_service 即可
+
+### 真机属性探测（AC29 testwall 首面墙 GUID 0f777f0c）
+| 属性 | 值 | 单位 | 用途 |
+|---|---|---|---|
+| Wall_NetInsideSurfaceArea | 10.0 | m² | 内饰面净面积 |
+| Wall_NetOutsideSurfaceArea | 10.0 | m² | 外饰面净面积 |
+| Wall_InsideSkinVolume | 0.2 | m³ | 内饰面层体积 |
+| Wall_OutsideSkinVolume | 0.1 | m³ | 外饰面层体积 |
+| General_InsulationSkinThickness | 0.2 | m | 保温层厚度 |
+| General_InsulationSkinArea | None | — | 不存在（用外饰面面积代表） |
+| Construction_CompositeName | "test-wall" | — | 复合结构名 |
+| General_NetVolume | 4.5 | m³ | 净体积 |
+
+### 设计原则（按 GB 50500 清单规则）
+- 核心结构层（混凝土）按体积 m³ 计量 → 公式法
+- 内/外饰面层、保温层按面积 m² 计量 → 直接取面积属性
+- 保温层贴外墙外侧，面积 = 外饰面面积
+
+### 新增 3 个模板（QUANTITY_TEMPLATES 10→13）
+| 模板名 | 字段 | 单位 | 描述 |
+|---|---|---|---|
+| wall_composite_layers | quantities = [Wall_NetInsideSurfaceArea, Wall_NetOutsideSurfaceArea, General_NetVolume] | m²+m²+m³ | 复合墙分层算量：内/外饰面面积 + 核心层体积，3 量同表 |
+| wall_insulation_area | quantity = Wall_NetOutsideSurfaceArea | m² | 墙保温层面积（贴外墙外侧，= 外饰面面积） |
+| wall_core_volume | formula = General_NetVolume - Wall_InsideSkinVolume - Wall_OutsideSkinVolume | m³ | 墙核心层体积（公式法，结构层体积） |
+
+3 个模板均启用 with_code: True，输出自动附 GB 50500 清单编码 010502001 / 现浇混凝土墙 / m³。
+
+### 修正历史
+- 初版（fa6a482）：误用体积字段（Wall_InsideSkinVolume/Wall_OutsideSkinVolume）作为饰面层算量
+- 修正版（43d00a5）：根据用户反馈"复合墙除核心层，都是按面积算的"，将饰面层/保温层改为面积字段
+  - wall_composite_layers：3 量从体积改为面积+面积+体积
+  - wall_insulation_thickness → wall_insulation_area：从厚度(m)改为面积(m²)
+  - wall_core_volume 保持（公式减体积正确，核心层仍按体积算）
+
+### 变更文件
+- aggregate_service.py（579→609 行，+30）：QUANTITY_TEMPLATES 新增 3 个模板
+- tests/unit/test_aggregate.py（44→50 单文件 / 455→461 全套件，+6 测试）：模板注册、
+  公式正确性（4.5-0.2-0.1=4.2）、None 跳过、模板总数 13
+- debug_log_3.md：V0.27 调研结论 + 修正说明 + 完整提交说明
+- readme.md：V0.27 版本历史条目
+
+### 真机端到端验证（AC29 testwall，2 面墙一层）
+| 模板 | sum 输出 | 验证 |
+|---|---|---|
+| wall_composite_layers | 内饰面 19.0 m² + 外饰面 19.0 m² + 净体积 8.55 m³ | ✓ |
+| wall_insulation_area | 19.0 m² | ✓ |
+| wall_core_volume | 7.98 m³（= 8.55 - 0.57 内+外层体积） | ✓ |
+| with_code 自动附清单编码 | 010502001 / 现浇混凝土墙 / m³ | ✓ |
+
+### 设计要点
+- 无需新模块/命令：完全复用 V0.25 formula + V0.26 with_code 现有能力
+- 核心层公式 vs 饰面层面积：核心层用公式（净体积 - 各分层体积 = 核心体积），
+  饰面层直接取面积属性——两者逻辑不同但都符合清单规则
+- 保温层面积取外饰面面积：ArchiCAD 无 General_InsulationSkinArea 属性，
+  因保温层贴外墙外侧，用 Wall_NetOutsideSurfaceArea 代表
+- 多单位并存：wall_composite_layers 输出 m²+m²+m³，V0.26 报表 fmt=report 会
+  自动跳过合计行（单位不一致时不强算合计）
+
+### 待办（可选）
+- 扩展 code_table 支持按 layer 细分清单编码（保温层/饰面层独立编码，如保温层 011001003）
+- 复合结构名 Construction_CompositeName 作为附加分组维度（同 type 不同 composite 分项出表）
+
+### 统计
+- 模板总数：10 → 13（+3）
+- 工具数：34（无新增工具）
+- aggregate_service.py：609 行（+30，未超 800）
+- 单测：455 → 461（+6）全过
+
