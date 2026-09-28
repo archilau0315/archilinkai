@@ -266,12 +266,12 @@ archicad-mcp/
 
 ## 工具分层
 
-- **P0 只读**：list_instances、project_summary、get_selected_elements、get_elements_by_type、get_element_properties、search_elements_by_criteria、get_element_geometry_info、get_classifications、list_floors、get_gdl_parameters、get_element_quantities（工程量读取：毛/净体积、表面积、长度等，带单位标注）、aggregate_quantities（按 type/story/属性分组汇总，count/sum/avg，支持分类过滤，结果含 flat 平铺行）、get_property_definition（属性类型/单位/枚举可选项，报错带相近名建议）
+- **P0 只读**：list_instances、project_summary、get_selected_elements、get_elements_by_type、get_element_properties、search_elements_by_criteria、get_element_geometry_info、get_classifications、list_floors、get_gdl_parameters、get_element_quantities（工程量读取：毛/净体积、表面积、长度等，带单位标注）、aggregate_quantities（按 type/story/属性分组汇总，count/sum/avg，支持分类过滤，结果含 flat 平铺行）、get_property_definition（属性类型/单位/枚举可选项，报错带相近名建议）、list_quantity_templates（列出预设算量模板）、aggregate_by_template（按模板名一键算量）、export_table（算量结果导出 CSV）
 - **P1 安全写入**：preview_property_change、set_element_properties、preview_classification、attach_classification、set_gdl_parameters、highlight_elements、preview_model_plan、create_from_plan
 - **构件修改（V0.4）**：preview_modify_plan、modify_from_plan
 - **构件删除（V0.7）**：preview_delete_plan、delete_from_plan
 - **计划辅助（V0.10）**：lint_model_plan（离线校验，不连 ArchiCAD）
-- **P2 诊断运维**：refresh_instances、validate_instance、get_operation_status、get_operation_log（共 30 个工具）
+- **P2 诊断运维**：refresh_instances、validate_instance、get_operation_status、get_operation_log（共 33 个工具）
 - **已支持建模构件（15 类）**：墙、柱、梁、板、门、窗、楼梯、屋顶、变形体、对象（家具）、灯具、网面、独立洞口、房间区域、机电管线（风管/水管/桥架）
 - **只读可算量构件（Tapir 不支持创建）**：幕墙（CurtainWall）、栏杆（Railing）、壳体（Shell）、天窗（Skylight）——可查询、可取工程量、可分组汇总，但不能通过建模计划创建（Tapir 未实现对应 Create 命令）
 
@@ -337,6 +337,7 @@ offset 方向；屋顶/板建在非当前楼层会假成功（level 填当前楼
 - V0.18 算量收尾：aggregate 结果新增 flat 平铺行（直接转表）；属性名报错自动附相近名建议（如 General_GrossArea → General_SurfaceArea）；兼容性矩阵补量属性类型核验与 MEP 命令存在性；新增 regression.py 一键回归（单测+集成+兼容+基准，456 通过 0 失败）
 - V0.19 幕墙只读支持：确认 Tapir 未实现 CreateCurtainWalls，幕墙（CurtainWall）仅支持查询/工程量/汇总，不支持建模创建。查询与算量走通用 GetElementsByType 接口，无需代码改动，仅文档标注。真机验证：AC29 幕墙表面积读取正常
 - V0.20 栏杆等只读支持：确认 Tapir 未实现 CreateRailings/CreateShells/CreateSkylights，栏杆/壳体/天窗与幕墙同属只读可算量类型。查询通道真机验证通过（AC28+AC29 返回 0 无报错），算量逻辑与 CurtainWall 一致。项目内无栏杆实例，工程量待有数据时补测
+- V0.21 算量模板+导出：新增 list_quantity_templates（8 个预设模板：混凝土体积/墙体面积/墙体长度/楼板面积/门窗计数/房间面积/柱计数/机电长度）、aggregate_by_template（按模板名一键算量，多构件类型自动合并）、export_table（算量结果导出 CSV 到 output/ 目录）。工具总数 30→33。真机：wall_length 8.0m、concrete_volume 8.55m³，CSV 导出正常。单测 424 全过
 
 ## 实机验证进度（2026-09-23）
 

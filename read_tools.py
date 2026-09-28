@@ -307,3 +307,74 @@ def register(mcp: FastMCP, safe) -> None:
                       "flat": data["flat_rows"]},
             )
         return safe(instance, _run)
+
+    @mcp.tool()
+    def list_quantity_templates() -> dict[str, Any]:
+        """列出所有预设算量规则模板名及说明，供 aggregate_by_template 调用。"""
+        def _run() -> dict[str, Any]:
+            items = [
+                {"name": k, "description": v["description"]}
+                for k, v in aggregate_service.QUANTITY_TEMPLATES.items()
+            ]
+            return success_result(count=len(items), items=items)
+        return safe(None, _run)
+
+    @mcp.tool()
+    def aggregate_by_template(
+        template_name: str, instance: str | None = None,
+    ) -> dict[str, Any]:
+        """按预设模板算量（如 concrete_volume 混凝土体积、wall_area 墙体面积）。
+        用 list_quantity_templates 查看全部模板。"""
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            data = aggregate_service.service.aggregate_by_template(
+                template_name, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(data["rows"]),
+                data={"template": data["template"],
+                      "description": data["description"],
+                      "unit": data["unit"],
+                      "groups": data["rows"],
+                      "flat": data["flat_rows"]},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def export_table(
+        rows: list[dict[str, Any]],
+        filename: str = "export",
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """把算量结果（flat_rows）导出为 CSV 文件，返回文件路径。
+
+        rows 传 aggregate_quantities / aggregate_by_template 返回的 flat 数组。
+        filename 不含扩展名，默认 export，存到项目同级 output 目录。
+        """
+        import csv
+        import os
+        import time
+
+        def _run() -> dict[str, Any]:
+            if not rows:
+                raise errors.InvalidArgumentError("rows", "rows 为空，无可导出数据")
+            # 输出目录：archicad-mcp/output/
+            out_dir = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "output")
+            os.makedirs(out_dir, exist_ok=True)
+            safe_name = "".join(
+                c for c in filename if c.isalnum() or c in "-_") or "export"
+            ts = time.strftime("%Y%m%d_%H%M%S")
+            path = os.path.join(out_dir, f"{safe_name}_{ts}.csv")
+            fieldnames = list(rows[0].keys())
+            with open(path, "w", newline="", encoding="utf-8-sig") as f:
+                w = csv.DictWriter(f, fieldnames=fieldnames)
+                w.writeheader()
+                w.writerows(rows)
+            return success_result(
+                instance=instance,
+                count=len(rows),
+                data={"file_path": path, "rows": len(rows),
+                      "columns": fieldnames},
+            )
+        return safe(instance, _run)

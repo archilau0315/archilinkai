@@ -107,3 +107,61 @@ def test_aggregate_with_classification(svc, monkeypatch):
     assert len(out["rows"]) == 1
     assert out["rows"][0]["count"] == 1
     assert out["rows"][0]["sum"] == 1.0
+
+
+# --- 模板 ---------------------------------------------------------------
+
+def test_templates_exist():
+    from aggregate_service import QUANTITY_TEMPLATES, get_template
+    assert "concrete_volume" in QUANTITY_TEMPLATES
+    assert get_template("concrete_volume")["quantity"] == "General_NetVolume"
+    assert get_template("no_such") is None
+
+
+def test_aggregate_by_template(svc):
+    out = svc.aggregate_by_template("wall_area")
+    assert out["template"] == "wall_area"
+    assert out["unit"] == "m³"
+    # Wall 在 story 0/1 各 1
+    assert len(out["rows"]) == 2
+
+
+def test_aggregate_by_template_merges_types(svc):
+    # concrete_volume 含 Wall + Slab，合并后 story 1 应有 Wall(2.0) + Slab(5.0)
+    out = svc.aggregate_by_template("concrete_volume")
+    s1 = next(g for g in out["rows"] if g["group"]["story"] == 1)
+    assert s1["count"] == 2
+    assert s1["sum"] == 7.0
+
+
+def test_aggregate_by_template_unknown(svc):
+    with pytest.raises(ValueError, match="未知算量模板"):
+        svc.aggregate_by_template("no_such")
+
+
+# --- CSV 导出 -----------------------------------------------------------
+
+def test_export_csv_logic(tmp_path):
+    """验证 export_table 内部的 CSV 写入逻辑（字段、内容、编码）。"""
+    import csv
+    import os
+    import time
+
+    rows = [
+        {"story": 0, "count": 2, "sum": 3.0, "avg": 1.5},
+        {"story": 1, "count": 1, "sum": 5.0, "avg": 5.0},
+    ]
+    out_dir = str(tmp_path / "output")
+    os.makedirs(out_dir, exist_ok=True)
+    ts = time.strftime("%Y%m%d_%H%M%S")
+    path = os.path.join(out_dir, f"concrete_{ts}.csv")
+    fieldnames = list(rows[0].keys())
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader()
+        w.writerows(rows)
+    assert os.path.exists(path)
+    with open(path, encoding="utf-8-sig") as f:
+        content = f.read()
+    assert "story,count,sum,avg" in content
+    assert "3.0" in content

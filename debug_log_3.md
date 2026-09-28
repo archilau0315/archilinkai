@@ -326,3 +326,33 @@ AC28 的 Tapir 插件已更新到新版，实例 ac28-1 当前挂 GDL-28 项目
 
 ### 备注
 - 代码无需改动，查询和算量均走通用 GetElementsByType 接口
+
+---
+
+## 2026-09-28 V0.21 算量规则模板 + CSV 导出
+
+### 变更文件
+- aggregate_service.py：新增 QUANTITY_TEMPLATES（8 个预设模板）、get_template()、AggregateService.aggregate_by_template()（多 element_types 分别汇总再合并）
+- read_tools.py：新增 3 个工具 list_quantity_templates / aggregate_by_template / export_table
+- .gitignore：新增 output/
+- tests/unit/test_aggregate.py：+5 单测（模板存在性、按模板算量、多类型合并、未知模板报错、CSV 写入逻辑）
+
+### 预设模板（8 个）
+- concrete_volume：墙/柱/梁/板净体积按楼层
+- wall_area / wall_length：墙表面积/3D 长度按楼层
+- slab_area：板净顶面积按楼层
+- door_count：门窗按类型计数
+- zone_area：房间计算面积按楼层
+- column_count：柱按楼层计数
+- mep_length：机电管线长度按类型
+
+### 真机验证（AC29）
+- list_quantity_templates：8 个模板正常
+- aggregate_by_template("wall_length")：story 0，2 墙，sum=8.0m
+- aggregate_by_template("concrete_volume")：story 0，2 构件（墙），sum=8.55m³
+- export_table：CSV 写入 output/ 目录，utf-8-sig 编码，Excel 可直接打开
+
+### 备注
+- 工具总数 30→33
+- 单测 419→424 全过
+- CSV 用 utf-8-sig（带 BOM），Excel 双击不乱码

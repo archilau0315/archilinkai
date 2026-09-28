@@ -3,3 +3,4 @@ __pycache__/
 .operations.jsonl
 benchmark_results.json
 benchmark_results.md
+output/

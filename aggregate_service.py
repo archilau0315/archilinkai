@@ -14,6 +14,64 @@ import property_service
 from query_engine import engine, MAX_LIMIT
 from schemas import Filter, Operator, QueryRequest
 
+# 算量规则模板：预设常用算量场景，LLM 直接按模板名调用即可
+# 字段与 aggregate() 参数一一对应；description 供人/模型理解用途
+QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
+    "concrete_volume": {
+        "description": "混凝土体积：按楼层汇总墙/柱/梁/板的净体积",
+        "quantity": "General_NetVolume",
+        "group_by": ["story"],
+        "element_types": ["Wall", "Column", "Beam", "Slab"],
+    },
+    "wall_area": {
+        "description": "墙体面积：按楼层汇总所有墙的表面积",
+        "quantity": "General_SurfaceArea",
+        "group_by": ["story"],
+        "element_types": ["Wall"],
+    },
+    "wall_length": {
+        "description": "墙体长度：按楼层汇总所有墙的 3D 长度",
+        "quantity": "General_3DLength",
+        "group_by": ["story"],
+        "element_types": ["Wall"],
+    },
+    "slab_area": {
+        "description": "楼板面积：按楼层汇总板的净顶面积",
+        "quantity": "General_NetTopSurfaceArea",
+        "group_by": ["story"],
+        "element_types": ["Slab"],
+    },
+    "door_count": {
+        "description": "门窗计数：按类型统计门和窗的数量",
+        "quantity": "General_3DLength",
+        "group_by": ["type"],
+        "element_types": ["Door", "Window"],
+    },
+    "zone_area": {
+        "description": "房间面积：按楼层汇总房间区域的计算面积",
+        "quantity": "Zone_CalculatedArea",
+        "group_by": ["story"],
+        "element_types": ["Zone"],
+    },
+    "column_count": {
+        "description": "柱计数：按楼层统计柱的数量",
+        "quantity": "General_Height",
+        "group_by": ["story"],
+        "element_types": ["Column"],
+    },
+    "mep_length": {
+        "description": "机电管线长度：按专业汇总风管/水管/桥架的长度",
+        "quantity": "General_3DLength",
+        "group_by": ["type"],
+        "element_types": ["MEPRoutingElement"],
+    },
+}
+
+
+def get_template(name: str) -> dict[str, Any]:
+    """按名取模板，找不到返回 None。"""
+    return QUANTITY_TEMPLATES.get(name)
+
 
 def _fetch_all(request: QueryRequest, instance: str | None) -> list:
     """循环翻页取全部匹配元素（query 单次最多 MAX_LIMIT）。"""
@@ -174,6 +232,51 @@ class AggregateService:
             if guids else None,
             "rows": groups,
             "flat_rows": _flatten(groups, quantity),
+        }
+
+    def aggregate_by_template(
+        self,
+        template_name: str,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """按预设模板算量。模板含 quantity/group_by/element_types。
+
+        多 element_types 时分别汇总再合并（相同维度键的 sum 相加、count 相加）。
+        """
+        tpl = get_template(template_name)
+        if tpl is None:
+            available = ", ".join(QUANTITY_TEMPLATES)
+            raise ValueError(f"未知算量模板：{template_name}，可选：{available}")
+        element_types = tpl["element_types"]
+        quantity = tpl["quantity"]
+        group_by = tpl["group_by"]
+        merged: dict[tuple, dict[str, Any]] = {}
+        unit = None
+        for et in element_types:
+            r = self.aggregate(
+                quantity=quantity, group_by=group_by,
+                element_type=et, instance=instance,
+            )
+            unit = r.get("unit") or unit
+            for row in r["rows"]:
+                key = tuple(sorted(row["group"].items()))
+                g = merged.setdefault(
+                    key, {"group": row["group"], "count": 0,
+                          "sum": 0.0, "skipped_none": 0})
+                g["count"] += row["count"]
+                g["sum"] += row["sum"]
+                g["skipped_none"] += row.get("skipped_none", 0)
+        for g in merged.values():
+            denom = g["count"] - g["skipped_none"]
+            g["avg"] = round(g["sum"] / denom, 4) if denom > 0 else None
+            g["sum"] = round(g["sum"], 4)
+        rows = sorted(merged.values(), key=lambda g: str(g["group"]))
+        return {
+            "unit": unit,
+            "rows": rows,
+            "flat_rows": _flatten(rows, quantity),
+            "template": template_name,
+            "description": tpl["description"],
         }
 
 
