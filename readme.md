@@ -348,6 +348,7 @@ offset 方向；屋顶/板建在非当前楼层会假成功（level 填当前楼
 - V0.26 GB 50500 清单编码+工程量清单报表：新增 code_table.py（16 类构件→清单编码映射，如 Wall 010502001/Slab 010505001）；新增 report_service.py（GB 50500 标准清单报表排版：标题/项目信息/表头/数据行/合计）；aggregate() / 模板支持 with_code 参数（True 时按 type 分项，自动附加 code/code_name/code_unit 列）；8 个预设模板启用 with_code；export_table 加 fmt=report 模式（一键出 GB 50500 清单 xlsx）+ value_column/project_name 参数。单测 455 全过
 - V0.27 复合墙分层算量：调研确认 Tapir/官方 API 无复合结构直接命令，但墙体 BuiltIn 属性已含分层信息。按 GB 50500 清单规则（核心层按体积 m³，饰面/保温层按面积 m²）新增 3 个模板：wall_composite_layers（内/外饰面面积 + 核心层体积，3 量同表，用 Wall_NetInsideSurfaceArea / Wall_NetOutsideSurfaceArea / General_NetVolume）、wall_insulation_area（保温层面积=外饰面面积，因保温层贴外墙外侧）、wall_core_volume（公式法：净体积 - 内层体积 - 外层体积 = 核心结构层体积）。复用 V0.25 formula + V0.26 with_code 现有能力，无需新命令/模块。单测 461 全过
 - V0.28 幕墙专属算量模板：V0.19 已实现幕墙读取+算量（通用 aggregate 路径，CW002 验证 SurfaceArea=10.0 m²），但缺专属模板。新增 curtain_wall_area 模板（quantity=General_SurfaceArea，element_types=[CurtainWall]，with_code=True 自动附 010805001/幕墙/m²）。幕墙无体积属性（General_GrossVolume=None），仅按面积 m² 算。单测 462 全过
+- V0.29 栏杆专属算量模板：栏杆与幕墙同属只读可算量构件（V0.20 确认 Tapir 未实现 CreateRailings），新增 railing_length 模板（quantity=General_3DLength，GB 50500 栏杆按 m 计，with_code=True 自动附 010606001/金属栏杆/m）。真机 AC28 验证 rows=[]（项目无栏杆实例），通道正常无报错。单测 463 全过
 
 ## 实机验证进度（2026-09-23）
 

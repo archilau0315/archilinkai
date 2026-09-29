@@ -645,9 +645,9 @@ def test_wall_core_volume_formula_none_skipped():
 
 
 def test_template_count_after_v027():
-    """V0.28 后模板总数应为 14（10+3+1 幕墙）。"""
+    """V0.29 后模板总数应为 15（10+3+1 幕墙+1 栏杆）。"""
     from aggregate_service import QUANTITY_TEMPLATES
-    assert len(QUANTITY_TEMPLATES) == 14
+    assert len(QUANTITY_TEMPLATES) == 15
 
 
 def test_template_curtain_wall_area_registered():
@@ -656,4 +656,13 @@ def test_template_curtain_wall_area_registered():
     tpl = QUANTITY_TEMPLATES["curtain_wall_area"]
     assert tpl["quantity"] == "General_SurfaceArea"
     assert tpl["element_types"] == ["CurtainWall"]
+    assert tpl["with_code"] is True
+
+
+def test_template_railing_length_registered():
+    """railing_length 模板已注册（V0.29 栏杆专属，只读类型）。"""
+    from aggregate_service import QUANTITY_TEMPLATES
+    tpl = QUANTITY_TEMPLATES["railing_length"]
+    assert tpl["quantity"] == "General_3DLength"
+    assert tpl["element_types"] == ["Railing"]
     assert tpl["with_code"] is True

@@ -143,6 +143,13 @@ QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
         "element_types": ["CurtainWall"],
         "with_code": True,
     },
+    "railing_length": {
+        "description": "栏杆长度：按楼层汇总栏杆 3D 长度（V0.29，GB 50500 栏杆按 m 计）",
+        "quantity": "General_3DLength",
+        "group_by": ["story"],
+        "element_types": ["Railing"],
+        "with_code": True,
+    },
 }
 
 

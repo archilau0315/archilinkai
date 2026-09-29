@@ -722,3 +722,27 @@ aggregate_by_template。
 - 复合结构名 Construction_CompositeName 作为附加分组维度（同 type 不同 composite 分项出表）
 - 扩展 code_table 支持按 layer 细分清单编码（保温层/饰面层独立编码，如保温层 011001003）
 
+---
+
+## 2026-09-29 V0.29 栏杆专属算量模板（railing_length）
+
+### 背景
+栏杆（Railing）与幕墙同属只读可算量构件（V0.20 确认 Tapir 未实现 CreateRailings），
+QUANTITY_TEMPLATES 缺专属模板。
+
+### 变更
+- aggregate_service.py（615→623 行，+7）：新增 railing_length 模板
+  - quantity: General_3DLength（GB 50500 栏杆按 m 计）
+  - element_types: ["Railing"]，with_code: True（010606001/金属栏杆/m）
+- tests/unit/test_aggregate.py（+1 测试，51→52 单文件 / 462→463 全套件）：
+  test_template_railing_length_registered + 总数断言 14→15
+
+### 真机验证（AC28 testwall）
+- rows=[]（项目无栏杆实例，与 V0.20 查询结果一致），通道正常无报错
+- 模板描述/element_types/with_code 均正确返回
+
+### 备注
+- 单测 463 全过，模板总数 14→15，工具数仍 34
+- aggregate_service.py 623 行（+7，未超 800）
+- 真机 AC29 未加载（当前仅 AC28 实例），AC29 验证留待后续
+
