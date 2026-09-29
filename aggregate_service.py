@@ -297,10 +297,16 @@ def _flatten(groups: list[dict[str, Any]],
                 row[f"sum_{qty}"] = g.get(f"sum_{qty}")
                 row[f"avg_{qty}"] = g.get(f"avg_{qty}")
                 row[f"skipped_none_{qty}"] = g.get(f"skipped_none_{qty}")
+                # 损耗系数列（V0.29 修复：flat_rows 也包含）
+                if f"sum_with_waste_{qty}" in g:
+                    row[f"sum_with_waste_{qty}"] = g[f"sum_with_waste_{qty}"]
             else:
                 row["sum"] = g["sum"]
                 row["avg"] = g["avg"]
                 row["skipped_none"] = g["skipped_none"]
+                # 损耗系数列（V0.29 修复：flat_rows 也包含）
+                if "sum_with_waste" in g:
+                    row["sum_with_waste"] = g["sum_with_waste"]
         row["element_names"] = ", ".join(g.get("element_names", []))
         out.append(row)
     return out

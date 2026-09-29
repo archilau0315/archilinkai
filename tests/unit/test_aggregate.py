@@ -179,6 +179,14 @@ def test_template_concrete_has_waste(svc):
     assert g["sum_with_waste"] > g["sum"]
 
 
+def test_flatten_includes_waste(svc):
+    """flat_rows 也包含 sum_with_waste（V0.29 修复）。"""
+    out = svc.aggregate_by_template("concrete_volume")
+    f = out["flat_rows"][0]
+    assert "sum_with_waste" in f
+    assert f["sum_with_waste"] == round(f["sum"] * 1.03, 4)
+
+
 # --- 多量合并 ------------------------------------------------------------
 
 def test_aggregate_multi_quantities(svc):
