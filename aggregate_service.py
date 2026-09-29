@@ -72,22 +72,28 @@ QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
         "with_code": True,
     },
     "door_window_area": {
-        "description": "门窗面积：按类型统计门和窗的表面积（V0.29 修正：原 door_count 用 3DLength 不适用）",
-        "quantity": "General_SurfaceArea",
+        "description": "门窗洞口面积：按类型统计门和窗的洞口面积（宽×高，GB 50500 规则）",
+        "formula": "General_Width * General_Height",
+        "formula_name": "洞口面积",
+        "formula_unit": "m²",
         "group_by": ["type"],
         "element_types": ["Door", "Window"],
         "with_code": True,
     },
     "door_area": {
-        "description": "门面积：按楼层汇总门的表面积",
-        "quantity": "General_SurfaceArea",
+        "description": "门洞口面积：按楼层汇总门的洞口面积（宽×高）",
+        "formula": "General_Width * General_Height",
+        "formula_name": "洞口面积",
+        "formula_unit": "m²",
         "group_by": ["story"],
         "element_types": ["Door"],
         "with_code": True,
     },
     "window_area": {
-        "description": "窗面积：按楼层汇总窗的表面积",
-        "quantity": "General_SurfaceArea",
+        "description": "窗洞口面积：按楼层汇总窗的洞口面积（宽×高）",
+        "formula": "General_Width * General_Height",
+        "formula_name": "洞口面积",
+        "formula_unit": "m²",
         "group_by": ["story"],
         "element_types": ["Window"],
         "with_code": True,
@@ -445,7 +451,9 @@ class AggregateService:
                     if info:
                         g["group"]["code"] = info["code"]
                         g["group"]["code_name"] = info["name"]
-                        g["group"]["code_unit"] = info["unit"]
+                        # formula 模式用 formula_unit，否则用 code_table 清单单位
+                        g["group"]["code_unit"] = (
+                            formula_unit if use_formula else info["unit"])
         # 单位
         if use_formula:
             units = formula_unit

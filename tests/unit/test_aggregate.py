@@ -659,11 +659,11 @@ def test_template_count_after_v027():
 
 
 def test_template_door_window_area_registered():
-    """door_area / window_area 模板已注册（V0.29 门窗专属）。"""
+    """door_area / window_area / door_window_area 模板已注册（V0.29 门窗专属）。"""
     from aggregate_service import QUANTITY_TEMPLATES
     assert QUANTITY_TEMPLATES["door_area"]["element_types"] == ["Door"]
     assert QUANTITY_TEMPLATES["window_area"]["element_types"] == ["Window"]
-    assert QUANTITY_TEMPLATES["door_window_area"]["quantity"] == "General_SurfaceArea"
+    assert "formula" in QUANTITY_TEMPLATES["door_window_area"]
 
 
 def test_template_curtain_wall_area_registered():
