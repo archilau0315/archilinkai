@@ -724,6 +724,40 @@ aggregate_by_template。
 
 ---
 
+## V0.32 概算表框架 + 定额匹配引擎
+
+### 变更
+1. **estimate_schema.py**（新增 82 行）：概算表 JSON Schema
+   - `create_estimate_item()`：创建概算条目（无价格，待定额接入）
+   - `create_estimate_table()`：创建概算表（含 summary 框架）
+   - `aggregate_rows_to_estimate_items()`：flat_rows → 概算条目转换
+2. **quota_matcher.py**（新增 120 行）：定额匹配引擎
+   - `extract_specs()`：从文本提取规格特征（C40/P8/矩形/干挂/δ50 等）
+   - `convert_unit()`：单位换算（m³↔10m³、m²↔100m²、t↔kg）
+   - `QuotaMatcher.match()`：名称相似度 + 规格加分匹配定额
+   - `QuotaMatcher.match_best()`：返回最佳匹配
+   - `match_aggregate_to_quota()`：aggregate flat_rows → 定额匹配
+
+### 匹配规则
+- 名称相似度：SequenceMatcher 计算（0-1）
+- 规格特征加分：强度等级/抗渗等级/截面类型/材料/施工工艺/厚度
+- 单位换算：支持 10m³/100m²/10m/100m/t/kg 等定额常用单位
+
+### 单测
+- test_estimate_schema.py：19 个测试
+  - TestExtractSpecs：4 个（强度等级/多规格/保温/空文本）
+  - TestConvertUnit：5 个（同单位/m³→10m³/m²→100m²/反向/未知单位）
+  - TestSimilarity：3 个（完全相同/部分相同/完全不同）
+  - TestQuotaMatcher：4 个（基础匹配/规格加分/最佳匹配/无匹配）
+  - TestCreateEstimateItem：2 个（基础/带规格）
+  - TestCreateEstimateTable：1 个（基础）
+
+### 统计
+- 单测：465 → 484（+19）
+- 新增文件：estimate_schema.py（82 行）、quota_matcher.py（120 行）、test_estimate_schema.py（95 行）
+
+---
+
 ## 2026-09-29 V0.29 栏杆专属算量模板（railing_length）
 
 ### 背景
