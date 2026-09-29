@@ -71,11 +71,25 @@ QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
         "element_types": ["Slab"],
         "with_code": True,
     },
-    "door_count": {
-        "description": "门窗计数：按类型统计门和窗的数量",
-        "quantity": "General_3DLength",
+    "door_window_area": {
+        "description": "门窗面积：按类型统计门和窗的表面积（V0.29 修正：原 door_count 用 3DLength 不适用）",
+        "quantity": "General_SurfaceArea",
         "group_by": ["type"],
         "element_types": ["Door", "Window"],
+        "with_code": True,
+    },
+    "door_area": {
+        "description": "门面积：按楼层汇总门的表面积",
+        "quantity": "General_SurfaceArea",
+        "group_by": ["story"],
+        "element_types": ["Door"],
+        "with_code": True,
+    },
+    "window_area": {
+        "description": "窗面积：按楼层汇总窗的表面积",
+        "quantity": "General_SurfaceArea",
+        "group_by": ["story"],
+        "element_types": ["Window"],
         "with_code": True,
     },
     "zone_area": {
