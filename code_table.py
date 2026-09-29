@@ -26,9 +26,11 @@ CODE_TABLE: dict[str, dict[str, str]] = {
     "MEPRoutingElement":{"code": "030801001", "name": "机电管线",       "unit": "m"},
     "Morph":            {"code": "010507001", "name": "现浇混凝土其他构件", "unit": "m³"},
     "Opening":          {"code": "010808001", "name": "门窗洞口",       "unit": "m²"},
-    "Railing":          {"code": "010606001", "name": "金属栏杆",       "unit": "m"},
+    "Railing":          {"code": "011503001", "name": "金属扶手栏杆",   "unit": "m"},
     "Shell":            {"code": "010507002", "name": "壳体",           "unit": "m³"},
     "Skylight":         {"code": "010807002", "name": "采光天窗",       "unit": "樘"},
+    "FacadePaint":      {"code": "011406001", "name": "墙面喷刷涂料",   "unit": "m²"},
+    "Masonry":          {"code": "010402001", "name": "砖砌体",         "unit": "m³"},
 }
 
 

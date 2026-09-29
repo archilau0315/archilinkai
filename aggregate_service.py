@@ -170,6 +170,57 @@ QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
         "element_types": ["Railing"],
         "with_code": True,
     },
+    "concrete_volume_by_grade": {
+        "description": "混凝土体积分强度：按楼层+类型+强度等级汇总（V0.30，概算分 C25/C30/C35/C40）",
+        "quantity": "General_NetVolume",
+        "group_by": ["story", "type", "General_ConcreteGrade"],
+        "element_types": ["Wall", "Column", "Beam", "Slab"],
+        "waste_factor": 0.03,
+        "with_code": True,
+    },
+    "roller_shutter_area": {
+        "description": "卷帘门面积：按楼层汇总防火卷帘门洞口面积（V0.30，GB 50500 规则）",
+        "formula": "General_Width * General_Height",
+        "formula_name": "洞口面积",
+        "formula_unit": "m²",
+        "group_by": ["story"],
+        "element_types": ["Door"],
+        "with_code": True,
+    },
+    "rebar_estimate": {
+        "description": "钢筋估算：按混凝土体积×含钢率估算（V0.30，框架结构 0.12-0.18t/m³，默认 0.15）",
+        "formula": "General_NetVolume * 0.15",
+        "formula_name": "钢筋估算",
+        "formula_unit": "t",
+        "group_by": ["story", "type"],
+        "element_types": ["Wall", "Column", "Beam", "Slab"],
+        "with_code": True,
+    },
+    "formwork_area": {
+        "description": "模板面积：按混凝土表面积×0.8 估算（V0.30，扣除底面/顶面不支模部分）",
+        "formula": "General_SurfaceArea * 0.8",
+        "formula_name": "模板面积",
+        "formula_unit": "m²",
+        "group_by": ["story", "type"],
+        "element_types": ["Wall", "Column", "Beam", "Slab"],
+        "with_code": True,
+    },
+    "facade_paint_area": {
+        "description": "外墙真石漆面积：按外饰面面积算（V0.31，概算外檐工程）",
+        "quantity": "Wall_NetOutsideSurfaceArea",
+        "group_by": ["story"],
+        "element_types": ["Wall"],
+        "with_code": True,
+        "code_override": {"code": "011406001", "name": "墙面喷刷涂料", "unit": "m²"},
+    },
+    "masonry_volume": {
+        "description": "砌体体积：按楼层汇总砌体墙净体积（V0.31，需配合 filters 筛选砌体墙）",
+        "quantity": "General_NetVolume",
+        "group_by": ["story"],
+        "element_types": ["Wall"],
+        "with_code": True,
+        "code_override": {"code": "010402001", "name": "砖砌体", "unit": "m³"},
+    },
 }
 
 
@@ -350,6 +401,7 @@ class AggregateService:
         formula_name: str | None = None,
         formula_unit: str | None = None,
         with_code: bool | None = None,
+        code_override: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """返回 {"unit"/"units", "rows", "flat_rows"}。
 
@@ -359,6 +411,8 @@ class AggregateService:
         waste_factor: 损耗系数（如 0.03=3%），结果加 sum_with_waste 字段。
         with_code: True 时按 GB 50500 清单编码附加 code/code_name/code_unit 列。
           每组按 type 查 code_table.lookup，要求 group_by 含 type（缺则自动加）。
+        code_override: 模板级清单编码覆盖（如 {"code": "011406001", "name": "墙面喷刷涂料", "unit": "m²"}），
+          用于同一 element_type 不同用途（如 Wall 用于真石漆/砌体）时指定正确编码。
         """
         if quantities and not quantity:
             quantity = quantities
@@ -447,7 +501,10 @@ class AggregateService:
                 g["group"]["type_name"] = _TYPE_CN.get(
                     g["group"]["type"], g["group"]["type"])
                 if with_code:
-                    info = code_table.lookup(g["group"]["type"])
+                    if code_override:
+                        info = code_override
+                    else:
+                        info = code_table.lookup(g["group"]["type"])
                     if info:
                         g["group"]["code"] = info["code"]
                         g["group"]["code_name"] = info["name"]
@@ -492,6 +549,7 @@ class AggregateService:
         formula = tpl.get("formula")
         formula_name = tpl.get("formula_name")
         formula_unit = tpl.get("formula_unit")
+        code_override = tpl.get("code_override")
         if formula:
             quantity = formula_name or "formula_result"
             is_multi = False
@@ -505,7 +563,7 @@ class AggregateService:
                 waste_factor=waste,
                 formula=formula, formula_name=formula_name,
                 formula_unit=formula_unit,
-                with_code=with_code,
+                with_code=with_code, code_override=code_override,
             )
             if is_multi:
                 units.update(r.get("units", {}))
@@ -575,6 +633,7 @@ class AggregateService:
         formula = template.get("formula")
         formula_name = template.get("formula_name")
         formula_unit = template.get("formula_unit")
+        code_override = template.get("code_override")
         if formula:
             quantity = formula_name or "formula_result"
             is_multi = False
@@ -587,7 +646,7 @@ class AggregateService:
                 waste_factor=waste,
                 formula=formula, formula_name=formula_name,
                 formula_unit=formula_unit,
-                with_code=with_code,
+                with_code=with_code, code_override=code_override,
             )
             if is_multi:
                 units.update(r.get("units", {}))
