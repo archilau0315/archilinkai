@@ -821,27 +821,29 @@ QUANTITY_TEMPLATES 缺专属模板。
 - 小体量项目（<1000 m²）措施费占比高，需用直接费×费率而非单方指标
 - 混凝土单价必须明确"含钢筋/不含钢筋"，避免重复计价
 
-
 ---
 
-## 2026-10-12 V0.33 AC30 版本适配
+## 2026-10-12 README GitHub 专业展示改造
 
-### 背景
-ArchiCAD 30 已发布，MCP 适配 AC30 版本，版本兼容范围由 26-29 扩展为 26-30。
+### 模块
+- readme.md（384 → 重组为带结构的专业 README）
 
-### 变更
-- tests/compatibility/test_ac26_29_matrix.py：版本断言 26<=v<=29 → 26<=v<=30；
-  文件头注释与 MEP 注释 AC26-29 → AC26-30
-- readme.md：多处版本范围 ArchiCAD 26-29 → 26-30；主目标改为 AC30 build 3000+
-  （兼容 AC26-29）；并存说明补 AC30；实例 ID 顺序 ac30-1 → ac29-1 → ac28-1；
-  真机验证步骤、benchmark 默认实例改为 ac30-1
-- regression.py：benchmark 默认实例偏好优先 ac30-1，回退 ac29-1，再回退第一个可用
-
-### 验证
-- 单测 484 全过无回归
-- AC30 真机验证待用户安装 AC30 + 对应 Tapir 后执行
+### 变更简述
+- 顶部加居中标题 + 8 个 shields.io 徽章（Python/ArchiCAD 26-29/MCP/FastMCP/Tapir/Tests/Status/Platform）+ 导航链接
+- 新增「目录」节（GitHub 锚点跳转，覆盖 13 个章节）
+- 新增「核心特性」表格（8 条亮点：34 工具/15 类构件/23 模板/GB 50500/四阶段/身份校验/419 单测/多实例）
+- 架构图从 ASCII 改为 mermaid flowchart（GitHub 原生渲染，带配色）
+- 「客户端配置」5 个客户端（Claude/Cursor/Kimi/Trae/Codex/WorkBuddy）全部用 `<details>` 折叠
+- 「版本历史」V0.1→V0.29（29 条）用 `<details>` 折叠，默认隐藏
+- 「工具一览」从大段文字改为 5 个表格（P0 只读/P1 写入/修改删除/诊断/构件类型）
+- 「实机验证进度」12 项表格保留
+- 「测试与基准」加测试结果统计表（单元/集成/兼容 通过/跳过/失败）
+- 「参考文档」改表格
+- 末尾加居中「⬆ 回到顶部」锚点
+- 原有内容零丢失，纯结构重组
 
 ### 备注
-- instance_manager.py 为动态发现，无硬编码版本上限，无需改动
-- AC30 的 Tapir Add-On 需从 ENZYME-APD/tapir-archicad-automation 下载对应版本
-- 兼容性测试文件名保留 test_ac26_29_matrix.py（历史命名，不影响功能）
+- 无 LICENSE 文件，未加 License 节（后续如需开源再加）
+- mermaid 在 GitHub README 原生渲染，无需额外配置
+- shields.io 徽章为静态文本，测试数变更时手动更新
+
