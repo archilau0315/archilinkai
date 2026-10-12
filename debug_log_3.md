@@ -821,3 +821,27 @@ QUANTITY_TEMPLATES 缺专属模板。
 - 小体量项目（<1000 m²）措施费占比高，需用直接费×费率而非单方指标
 - 混凝土单价必须明确"含钢筋/不含钢筋"，避免重复计价
 
+
+---
+
+## 2026-10-12 V0.33 AC30 版本适配
+
+### 背景
+ArchiCAD 30 已发布，MCP 适配 AC30 版本，版本兼容范围由 26-29 扩展为 26-30。
+
+### 变更
+- tests/compatibility/test_ac26_29_matrix.py：版本断言 26<=v<=29 → 26<=v<=30；
+  文件头注释与 MEP 注释 AC26-29 → AC26-30
+- readme.md：多处版本范围 ArchiCAD 26-29 → 26-30；主目标改为 AC30 build 3000+
+  （兼容 AC26-29）；并存说明补 AC30；实例 ID 顺序 ac30-1 → ac29-1 → ac28-1；
+  真机验证步骤、benchmark 默认实例改为 ac30-1
+- regression.py：benchmark 默认实例偏好优先 ac30-1，回退 ac29-1，再回退第一个可用
+
+### 验证
+- 单测 484 全过无回归
+- AC30 真机验证待用户安装 AC30 + 对应 Tapir 后执行
+
+### 备注
+- instance_manager.py 为动态发现，无硬编码版本上限，无需改动
+- AC30 的 Tapir Add-On 需从 ENZYME-APD/tapir-archicad-automation 下载对应版本
+- 兼容性测试文件名保留 test_ac26_29_matrix.py（历史命名，不影响功能）

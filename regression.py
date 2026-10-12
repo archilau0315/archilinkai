@@ -70,7 +70,10 @@ def main() -> int:
             mgr = instance_manager.manager
             mgr.discover_instances()
             ids = [i.instance_id for i in mgr.list_instances()]
-            inst = "ac29-1" if "ac29-1" in ids else (ids[0] if ids else None)
+            # 优先最新版（AC30），回退到 AC29，再回退第一个可用
+            inst = ("ac30-1" if "ac30-1" in ids
+                    else "ac29-1" if "ac29-1" in ids
+                    else (ids[0] if ids else None))
             b = benchmark.run(instance=inst)
             report["benchmark"] = b
             print(f"  OK  {len(b['items'])} 项命令，实例 {b['instance']}")

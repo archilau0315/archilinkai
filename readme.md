@@ -1,11 +1,11 @@
 # ArchiCAD MCP Server
 
-让 LLM 客户端（Claude Desktop、Cursor、Kimi 等）通过自然语言读取和操作 ArchiCAD 26–29 项目中的 BIM 数据。
+让 LLM 客户端（Claude Desktop、Cursor、Kimi 等）通过自然语言读取和操作 ArchiCAD 26–30 项目中的 BIM 数据。
 
 ## 目标
 
 - 基于 MCP（Model Context Protocol）协议，使用 Python + FastMCP 实现
-- 同一套代码兼容 ArchiCAD 26–29 多版本、多实例
+- 同一套代码兼容 ArchiCAD 26–30 多版本、多实例
 - 通过官方 `archicad` Python 包 + 开源 Tapir Add-On 连接 ArchiCAD
 
 ## 架构
@@ -20,28 +20,28 @@ ArchiCAD 实例 (经 Tapir Add-On)
 
 ## 运行前提
 
-1. ArchiCAD 26–29 已启动并打开项目（主目标 AC29 build 3000+）
+1. ArchiCAD 26–30 已启动并打开项目（主目标 AC30 build 3000+，兼容 AC26-29）
 2. 选项 → 工作环境 → 连接端口 已启用
 3. Python ≥ 3.10
 4. 对应版本的 Tapir Add-On 已加载
    - 下载：https://github.com/ENZYME-APD/tapir-archicad-automation
    - 通过 选项 → Add-On 管理器 → 添加 加载
 
-### AC28 + AC29 双版本并存说明
+### AC28 + AC29 + AC30 多版本并存说明
 
-本项目支持同时连接多个 ArchiCAD 大版本实例。你装的是 AC28 和 AC29，需注意：
+本项目支持同时连接多个 ArchiCAD 大版本实例。你装的是 AC28、AC29 和 AC30，需注意：
 
-- **Tapir Add-On 与大版本一一绑定**：AC29 的 Tapir 不适用于 AC28，反之亦然。
-  必须分别下载 AC28 和 AC29 对应版本的 `.apx`，在各自 ArchiCAD 里通过
+- **Tapir Add-On 与大版本一一绑定**：AC30 的 Tapir 不适用于 AC29/AC28，反之亦然。
+  必须分别下载 AC28、AC29 和 AC30 对应版本的 `.apx`，在各自 ArchiCAD 里通过
   `选项 → Add-On 管理器 → 添加` 加载。
 - **端口分配**：每个 ArchiCAD 实例占用 19723–19743 中的一个端口。先启动的
-  实例占 19723，第二个占 19724，依此类推。建议先开 AC29 再开 AC28，便于
+  实例占 19723，第二个占 19724，依此类推。建议先开 AC30 再开 AC29、AC28，便于
   按端口顺序识别。
 - **实例 ID 规则**：MCP Server 启动时扫描全部端口，按 `ac + 主版本号 + 序号`
-  命名，例如 `ac29-1`、`ac28-1`。多实例并存时，所有工具调用须带 `instance`
+  命名，例如 `ac30-1`、`ac29-1`、`ac28-1`。多实例并存时，所有工具调用须带 `instance`
   参数指定目标（仅一个实例时可省略）。
 - **客户端切换**：在 Kimi / Trae 里调用 `list_instances` 可看到当前所有实例；
-  调 `project_summary` 等工具时传 `instance="ac29-1"` 或 `instance="ac28-1"`。
+  调 `project_summary` 等工具时传 `instance="ac30-1"` 或 `instance="ac29-1"`。
 
 ## 安装
 
@@ -186,9 +186,9 @@ WorkBuddy 桌面版读取的用户级配置：`C:\Users\<用户名>\.workbuddy\m
 
 ### 验证连接
 
-1. 启动 ArchiCAD 28 / 29 并打开项目，确认 Tapir Add-On 已加载
-2. 在客户端里让模型调用 `list_instances`，应返回两个实例
-3. 调 `project_summary` 传 `instance="ac29-1"` 看元素总数
+1. 启动 ArchiCAD 28 / 29 / 30 并打开项目，确认 Tapir Add-On 已加载
+2. 在客户端里让模型调用 `list_instances`，应返回所有实例
+3. 调 `project_summary` 传 `instance="ac30-1"`（或 `ac29-1`）看元素总数
 4. 已实测：Trae 桌面端自然语言调用成功（2 实例 / 12 墙）
 
 ### 跑测试（在项目根目录）
@@ -200,7 +200,7 @@ python -m pytest tests/compatibility/  # AC 版本兼容矩阵，需真机
 python regression.py                   # 一键回归（单测+集成+兼容+基准），--json 存报告
 ```
 
-无真机时集成/兼容性测试会自动跳过。当前结果（AC28+AC29 真机）：
+无真机时集成/兼容性测试会自动跳过。当前结果（AC28+AC29 真机，AC30 待真机验证）：
 单元 419 全过、集成 25 过 2 跳（含建→验→删→还原全链路）、兼容 12 过 1 跳过。
 
 ## 性能基准
@@ -208,7 +208,7 @@ python regression.py                   # 一键回归（单测+集成+兼容+基
 测常用只读命令多次调用的平均/最小/最大耗时（毫秒）：
 
 ```powershell
-python benchmark.py --instance ac29-1 --rounds 3
+python benchmark.py --instance ac30-1 --rounds 3
 ```
 
 结果自动存为 benchmark_results.json 和 benchmark_results.md。
