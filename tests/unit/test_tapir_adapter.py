@@ -150,5 +150,5 @@ def test_get_attributes_passes_command_and_type(monkeypatch):
 
     monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
     tapir_adapter.adapter.get_attributes("Composite", "ac29-1")
-    assert calls["cmd"] == "GetAttributes"
+    assert calls["cmd"] == "GetAttributesByType"
     assert calls["params"] == {"attributeType": "Composite"}

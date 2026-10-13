@@ -1,7 +1,7 @@
 # tests/compatibility/test_ac26_29_matrix.py
-"""ArchiCAD AC26–30 兼容性测试矩阵（V0.3 8.13）。
+"""ArchiCAD AC26–29 兼容性测试矩阵（V0.3 8.13）。
 
-需在装有 AC26–30 的环境运行，或 CI 矩阵多机并行。
+需在装有 AC26–29 的环境运行，或 CI 矩阵多机并行。
 覆盖：连接、基础命令、Tapir 命令、属性类型解析、属性取值。
 无真机时 discover 抛错，整个模块报错即提示环境不满足。
 """
@@ -43,7 +43,7 @@ class TestACVersionCompatibility:
         versions = [info.version for info in instances.values()]
         print(f"\n检测到版本: {versions}")
         for v in versions:
-            assert 26 <= v <= 30, f"不支持的版本: {v}（支持 26-30）"
+            assert 26 <= v <= 29, f"不支持的版本: {v}（支持 26-29）"
 
     def test_get_product_info(self, instances):
         for iid, info in instances.items():
@@ -177,7 +177,7 @@ class TestQuantityCompatibility:
             assert v["value"] is None or v["value"] > 0
 
     def test_mep_commands_available(self, instances):
-        """MEP 三命令在 AC26-30 应都存在（Tapir 支持）。"""
+        """MEP 三命令在 AC26-29 应都存在（Tapir 支持）。"""
         for iid in instances:
             for cmd in ("CreateMEPRoutingElements",
                         "GetMEPRoutingElements",

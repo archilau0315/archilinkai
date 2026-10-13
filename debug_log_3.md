@@ -860,10 +860,11 @@ QUANTITY_TEMPLATES 缺专属模板。
   返回 items（每项含 attributeId.guid、name 等，字段随类型而异）
 - tests/unit/test_tapir_adapter.py：+3 用例（Layer 取值/空列表/命令与参数透传）
 
-### 真机验证（AC28 build 6003，Tapir 已加载）
-- GetAttributes 返回 4010：当前 AC28 装的 Tapir 版本未注册该命令
-  （Tapir 属性命令按版本逐步补全，需较新版本才支持 GetAttributes）
-- 代码已按官方 schema 实现并 mock 单测通过，Tapir 升级后自动生效
+### 真机验证（AC28 build 6003，办公楼改造项目）
+- 初版用 GetAttributes 报 4010（命令名错）；查 Tapir 官方命令表（docs/archicad-addon/
+  command_definitions.js，共 265 个命令）确认真实命令为 **GetAttributesByType**，改名后通过
+- 实测：Layer 259 项、Composite 300 项、BuildingMaterial 379 项，
+  返回字段 attributeId.guid / index / name / modificationTime
 
 ### 备注
 - 单测 484 → 487 全过（+3）

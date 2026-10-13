@@ -135,7 +135,7 @@ class TapirAdapter:
         具体字段随类型而异，统一转 dict 透传）。
         """
         result = self.execute(
-            "GetAttributes", {"attributeType": attribute_type}, instance)
+            "GetAttributesByType", {"attributeType": attribute_type}, instance)
         data = _to_dict(result)
         if isinstance(data, dict):
             rows = data.get("attributes", [])
