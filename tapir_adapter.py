@@ -116,6 +116,33 @@ class TapirAdapter:
                 row["guid"] = str(g)
         return rows
 
+    # Tapir GetAttributes 支持的属性类型（读用；不同版本覆盖面略异）
+    ATTRIBUTE_TYPES = (
+        "Layer", "Line", "Pen", "BuildingMaterial", "Composite",
+        "Surface", "ZoneCategory", "Profile", "City", "Fill",
+        "LayerCombination", "MEPSystem",
+    )
+
+    def get_attributes(
+        self,
+        attribute_type: str,
+        instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetAttributes：按类型读项目属性列表（Layer/Pen/材料/复合结构等）。
+
+        实测入参：{"attributeType": "Layer"}，
+        返回 key：attributes（每项含 attributeId.guid、name 等，
+        具体字段随类型而异，统一转 dict 透传）。
+        """
+        result = self.execute(
+            "GetAttributes", {"attributeType": attribute_type}, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("attributes", [])
+        else:
+            rows = list(data or [])
+        return rows
+
     def set_property_values_of_elements(
         self,
         element_property_values: list[dict[str, Any]],

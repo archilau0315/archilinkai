@@ -199,6 +199,27 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def list_attributes(
+        attribute_type: str = "Layer", instance: str | None = None
+    ) -> dict[str, Any]:
+        """按类型列出项目属性（经 Tapir GetAttributes）。
+
+        attribute_type 常用：Layer（图层）、Pen（画笔）、Line（线型）、
+        BuildingMaterial（建筑材料）、Composite（复合结构）、Surface（表面材质）、
+        ZoneCategory（区域类别）、Profile（截面）、Fill（填充）、
+        LayerCombination（图层组合）、MEPSystem（机电系统）。
+        每项含 attributeId.guid 与 name，具体字段随类型而异。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_attributes(attribute_type, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), attribute_type=attribute_type, items=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
     def get_element_geometry_info(
         element_guids: list[str], instance: str | None = None
     ) -> dict[str, Any]:

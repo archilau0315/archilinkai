@@ -847,3 +847,26 @@ QUANTITY_TEMPLATES 缺专属模板。
 - mermaid 在 GitHub README 原生渲染，无需额外配置
 - shields.io 徽章为静态文本，测试数变更时手动更新
 
+---
+
+## 2026-10-13 V0.30 通道补 GetAttributes（list_attributes 工具）
+
+### 变更
+- tapir_adapter.py：新增 ATTRIBUTE_TYPES 常量（Layer/Line/Pen/BuildingMaterial/
+  Composite/Surface/ZoneCategory/Profile/City/Fill/LayerCombination/MEPSystem）+
+  get_attributes(attribute_type) 便捷方法（入参 {"attributeType":...}，
+  返回 attributes 列表透传）
+- read_tools.py：新增只读工具 list_attributes（attribute_type 默认 Layer），
+  返回 items（每项含 attributeId.guid、name 等，字段随类型而异）
+- tests/unit/test_tapir_adapter.py：+3 用例（Layer 取值/空列表/命令与参数透传）
+
+### 真机验证（AC28 build 6003，Tapir 已加载）
+- GetAttributes 返回 4010：当前 AC28 装的 Tapir 版本未注册该命令
+  （Tapir 属性命令按版本逐步补全，需较新版本才支持 GetAttributes）
+- 代码已按官方 schema 实现并 mock 单测通过，Tapir 升级后自动生效
+
+### 备注
+- 单测 484 → 487 全过（+3）
+- 工具数 34 → 35
+- read_tools.py 未超 500 行
+

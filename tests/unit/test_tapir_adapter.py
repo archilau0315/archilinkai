@@ -103,3 +103,52 @@ def test_deeply_nested_object():
         "leaf": {"value": "x"},
         "items": [{"value": "a"}, {"value": "b"}],
     }
+
+
+# --- get_attributes ----------------------------------------------------
+
+
+def test_get_attributes_layers(monkeypatch):
+    """GetAttributes Layer：dict 返回取 attributes 键。"""
+    import tapir_adapter
+
+    fake = {
+        "attributes": [
+            {"attributeId": {"guid": "L1"}, "name": "结构"},
+            {"attributeId": {"guid": "L2"}, "name": "隔墙"},
+        ]
+    }
+    monkeypatch.setattr(
+        tapir_adapter.adapter, "execute",
+        lambda cmd, params, instance: fake)
+    rows = tapir_adapter.adapter.get_attributes("Layer", "ac28-1")
+    assert len(rows) == 2
+    assert rows[0]["name"] == "结构"
+    assert rows[0]["attributeId"]["guid"] == "L1"
+
+
+def test_get_attributes_empty(monkeypatch):
+    """无该类型属性时返回空列表。"""
+    import tapir_adapter
+
+    monkeypatch.setattr(
+        tapir_adapter.adapter, "execute",
+        lambda cmd, params, instance: {"attributes": []})
+    assert tapir_adapter.adapter.get_attributes("Pen") == []
+
+
+def test_get_attributes_passes_command_and_type(monkeypatch):
+    """校验命令名与 attributeType 参数透传正确。"""
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"attributes": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    tapir_adapter.adapter.get_attributes("Composite", "ac29-1")
+    assert calls["cmd"] == "GetAttributes"
+    assert calls["params"] == {"attributeType": "Composite"}
