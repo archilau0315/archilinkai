@@ -205,6 +205,211 @@ class TapirAdapter:
         params = {"elementsWithGDLParameters": elements_with_gdl_parameters}
         return self.execute("SetGDLParametersOfElements", params, instance)
 
+    # ---- P1 命令：碰撞 / 图层 / 收藏夹 / IFC / 区域边界 / 详情修改 ----
+
+    def get_collisions(
+        self,
+        elements_group1: list[dict[str, Any]],
+        elements_group2: list[dict[str, Any]],
+        volume_tolerance: float = 0.001,
+        perform_surface_check: bool = False,
+        surface_tolerance: float = 0.001,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """GetCollisions：检测两组元素间的碰撞。
+
+        settings 全部可选，缺省 volumeTolerance=0.001 / performSurfaceCheck=False /
+        surfaceTolerance=0.001。返回 collisions（每项 elementId1/elementId2/
+        hasBodyCollision/hasClearenceCollision）。
+        """
+        params = {
+            "elementsGroup1": elements_group1,
+            "elementsGroup2": elements_group2,
+            "settings": {
+                "volumeTolerance": volume_tolerance,
+                "performSurfaceCheck": perform_surface_check,
+                "surfaceTolerance": surface_tolerance,
+            },
+        }
+        result = self.execute("GetCollisions", params, instance)
+        data = _to_dict(result)
+        if not isinstance(data, dict):
+            return {"collisions": []}
+        return data
+
+    def get_layers(
+        self,
+        attribute_ids: list[str],
+        fields: list[str] | None = None,
+        instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetLayers：读指定图层的详情（name/isHidden/isLocked/isWireframe/intersectionGroupNr）。
+
+        attribute_ids：图层 attributeId.guid 列表。fields 可选，不传则返回全部字段。
+        """
+        params: dict[str, Any] = {
+            "attributeIds": [{"attributeId": {"guid": g}} for g in attribute_ids]
+        }
+        if fields:
+            params["fields"] = fields
+        result = self.execute("GetLayers", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("layers", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def create_layers(
+        self,
+        layer_data_array: list[dict[str, Any]],
+        overwrite_existing: bool = False,
+        instance: str | None = None,
+    ) -> Any:
+        """CreateLayers：创建或覆盖图层。layerDataArray 每项至少含 name。"""
+        params = {
+            "layerDataArray": layer_data_array,
+            "overwriteExisting": overwrite_existing,
+        }
+        return self.execute("CreateLayers", params, instance)
+
+    def delete_attributes(
+        self,
+        attributes_to_delete: list[dict[str, Any]],
+        instance: str | None = None,
+    ) -> Any:
+        """DeleteAttributes：删除属性。attributesToDelete 每项含 attributeType + attributeId。"""
+        params = {"attributesToDelete": attributes_to_delete}
+        return self.execute("DeleteAttributes", params, instance)
+
+    def get_favorites_by_type(
+        self,
+        element_type: str,
+        instance: str | None = None,
+    ) -> list[str]:
+        """GetFavoritesByType：列指定构件类型的收藏夹名称列表。"""
+        params = {"elementType": element_type}
+        result = self.execute("GetFavoritesByType", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("favorites", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def apply_favorites_to_elements(
+        self,
+        favorites_to_apply: list[dict[str, Any]],
+        apply_settings: bool = True,
+        apply_classifications: bool = True,
+        apply_categories: bool = True,
+        apply_properties: bool = True,
+        instance: str | None = None,
+    ) -> Any:
+        """ApplyFavoritesToElements：把收藏夹应用到已有元素。
+
+        favorites_to_apply 每项含 elementId + favorite（名称）。
+        只改设置类参数，不改几何。
+        """
+        params: dict[str, Any] = {"favoritesToApply": favorites_to_apply}
+        if not apply_settings:
+            params["applySettings"] = False
+        if not apply_classifications:
+            params["applyClassifications"] = False
+        if not apply_categories:
+            params["applyCategories"] = False
+        if not apply_properties:
+            params["applyProperties"] = False
+        return self.execute("ApplyFavoritesToElements", params, instance)
+
+    def get_ifc_ids_of_elements(
+        self,
+        guids: list[str],
+        instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetIFCIdsOfElements：读元素的 IFC ID。"""
+        params = {"elements": [{"elementId": {"guid": g}} for g in guids]}
+        result = self.execute("GetIFCIdsOfElements", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("elementIFCIds", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def get_elements_by_ifc_ids(
+        self,
+        ifc_ids: list[str],
+        instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetElementsByIFCIds：按 IFC ID 反查元素。"""
+        params = {"ifcIds": ifc_ids}
+        result = self.execute("GetElementsByIFCIds", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("elementsByIFCIds", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def get_ifc_properties_of_elements(
+        self,
+        guids: list[str],
+        instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetIFCPropertiesOfElements：读元素的 IFC 属性。"""
+        params = {"elements": [{"elementId": {"guid": g}} for g in guids]}
+        result = self.execute("GetIFCPropertiesOfElements", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("elementIFCProperties", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def set_details_of_elements(
+        self,
+        elements_with_details: list[dict[str, Any]],
+        instance: str | None = None,
+    ) -> Any:
+        """SetDetailsOfElements：改元素楼层/图层/绘制顺序等。
+
+        elements_with_details 每项含 elementId + details（floorIndex/layerIndex/drawIndex/typeSpecificDetails）。
+        """
+        params = {"elementsWithDetails": elements_with_details}
+        return self.execute("SetDetailsOfElements", params, instance)
+
+    def get_zone_boundaries(
+        self,
+        zone_guids: list[str],
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """GetZoneBoundaries：读 Zone 的边界（关联元素/相邻 Zone 等）。
+
+        zone_guids 为 Zone elementId.guid 列表。批量查询一次完成，比逐个查快。
+        """
+        params = {"zones": [{"elementId": {"guid": g}} for g in zone_guids]}
+        result = self.execute("GetZoneBoundaries", params, instance)
+        data = _to_dict(result)
+        if not isinstance(data, dict):
+            return {"zoneBoundaries": []}
+        return data
+
+    def update_zones(
+        self,
+        keep_stamp_position: bool = True,
+        undo_top_trim: bool = False,
+        undo_bottom_trim: bool = False,
+        instance: str | None = None,
+    ) -> Any:
+        """UpdateZones：重算全部 Zone 的几何/标签/关联元素。"""
+        params = {
+            "keepStampPosition": keep_stamp_position,
+            "undoTopTrim": undo_top_trim,
+            "undoBottomTrim": undo_bottom_trim,
+        }
+        return self.execute("UpdateZones", params, instance)
+
 
 def _to_dict(value: Any) -> Any:
     """把 Tapir 返回的对象（可能是 namedtuple/dataclass）转成 dict/list。

@@ -260,3 +260,250 @@ def test_get_subelements_of_hierarchical_guids_wrapped(monkeypatch):
         {"elementId": {"guid": "A1"}},
         {"elementId": {"guid": "A2"}},
     ]
+
+
+# --- P1 命令：get_collisions --------------------------------------------
+
+
+def test_get_collisions_cmd_and_params(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"collisions": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    g1 = [{"elementId": {"guid": "G1"}}]
+    g2 = [{"elementId": {"guid": "G2"}}]
+    tapir_adapter.adapter.get_collisions(g1, g2)
+    assert calls["cmd"] == "GetCollisions"
+    assert calls["params"]["elementsGroup1"] == g1
+    assert calls["params"]["elementsGroup2"] == g2
+    assert calls["params"]["settings"]["volumeTolerance"] == 0.001
+    assert calls["params"]["settings"]["performSurfaceCheck"] is False
+
+
+def test_get_collisions_result(monkeypatch):
+    import tapir_adapter
+
+    fake = {
+        "collisions": [
+            {"elementId1": {"guid": "A"}, "elementId2": {"guid": "B"},
+             "hasBodyCollision": True, "hasClearenceCollision": False},
+        ],
+    }
+    monkeypatch.setattr(
+        tapir_adapter.adapter, "execute",
+        lambda cmd, params, instance: fake)
+    out = tapir_adapter.adapter.get_collisions([], [])
+    assert len(out["collisions"]) == 1
+
+
+# --- P1 命令：get_layers / create_layers / delete_attributes -------------
+
+
+def test_get_layers_cmd_and_params(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"layers": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    tapir_adapter.adapter.get_layers(["L1", "L2"], ["name"])
+    assert calls["cmd"] == "GetLayers"
+    assert calls["params"]["attributeIds"] == [
+        {"attributeId": {"guid": "L1"}},
+        {"attributeId": {"guid": "L2"}},
+    ]
+    assert calls["params"]["fields"] == ["name"]
+
+
+def test_create_layers_cmd_and_params(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"attributeIds": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    layer_data = [{"name": "测试层", "isHidden": False}]
+    tapir_adapter.adapter.create_layers(layer_data, True)
+    assert calls["cmd"] == "CreateLayers"
+    assert calls["params"]["layerDataArray"] == layer_data
+    assert calls["params"]["overwriteExisting"] is True
+
+
+def test_delete_attributes_cmd_and_params(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"executionResults": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    attrs = [{"attributeType": "Layer", "attributeId": "L1"}]
+    tapir_adapter.adapter.delete_attributes(attrs)
+    assert calls["cmd"] == "DeleteAttributes"
+    assert calls["params"]["attributesToDelete"] == attrs
+
+
+# --- P1 命令：favorites -------------------------------------------------
+
+
+def test_get_favorites_by_type(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"favorites": ["标准墙", "隔墙"]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_favorites_by_type("Wall")
+    assert calls["cmd"] == "GetFavoritesByType"
+    assert calls["params"]["elementType"] == "Wall"
+    assert rows == ["标准墙", "隔墙"]
+
+
+def test_apply_favorites_to_elements(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"executionResults": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    pairs = [{"elementId": {"guid": "E1"}, "favorite": "标准墙"}]
+    tapir_adapter.adapter.apply_favorites_to_elements(pairs, False, True, True, False)
+    assert calls["cmd"] == "ApplyFavoritesToElements"
+    assert calls["params"]["favoritesToApply"] == pairs
+    assert calls["params"]["applySettings"] is False
+    # 默认值 True 时不传参（Tapir 默认 true）
+    assert "applyClassifications" not in calls["params"]
+    assert "applyCategories" not in calls["params"]
+    assert calls["params"]["applyProperties"] is False
+
+
+# --- P1 命令：IFC --------------------------------------------------------
+
+
+def test_get_ifc_ids_of_elements(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"elementIFCIds": [{"elementId": {"guid": "E1"}, "ifcId": "2x3$abc"}]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_ifc_ids_of_elements(["G1"])
+    assert calls["cmd"] == "GetIFCIdsOfElements"
+    assert calls["params"]["elements"] == [{"elementId": {"guid": "G1"}}]
+    assert rows[0]["ifcId"] == "2x3$abc"
+
+
+def test_get_elements_by_ifc_ids(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"elementsByIFCIds": [{"ifcId": "2x3$abc", "elementId": {"guid": "E1"}}]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_elements_by_ifc_ids(["2x3$abc"])
+    assert calls["cmd"] == "GetElementsByIFCIds"
+    assert calls["params"]["ifcIds"] == ["2x3$abc"]
+    assert rows[0]["elementId"]["guid"] == "E1"
+
+
+def test_get_ifc_properties_of_elements(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"elementIFCProperties": [{"elementId": {"guid": "E1"}, "ifcProperties": []}]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_ifc_properties_of_elements(["G1"])
+    assert calls["cmd"] == "GetIFCPropertiesOfElements"
+    assert rows[0]["elementId"]["guid"] == "E1"
+
+
+# --- P1 命令：set_details / get_zone_boundaries / update_zones ---------
+
+
+def test_set_details_of_elements(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"executionResults": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    items = [{"elementId": {"guid": "E1"}, "details": {"floorIndex": 1}}]
+    tapir_adapter.adapter.set_details_of_elements(items)
+    assert calls["cmd"] == "SetDetailsOfElements"
+    assert calls["params"]["elementsWithDetails"] == items
+
+
+def test_get_zone_boundaries(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"zoneBoundaries": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    tapir_adapter.adapter.get_zone_boundaries(["Z1"])
+    assert calls["cmd"] == "GetZoneBoundaries"
+    assert calls["params"]["zones"] == [{"elementId": {"guid": "Z1"}}]
+
+
+def test_update_zones(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"executionResult": "success"}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    tapir_adapter.adapter.update_zones(False, True, True)
+    assert calls["cmd"] == "UpdateZones"
+    assert calls["params"]["keepStampPosition"] is False
+    assert calls["params"]["undoTopTrim"] is True
+    assert calls["params"]["undoBottomTrim"] is True

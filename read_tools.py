@@ -261,6 +261,104 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def get_collisions(
+        guids1: list[str], guids2: list[str],
+        volume_tolerance: float = 0.001,
+        perform_surface_check: bool = False,
+        surface_tolerance: float = 0.001,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """碰撞检查（经 Tapir GetCollisions）。
+
+        guids1/guids2：两组元素 GUID 列表。
+        volume_tolerance：体积容差（m³，默认 0.001）。
+        perform_surface_check：是否启用表面碰撞检查。
+        surface_tolerance：表面容差（m²，默认 0.001）。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            data = _tapir.get_collisions(
+                [{"elementId": {"guid": g}} for g in guids1],
+                [{"elementId": {"guid": g}} for g in guids2],
+                volume_tolerance, perform_surface_check, surface_tolerance,
+                instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(data.get("collisions", [])), **data,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def list_favorites(
+        element_type: str, instance: str | None = None,
+    ) -> dict[str, Any]:
+        """列指定构件类型的收藏夹名称（经 Tapir GetFavoritesByType）。"""
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_favorites_by_type(element_type, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), element_type=element_type, items=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_ifc_ids(
+        guids: list[str], instance: str | None = None,
+    ) -> dict[str, Any]:
+        """读元素的 IFC ID（经 Tapir GetIFCIdsOfElements）。"""
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_ifc_ids_of_elements(guids, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), items=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_elements_by_ifc_ids(
+        ifc_ids: list[str], instance: str | None = None,
+    ) -> dict[str, Any]:
+        """按 IFC ID 反查元素（经 Tapir GetElementsByIFCIds）。"""
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_elements_by_ifc_ids(ifc_ids, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), items=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_ifc_properties(
+        guids: list[str], instance: str | None = None,
+    ) -> dict[str, Any]:
+        """读元素的 IFC 属性（经 Tapir GetIFCPropertiesOfElements）。"""
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_ifc_properties_of_elements(guids, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), items=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_zone_boundaries(
+        zone_guids: list[str], instance: str | None = None,
+    ) -> dict[str, Any]:
+        """读 Zone 边界（经 Tapir GetZoneBoundaries）。zone_guids 为 Zone GUID 列表。"""
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            data = _tapir.get_zone_boundaries(zone_guids, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(data.get("zoneBoundaries", [])), **data,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
     def get_element_geometry_info(
         element_guids: list[str], instance: str | None = None
     ) -> dict[str, Any]:

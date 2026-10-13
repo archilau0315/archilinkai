@@ -148,6 +148,152 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def create_layers(
+        layer_data: list[dict[str, Any]],
+        overwrite_existing: bool = False,
+        confirm: bool = False,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """创建或覆盖图层（经 Tapir CreateLayers）。
+
+        layer_data 每项至少含 name，可选 isHidden/isLocked/isWireframe/intersectionGroupNr。
+        confirm=true 时才执行；overwrite_existing=true 时同名图层会被覆盖。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            if not confirm:
+                return success_result(
+                    instance=info.instance_id, project=info.project_name,
+                    count=len(layer_data),
+                    data={"message": f"预览：将创建/覆盖 {len(layer_data)} 个图层。",
+                          "layer_data": layer_data, "overwrite_existing": overwrite_existing},
+                )
+            result = _tapir.create_layers(layer_data, overwrite_existing, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(layer_data),
+                data={"message": f"已创建/覆盖 {len(layer_data)} 个图层。", "result": result},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def delete_attributes(
+        attributes_to_delete: list[dict[str, Any]],
+        confirm: bool = False,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """删除属性（经 Tapir DeleteAttributes）。
+
+        attributes_to_delete 每项含 attributeType + attributeId。
+        confirm=true 时才执行。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            if not confirm:
+                return success_result(
+                    instance=info.instance_id, project=info.project_name,
+                    count=len(attributes_to_delete),
+                    data={"message": f"预览：将删除 {len(attributes_to_delete)} 个属性。",
+                          "attributes_to_delete": attributes_to_delete},
+                )
+            result = _tapir.delete_attributes(attributes_to_delete, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(attributes_to_delete),
+                data={"message": f"已删除 {len(attributes_to_delete)} 个属性。", "result": result},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def apply_favorites(
+        favorites_to_apply: list[dict[str, Any]],
+        apply_settings: bool = True,
+        apply_classifications: bool = True,
+        apply_categories: bool = True,
+        apply_properties: bool = True,
+        confirm: bool = False,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """把收藏夹应用到已有元素（经 Tapir ApplyFavoritesToElements）。
+
+        favorites_to_apply 每项含 elementId + favorite（收藏夹名称）。
+        只改设置类参数，不改几何。confirm=true 时才执行。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            if not confirm:
+                return success_result(
+                    instance=info.instance_id, project=info.project_name,
+                    count=len(favorites_to_apply),
+                    data={"message": f"预览：将应用 {len(favorites_to_apply)} 个收藏夹。",
+                          "favorites_to_apply": favorites_to_apply},
+                )
+            result = _tapir.apply_favorites_to_elements(
+                favorites_to_apply, apply_settings, apply_classifications,
+                apply_categories, apply_properties, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(favorites_to_apply),
+                data={"message": f"已应用 {len(favorites_to_apply)} 个收藏夹。", "result": result},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def set_element_details(
+        elements_with_details: list[dict[str, Any]],
+        confirm: bool = False,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """改元素楼层/图层/绘制顺序等（经 Tapir SetDetailsOfElements）。
+
+        elements_with_details 每项含 elementId + details（floorIndex/layerIndex/drawIndex）。
+        confirm=true 时才执行。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            if not confirm:
+                return success_result(
+                    instance=info.instance_id, project=info.project_name,
+                    count=len(elements_with_details),
+                    data={"message": f"预览：将修改 {len(elements_with_details)} 个元素的详情。",
+                          "elements_with_details": elements_with_details},
+                )
+            result = _tapir.set_details_of_elements(elements_with_details, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(elements_with_details),
+                data={"message": f"已修改 {len(elements_with_details)} 个元素的详情。", "result": result},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def update_zones(
+        keep_stamp_position: bool = True,
+        undo_top_trim: bool = False,
+        undo_bottom_trim: bool = False,
+        confirm: bool = False,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """重算全部 Zone 的几何/标签/关联元素（经 Tapir UpdateZones）。confirm=true 时才执行。"""
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            if not confirm:
+                return success_result(
+                    instance=info.instance_id, project=info.project_name,
+                    data={"message": "预览：将重算全部 Zone 的几何/标签/关联元素。",
+                          "keep_stamp_position": keep_stamp_position,
+                          "undo_top_trim": undo_top_trim,
+                          "undo_bottom_trim": undo_bottom_trim},
+                )
+            result = _tapir.update_zones(
+                keep_stamp_position, undo_top_trim, undo_bottom_trim, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                data={"message": "已重算全部 Zone。", "result": result},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
     def preview_model_plan(
         plan: dict[str, Any], instance: str | None = None
     ) -> dict[str, Any]:
