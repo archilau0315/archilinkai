@@ -143,6 +143,50 @@ class TapirAdapter:
             rows = list(data or [])
         return rows
 
+    # Tapir 库部件类型过滤值（filterByTypeId）
+    LIBPART_TYPES = ("Door", "Window", "Object", "Lamp")
+
+    def get_available_library_parts(
+        self,
+        filter_by_type_id: str | None = None,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """GetAvailableLibraryParts：列出项目可用库部件。
+
+        入参可选 filterByTypeId（Door/Window/Object/Lamp），不传则返回全部。
+        返回 dict：libraryParts（每项 guid/index/documentName/fileName/typeId）、
+        skippedCount（读取失败数）、skippedSample（前 5 个失败项含 index/code）。
+        """
+        params = {}
+        if filter_by_type_id:
+            params["filterByTypeId"] = filter_by_type_id
+        result = self.execute("GetAvailableLibraryParts", params, instance)
+        data = _to_dict(result)
+        if not isinstance(data, dict):
+            return {"libraryParts": [], "skippedCount": 0, "skippedSample": []}
+        return data
+
+    def get_subelements_of_hierarchical(
+        self,
+        guids: list[str],
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """GetSubelementsOfHierarchicalElements：取层级构件的子构件。
+
+        入参 guids（幕墙/楼梯等父构件 GUID 列表），
+        返回 dict：subelements（按类型分组，如 cWallSegments/cWallFrames/
+        stairTreads/stairRisers/stairStructures）。
+        """
+        params = {
+            "elements": [{"elementId": {"guid": g}} for g in guids],
+        }
+        result = self.execute(
+            "GetSubelementsOfHierarchicalElements", params, instance)
+        data = _to_dict(result)
+        if not isinstance(data, dict):
+            return {"subelements": []}
+        return data
+
     def set_property_values_of_elements(
         self,
         element_property_values: list[dict[str, Any]],

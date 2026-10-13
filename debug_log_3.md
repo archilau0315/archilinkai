@@ -871,3 +871,32 @@ QUANTITY_TEMPLATES 缺专属模板。
 - 工具数 34 → 35
 - read_tools.py 未超 500 行
 
+---
+
+## 2026-10-13 V0.31 库部件清单 + 层级构件子构件
+
+### 变更
+- tapir_adapter.py：新增 LIBPART_TYPES 常量（Door/Window/Object/Lamp）+
+  get_available_library_parts(filter_by_type_id)（入参可选 filterByTypeId，
+  返回 libraryParts/skippedCount/skippedSample）+
+  get_subelements_of_hierarchical(guids)（入参 elements[{elementId{guid}}]，
+  返回 subelements 按类型分组：cWallSegments/cWallFrames/cWallPanels/
+  stairTreads/stairRisers/stairStructures）
+- read_tools.py：新增只读工具 list_library_parts（type_id 可选过滤）+
+  get_subelements_of_hierarchical（guids 列表）
+- tests/unit/test_tapir_adapter.py：+6 用例（库部件全量/过滤/空列表/
+  子构件分组/空列表/参数包装）
+
+### 真机验证（AC28 build 6003，办公楼改造项目）
+- GetAvailableLibraryParts：2894 项，skippedCount=7（最后 5 项 code=-2130313112）
+  typeId 分布：Object 1272、Picture 1535、Unknown 87（本项目无 Door/Window 独立库部件）
+  样本：BIMOMGeneralsymbol、MEP_m_Connections、TrussMaker对象、上下水设备段
+- GetSubelementsOfHierarchicalElements：
+  幕墙 46 个 → 首个幕墙拆出 cWallSegments 3 + cWallFrames 39 + cWallPanels 10
+  楼梯 19 个 → 首个楼梯拆出 stairTreads 22 + stairRisers 22 + stairStructures 3
+
+### 备注
+- 单测 487 → 493 全过（+6）
+- 工具数 35 → 37
+- read_tools.py 未超 500 行
+

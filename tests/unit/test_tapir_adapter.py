@@ -152,3 +152,111 @@ def test_get_attributes_passes_command_and_type(monkeypatch):
     tapir_adapter.adapter.get_attributes("Composite", "ac29-1")
     assert calls["cmd"] == "GetAttributesByType"
     assert calls["params"] == {"attributeType": "Composite"}
+
+
+# --- get_available_library_parts ----------------------------------------
+
+
+def test_get_available_library_parts_all(monkeypatch):
+    """无 filterByTypeId 时返回全部库部件。"""
+    import tapir_adapter
+
+    fake = {
+        "libraryParts": [
+            {"guid": "P1", "index": 1, "documentName": "门1", "fileName": "D1.gsm", "typeId": "Door"},
+            {"guid": "P2", "index": 2, "documentName": "窗1", "fileName": "W1.gsm", "typeId": "Window"},
+        ],
+        "skippedCount": 0,
+        "skippedSample": [],
+    }
+    monkeypatch.setattr(
+        tapir_adapter.adapter, "execute",
+        lambda cmd, params, instance: fake)
+    out = tapir_adapter.adapter.get_available_library_parts()
+    assert len(out["libraryParts"]) == 2
+    assert out["skippedCount"] == 0
+
+
+def test_get_available_library_parts_filtered(monkeypatch):
+    """filterByTypeId 透传正确。"""
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"libraryParts": [], "skippedCount": 0, "skippedSample": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    tapir_adapter.adapter.get_available_library_parts("Object")
+    assert calls["cmd"] == "GetAvailableLibraryParts"
+    assert calls["params"] == {"filterByTypeId": "Object"}
+
+
+def test_get_available_library_parts_empty(monkeypatch):
+    """无库部件时返回空列表。"""
+    import tapir_adapter
+
+    monkeypatch.setattr(
+        tapir_adapter.adapter, "execute",
+        lambda cmd, params, instance: {"libraryParts": [], "skippedCount": 0, "skippedSample": []})
+    out = tapir_adapter.adapter.get_available_library_parts()
+    assert out["libraryParts"] == []
+
+
+# --- get_subelements_of_hierarchical ------------------------------------
+
+
+def test_get_subelements_of_hierarchical(monkeypatch):
+    """GetSubelementsOfHierarchicalElements：返回按类型分组。"""
+    import tapir_adapter
+
+    fake = {
+        "subelements": [
+            {
+                "cWallSegments": [{"elementId": {"guid": "S1"}}],
+                "cWallFrames": [{"elementId": {"guid": "F1"}}, {"elementId": {"guid": "F2"}}],
+                "stairTreads": [],
+                "stairRisers": [],
+                "stairStructures": [],
+            }
+        ],
+    }
+    monkeypatch.setattr(
+        tapir_adapter.adapter, "execute",
+        lambda cmd, params, instance: fake)
+    out = tapir_adapter.adapter.get_subelements_of_hierarchical(["G1"])
+    assert len(out["subelements"]) == 1
+    assert len(out["subelements"][0]["cWallFrames"]) == 2
+
+
+def test_get_subelements_of_hierarchical_empty(monkeypatch):
+    """无子构件时返回空列表。"""
+    import tapir_adapter
+
+    monkeypatch.setattr(
+        tapir_adapter.adapter, "execute",
+        lambda cmd, params, instance: {"subelements": []})
+    out = tapir_adapter.adapter.get_subelements_of_hierarchical(["G1"])
+    assert out["subelements"] == []
+
+
+def test_get_subelements_of_hierarchical_guids_wrapped(monkeypatch):
+    """校验 elements 参数包装正确。"""
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"subelements": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    tapir_adapter.adapter.get_subelements_of_hierarchical(["A1", "A2"])
+    assert calls["cmd"] == "GetSubelementsOfHierarchicalElements"
+    assert calls["params"]["elements"] == [
+        {"elementId": {"guid": "A1"}},
+        {"elementId": {"guid": "A2"}},
+    ]

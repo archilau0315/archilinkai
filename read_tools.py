@@ -220,6 +220,47 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def list_library_parts(
+        type_id: str | None = None, instance: str | None = None
+    ) -> dict[str, Any]:
+        """列出项目可用库部件（经 Tapir GetAvailableLibraryParts）。
+
+        type_id 可选：Door/Window/Object/Lamp，不传则返回全部。
+        返回 libraryParts（每项 guid/index/documentName/fileName/typeId）、
+        skippedCount（读取失败数）、skippedSample（前 5 个失败项）。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            data = _tapir.get_available_library_parts(type_id, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(data.get("libraryParts", [])),
+                type_id=type_id, **data,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_subelements_of_hierarchical(
+        guids: list[str], instance: str | None = None
+    ) -> dict[str, Any]:
+        """取层级构件的子构件（经 Tapir GetSubelementsOfHierarchicalElements）。
+
+        guids：幕墙/楼梯等父构件 GUID 列表。
+        返回 subelements（按类型分组，如 cWallSegments/cWallFrames/
+        stairTreads/stairRisers/stairStructures）。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            data = _tapir.get_subelements_of_hierarchical(guids, instance)
+            sub = data.get("subelements", [])
+            total = sum(len(v) for v in sub if isinstance(v, list))
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=total, subelements=sub,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
     def get_element_geometry_info(
         element_guids: list[str], instance: str | None = None
     ) -> dict[str, Any]:

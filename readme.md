@@ -362,6 +362,8 @@ archicad-mcp/
 | `aggregate_by_template` | 按模板名一键算量（含 with_code 时附 GB 50500 清单编码） |
 | `aggregate_by_custom_template` | 传 JSON 自定义模板（支持 formula 公式和 with_code） |
 | `list_attributes` | 按类型列项目属性（Layer/Pen/BuildingMaterial/Composite 等，Tapir GetAttributes） |
+| `list_library_parts` | 列出项目可用库部件（可选 type_id 过滤：Door/Window/Object/Lamp），返回 guid/documentName/fileName/typeId |
+| `get_subelements_of_hierarchical` | 取层级构件子构件（幕墙拆框架/面板/分隔条，楼梯拆踏板/踢板/结构） |
 | `export_table` | 导出 CSV/Excel/工程量清单报表（支持多表、fmt=report 出 GB 50500 格式） |
 
 ### P1 安全写入工具（8 个）
@@ -396,7 +398,7 @@ archicad-mcp/
 | `get_operation_status` | 查操作状态 |
 | `get_operation_log` | 查操作日志 |
 
-> 工具总数：**35 个**
+> 工具总数：**37 个**
 
 ### 已支持建模构件（15 类）
 
@@ -474,6 +476,7 @@ archicad-mcp/
 - **V0.28 幕墙专属算量模板**：V0.19 已实现幕墙读取+算量（通用 aggregate 路径，CW002 验证 SurfaceArea=10.0 m²），但缺专属模板。新增 curtain_wall_area 模板（quantity=General_SurfaceArea，element_types=[CurtainWall]，with_code=True 自动附 010805001/幕墙/m²）。幕墙无体积属性（General_GrossVolume=None），仅按面积 m² 算。单测 462 全过
 - **V0.29 栏杆专属算量模板**：栏杆与幕墙同属只读可算量构件（V0.20 确认 Tapir 未实现 CreateRailings），新增 railing_length 模板（quantity=General_3DLength，GB 50500 栏杆按 m 计，with_code=True 自动附 010606001/金属栏杆/m）。真机 AC28 验证 rows=[]（项目无栏杆实例），通道正常无报错。单测 463 全过
 - **V0.30 通道补 GetAttributesByType**：新增 list_attributes 工具（按类型列项目属性：Layer/Pen/BuildingMaterial/Composite/Surface 等 12 类），tapir_adapter 加 get_attributes 便捷方法。真机 AC28 验证：Layer 259 项/Composite 300 项/BuildingMaterial 379 项。工具 35 个，单测 487 全过
+- **V0.31 库部件+层级子构件**：新增 list_library_parts（2894 项库部件，Object 1272/Picture 1535，含 skippedCount 诊断）和 get_subelements_of_hierarchical（幕墙拆框架/面板/分隔条，楼梯拆踏板/踢板/结构）。真机验证：幕墙 46→框架 39+面板 10，楼梯 19→踏板 22+踢板 22+结构 3。工具 37 个，单测 493 全过
 
 </details>
 
