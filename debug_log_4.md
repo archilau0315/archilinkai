@@ -220,3 +220,42 @@
 
 ### 备注
 - S0 验收清单剩余：干净虚拟机 uvx 验证、PyPI 发布（待 tag 推送后走 CI）
+
+---
+
+## 2026-10-18 品牌更名：ArchiBridge → ArchiLinkAI（ALAI），筑联 → 筑元智联
+
+### 变更
+- 包目录 src/archibridge → src/archilinkai；项目根目录 archicad-mcp → archilinkai
+- 文档改名：archilinkai_research.md / archilinkai_plan.md / archilinkai_tech_spec.md
+- 全文替换：archibridge→archilinkai（包名/导入/console 命令/横幅）、
+  ArchiBridge→ArchiLinkAI、筑联→筑元智联；readme 配置示例路径同步
+- 提交 31e130a
+
+### 验证
+- pip install -e . 重装；python -m archilinkai 启动横幅正常；537 单测全过
+
+### 备注
+- debug_log_1/2/3 历史记录保留旧路径，不回改
+- 用户本机既有 MCP 客户端配置若指向旧绝对路径需手动更新为 archilinkai/server.py
+
+---
+
+## 2026-10-18 V0.40（S1）自检向导：doctor + install CLI
+
+### 变更
+- 新增 src/archilinkai/cli.py：archilinkai 命令升级为子命令 CLI（serve/doctor/install），
+  无子命令时默认 serve（向后兼容）
+- 新增 src/archilinkai/doctor.py：四项检查（Python 版本/依赖完整/实例探测/Tapir 探测），
+  逐项给修复建议；实例未发现时 Tapir 检查自动跳过
+- 新增 src/archilinkai/data/clients.json：客户端配置矩阵外置
+  （claude/cursor/cline/witsy/cherry/codex，含 macOS 路径变体）
+- install <client>：写 mcpServers.archilinkai 配置，写前 .bak 备份，不覆盖既有 server；
+  codex 为 toml 格式输出手动片段；generic 打印通用 JSON 片段
+- pyproject：入口改 archilinkai.cli:main，package-data 收 data/*.json
+- tests/unit/test_cli.py：+9 用例（doctor 检查/exit code/install 写入与备份/toml 提示）
+- readme：新增「环境自检与客户端配置」节
+
+### 验证
+- 546 单测全过（537+9）
+- 真机缺省：doctor 正确报实例/Tapir FAIL 并给出修复提示；install generic 输出正常

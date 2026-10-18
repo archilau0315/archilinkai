@@ -26,7 +26,10 @@ dependencies = [
 dev = ["pytest>=8.0"]
 
 [project.scripts]
-archilinkai = "archilinkai.server:main"
+archilinkai = "archilinkai.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+archilinkai = ["data/*.json"]

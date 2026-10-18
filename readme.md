@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # 筑元智联 ArchiLinkAI（ALAI）
 
@@ -118,12 +118,23 @@ pip install -e ".[dev]"
 三种启动方式等价：
 
 ```bash
-archilinkai          # PyPI 安装后的命令入口
+archilinkai          # PyPI 安装后的命令入口（等价 archilinkai serve）
 python -m archilinkai
 python server.py     # 源码目录兼容壳（保留旧配置可用）
 ```
 
 无 ArchiCAD 实例时 server 仍会启动并打印提示，工具调用时返回结构化错误（`NO_INSTANCE_AVAILABLE`，`retryable=true`），便于 LLM 引导排查。
+
+### 环境自检与客户端配置
+
+```bash
+archilinkai doctor            # 六项环境自检：Python/依赖/实例/Tapir，逐项给修复建议
+archilinkai install claude    # 自动写入 Claude Desktop 配置（先备份原文件）
+archilinkai install cursor    # 写入 Cursor ~/.cursor/mcp.json
+archilinkai install generic   # 打印通用 MCP JSON 片段，任意客户端手动粘贴
+```
+
+支持的客户端矩阵见 `src/archilinkai/data/clients.json`（Claude/Cursor/Cline/Witsy/Cherry Studio/Codex 等，可随版本扩充）。
 
 ### AC28 + AC29 双版本并存说明
 

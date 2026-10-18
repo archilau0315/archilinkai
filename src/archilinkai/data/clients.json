@@ -1,0 +1,12 @@
+{
+  "claude": {
+    "name": "Claude Desktop",
+    "config": "%APPDATA%/Claude/claude_desktop_config.json",
+    "config_mac": "~/Library/Application Support/Claude/claude_desktop_config.json"
+  },
+  "cursor": { "name": "Cursor", "config": "~/.cursor/mcp.json" },
+  "cline": { "name": "Cline (VS Code)", "config": "%APPDATA%/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json" },
+  "witsy": { "name": "Witsy", "config": "~/.witsy/settings.json" },
+  "cherry": { "name": "Cherry Studio", "config": "%APPDATA%/CherryStudio/config.json" },
+  "codex": { "name": "Codex CLI", "config": "~/.codex/config.toml", "fmt": "toml" }
+}
