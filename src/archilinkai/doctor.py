@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import sys
 from dataclasses import dataclass
 
@@ -54,10 +55,10 @@ def check_instances() -> CheckResult:
 
 
 def check_tapir() -> CheckResult:
-    """Tapir Add-On 加载探测（依赖实例已发现）。"""
+    """Tapir Add-On 加载探测（依赖实例已发现）。用 GetProjectInfo 验证命令通道。"""
     try:
         from archilinkai.tapir_adapter import adapter
-        adapter.execute("GetProductInfo", None, None)
+        adapter.execute("GetProjectInfo", None, None)
         return CheckResult("Tapir Add-On", True, "命令通道正常")
     except Exception as exc:  # noqa: BLE001
         return CheckResult(

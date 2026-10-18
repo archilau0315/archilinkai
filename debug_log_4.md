@@ -303,3 +303,18 @@
 ### 备注
 - 未实际编译 iss（本机无 Inno Setup）；.iss 语法基于 Inno 6 文档核对，
   真实编译需用户装 Inno Setup 后跑 build_installer.py
+
+---
+
+## 2026-10-18 V0.38.1 doctor 探测命令修正
+
+### 变更
+- doctor.check_tapir 探测命令 GetProductInfo → GetProjectInfo（前者非 Tapir 命令，
+  导致 Tapir 已加载却误报未加载）
+- 补 import importlib.util（Python 3.14 下 find_spec 需显式导入）
+
+### 验证
+- 真机 AC28：GetProjectInfo 返回 dict，Tapir 探测 PASS
+
+### 备注
+- 用户反馈 Tapir 已加载但 doctor 报 FAIL，根因是探测命令选错

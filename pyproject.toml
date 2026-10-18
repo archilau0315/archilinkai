@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "archilinkai"
-version = "0.38.0"
+version = "0.38.1"
 description = "筑元智联 ArchiLinkAI：AI 智能体与 ArchiCAD 之间的 MCP 桥梁（查询/建模/算量/估价/报表）"
 readme = "readme.md"
 requires-python = ">=3.10"
