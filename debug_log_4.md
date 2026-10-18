@@ -586,3 +586,30 @@
 - openings 从 0 → 53 条违规
 - 检出样本：洞口 0.80m - 门框 0.10m = 净宽 0.70m < 0.8m
 - 单测 553 全过
+
+---
+
+## 2026-10-19 V0.46 楼梯净宽扣扶手 + 属性名修正
+
+### 问题
+用户指出：楼梯净宽要考虑扶手宽度影响（扶手在踏面边缘上方时扣除）。
+探测发现：
+- 原 stair_width 用 Stair_Width/General_Width（不存在，返回 None）
+- 原 stair_tread 用 Stair_RiserHeight/Stair_TreadDepth（不存在）
+- 属性中文名「默认楼梯宽度」存在但 get_property_id 用英文 nonLocalizedName 匹配，中文查不到
+
+### 正确属性名（BuiltIn，英文 nonLocalizedName）
+- Stair_FlightWidth：梯段构造宽度
+- Stair_DefaultGoing：踏面深度（踏步深）
+- Stair_DefaultRiserHeight：踏步高度
+
+### 变更
+- code_review_service.py：
+  - DEFAULT_LIMITS +2 项：stair_handrail_deduction_per_side=0.06、stair_handrail_count=2
+  - check_stair_width：用 Stair_FlightWidth，净宽 = 构造宽 - 单侧扶手扣除 × 扶手数（默认 0.12m）
+  - check_stair_tread：用 Stair_DefaultRiserHeight/Stair_DefaultGoing
+
+### 真机验证（办公楼改造项目）
+- stair_width 12 条违规：构造宽 1.00m - 扶手 0.12m = 净宽 0.88m < 1.1m
+- stair_tread 18 条违规：踏步深 0.26-0.27m < 0.28m（公共建筑限值）
+- 单测 553 全过

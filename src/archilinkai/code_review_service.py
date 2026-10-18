@@ -40,6 +40,9 @@ DEFAULT_LIMITS: dict[str, float] = {
     # ---- V0.45 门框余量 ----
     "door_frame_allowance": 0.10,     # 门洞两侧门框合计宽度(m)，净宽=洞口宽-此值
     "door_head_allowance": 0.05,      # 门上框高度(m)，净高=洞口高-此值
+    # ---- V0.46 楼梯扶手扣除 ----
+    "stair_handrail_deduction_per_side": 0.06,  # 单侧扶手扣除宽度(m)
+    "stair_handrail_count": 2,        # 默认扶手数量（双侧）
 }
 
 
@@ -337,26 +340,36 @@ def check_stair_width(
     instance: str | None,
     limits: dict[str, float] | None = None,
 ) -> list[dict[str, Any]]:
-    """楼梯梯段宽度≥1.1m。"""
+    """楼梯梯段**净宽**≥1.1m。
+
+    净宽 = 构造宽度（Stair_FlightWidth）- 扶手扣除。
+    扶手在踏面边缘上方时，按 stair_handrail_deduction_per_side ×
+    stair_handrail_count 扣除（默认 0.06×2=0.12m）。
+    """
     lim = {**DEFAULT_LIMITS, **(limits or {})}
+    deduct = (lim["stair_handrail_deduction_per_side"]
+              * lim["stair_handrail_count"])
     stairs = _fetch_elements("Stair", instance)
     if not stairs:
         return []
     guids = [s["guid"] for s in stairs]
     props = _get_props(
-        guids, ["Stair_Width", "General_Width"], instance)
+        guids, ["Stair_FlightWidth"], instance)
     violations: list[dict[str, Any]] = []
     for s in stairs:
         p = props.get(s["guid"], {})
-        w = _num(p.get("Stair_Width")) or _num(p.get("General_Width"))
-        if w is None:
+        structural_w = _num(p.get("Stair_FlightWidth"))
+        if structural_w is None:
             continue
-        if w < lim["stair_min_width"]:
+        clear_w = structural_w - deduct
+        if clear_w < lim["stair_min_width"]:
             violations.append({
                 "guid": s["guid"], "name": s.get("name", ""),
-                "story": s.get("story_index"), "rule": "楼梯宽度不足",
-                "value": round(w, 3), "limit": lim["stair_min_width"],
-                "message": f"楼梯宽 {w:.2f}m 小于 {lim['stair_min_width']:.1f}m",
+                "story": s.get("story_index"), "rule": "楼梯净宽不足",
+                "value": round(clear_w, 3), "limit": lim["stair_min_width"],
+                "message": (f"楼梯净宽 {clear_w:.2f}m（构造宽 {structural_w:.2f}m "
+                            f"- 扶手 {deduct:.2f}m）小于 "
+                            f"{lim['stair_min_width']:.1f}m"),
             })
     return violations
 
@@ -416,16 +429,13 @@ def check_stair_tread(
     guids = [s["guid"] for s in stairs]
     props = _get_props(
         guids,
-        ["Stair_RiserHeight", "Stair_TreadDepth",
-         "General_RiserHeight", "General_TreadDepth"],
+        ["Stair_DefaultRiserHeight", "Stair_DefaultGoing"],
         instance)
     violations: list[dict[str, Any]] = []
     for s in stairs:
         p = props.get(s["guid"], {})
-        riser = (_num(p.get("Stair_RiserHeight"))
-                 or _num(p.get("General_RiserHeight")))
-        tread = (_num(p.get("Stair_TreadDepth"))
-                 or _num(p.get("General_TreadDepth")))
+        riser = _num(p.get("Stair_DefaultRiserHeight"))
+        tread = _num(p.get("Stair_DefaultGoing"))
         if riser is not None and riser > riser_max:
             violations.append({
                 "guid": s["guid"], "name": s.get("name", ""),
