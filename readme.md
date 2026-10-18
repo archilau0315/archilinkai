@@ -95,6 +95,18 @@ flowchart TB
    - 下载：https://github.com/ENZYME-APD/tapir-archicad-automation
    - 通过 选项 → Add-On 管理器 → 添加 加载
 
+   **Windows**：下载 `TapirAddOn_AC{版本}_Win.apx` 放入 Add-Ons 目录（如 `C:\Program Files\Graphisoft\Archicad 28\Add-Ons\`）
+
+   **macOS**：下载 `TapirAddOn_AC{版本}_Mac.zip`，解压出 `.bundle`，放入
+   `~/Library/Application Support/GRAPHISOFT/ARCHICAD {版本}/Add-Ons/`
+   （或直接在 Add-On 管理器里手动添加任意位置）
+
+   也可用本包自带脚本自动下载（自动按平台筛选）：
+   ```bash
+   python installer/download_tapir.py 28            # 自动检测 Win/Mac
+   python installer/download_tapir.py 28 --platform mac --out ~/Downloads
+   ```
+
 ### 安装
 
 **方式一：从 PyPI 安装（推荐）**
@@ -170,6 +182,8 @@ archilinkai serve --http --port 8000 --token <你的密钥>
 - 安装器捆绑嵌入式 Python + 本地 wheel，`pip install --no-index` 离线安装
 - 自动写入 MCP 客户端配置；Tapir 按 AC 版本从 GitHub 自动下载（[download_tapir.py](installer/download_tapir.py)）
 - AC 版本→Tapir 映射维护在 `src/archilinkai/data/tapir_versions.json`
+
+> **macOS**：桌面安装器仅支持 Windows（Inno Setup）。Mac 用户走 pip 安装即可，见上方「安装」段；Tapir 用 `installer/download_tapir.py` 自动筛选 `_Mac.zip` 资产并解压 `.bundle`。
 
 ### AC28 + AC29 双版本并存说明
 

@@ -318,3 +318,28 @@
 
 ### 备注
 - 用户反馈 Tapir 已加载但 doctor 报 FAIL，根因是探测命令选错
+
+---
+
+## 2026-10-18 Mac 平台适配（Tapir 下载 + 文档）
+
+### 变更
+- installer/download_tapir.py
+  - 新增 detect_platform()（sys.platform==darwin → mac）
+  - pick_asset 加 platform 参数：Win 筛 *_Win.apx，Mac 筛 *_Mac.zip
+  - download 加 platform 参数，Mac 下 .zip 自动解压出 .bundle
+  - CLI 新增 --platform 参数（默认自动检测）
+- data/tapir_versions.json
+  - 修复 bug：AC26/27 原 release_tag "v0.66.0" 已 404，统一改为 "latest"
+  - 注释更新资产命名规律（_Win.apx / _Mac.zip）
+- readme.md
+  - 运行前提-Tapir 段补 Win/Mac 分平台说明 + Add-Ons 目录路径
+  - 桌面安装器段注明 macOS 无 Inno Setup 安装器，走 pip + download_tapir.py
+
+### 验证
+- pick_asset 单测式验证：win ac28 → TapirAddOn_AC28_Win.apx，mac ac28/29 → 对应 _Mac.zip
+- GitHub API 实测 latest release 1.7.1 含 AC25–30 × Win/Mac 全部 14 资产
+
+### 备注
+- Mac 上 archilinkai 本体无需改动（Python/FastMCP/archicad 包均跨平台）
+- CI 已含 macOS × py3.10/3.12 矩阵
