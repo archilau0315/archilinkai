@@ -132,3 +132,29 @@
 - 真机验证跳过（AC 未启动）
 
 ---
+
+## 2026-10-18 V0.37 成本估算细算引擎
+
+### 变更
+- cost_estimator.py（新增 250 行）：
+  - PRICE_BOOK 材料市场价（混凝土 5 强度/砂浆/钢筋/砌块/防水/装饰，2026 参考价）
+  - MACHINE_BOOK 机械台班价 7 项；DEFAULT_LABOR_PRICE 130 元/工日
+  - CONSUMPTION 消耗量表：15 个清单编码 → 每单位人工工日/材料明细/机械台班
+  - KEYWORD_FALLBACK 关键词兜底 7 类
+  - CostEstimator.estimate_item：单条目细算（人材机分解+材料明细展开）
+  - CostEstimator.estimate_table：全表取费（管理 5%/利润 4.5%/税 9%，可覆盖）
+  - estimate_from_flat_rows：flat_rows → 概算表全流程
+- read_tools.py：+1 工具 estimate_cost（rows+项目名 → 概算表）
+- tests/unit/test_cost_estimator.py（新增，9 用例）
+
+### 设计要点
+- 细算路径：消耗量 × 市场价 → 人材机 → 直接费 → 管理费/利润/税金 → 总价
+- 混凝土类消耗系数 1.015（含 1.5% 损耗）
+- 未命中消耗量的条目不定价，写 notes 提示，避免瞎编
+- 价格/消耗量/费率全部可参数覆盖
+
+### 备注
+- 单测 522 → 531 全过
+- 工具数 64 → 65
+
+---

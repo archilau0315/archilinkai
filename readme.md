@@ -9,7 +9,7 @@
 [![MCP](https://img.shields.io/badge/MCP-Protocol-black?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIweiIvPjwvc3ZnPg==)](https://modelcontextprotocol.io/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-server-green)](https://github.com/jlowin/fastmcp)
 [![Tapir](https://img.shields.io/badge/Tapir-Add--On-yellow)](https://github.com/ENZYME-APD/tapir-archicad-automation)
-[![Tests](https://img.shields.io/badge/tests-522%20pass-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-531%20pass-brightgreen)](tests/)
 [![Status](https://img.shields.io/badge/status-active-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)](#)
 
@@ -46,13 +46,13 @@
 
 | 能力 | 说明 |
 |---|---|
-| 🛠 **64 个 MCP 工具** | 覆盖只读查询、安全写入、修改、删除、计划辅助、诊断运维 |
+| 🛠 **65 个 MCP 工具** | 覆盖只读查询、安全写入、修改、删除、计划辅助、诊断运维 |
 | 🏗 **15 类构件建模** | 墙、柱、梁、板、门、窗、楼梯、屋顶、变形体、家具、灯具、网面、洞口、房间区域、机电管线 |
 | 📊 **29 个算量模板** | 混凝土体积、墙体分层、幕墙、栏杆、门窗洞口面积、模板估算、外檐真石漆、砌体工程等 |
 | 📋 **GB 50500 清单** | 自动映射清单编码、出标准清单报表（xlsx + 标题/项目信息/合计行） |
 | 🔒 **四阶段写入** | Preview → Confirm → Execute → Verify，支持 Ctrl+Z 撤销 |
 | 🆔 **项目身份强校验** | 写入前核对项目路径 + 元素 GUID，防止项目被切换导致误写 |
-| 🧪 **522 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
+| 🧪 **531 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
 | 🖥 **多版本多实例** | 同一套代码兼容 AC26–29，支持双实例并存（ac29-1 / ac28-1） |
 
 ---
@@ -65,7 +65,7 @@ flowchart TB
         C[Claude Desktop / Cursor / Kimi / Trae / Codex / WorkBuddy]
     end
     subgraph Server["ArchiCAD MCP Server"]
-        S[Python FastMCP<br/>64 工具]
+        S[Python FastMCP<br/>65 工具]
     end
     subgraph AC["ArchiCAD 实例"]
         A1[AC29 + Tapir]
@@ -269,7 +269,7 @@ python regression.py                   # 一键回归（单测+集成+兼容+基
 
 | 测试类型 | 通过 | 跳过 | 失败 |
 |---|---|---|---|
-| 单元测试 | 522 | 0 | 0 |
+| 单元测试 | 531 | 0 | 0 |
 | 集成测试 | 25 | 2 | 0 |
 | 兼容性测试 | 12 | 1 | 0 |
 
@@ -384,6 +384,7 @@ archicad-mcp/
 | `list_all_properties` | 列全部属性定义+属性组（算量属性名排查） |
 | `get_calculation_units` | 读项目计算单位与精度 |
 | `get_navigator_tree` | 读导航树（楼层/视图/图册/发布集） |
+| `estimate_cost` | 成本估算细算：算量结果 → 人材机分解 → 取费 → 总价 |
 
 ### P1 安全写入工具（16 个）
 
@@ -425,7 +426,7 @@ archicad-mcp/
 | `get_operation_status` | 查操作状态 |
 | `get_operation_log` | 查操作日志 |
 
-> 工具总数：**64 个**
+> 工具总数：**65 个**
 
 ### 已支持建模构件（15 类）
 
@@ -509,6 +510,7 @@ archicad-mcp/
 - **V0.34 图层组合**：新增 get_layer_combination_details（读组合内每层显隐/锁定/线框/交叉组）和 create_layer_combinations（创建/覆盖组合，confirm 模式）。工具 55 个，单测 513 全过
 - **V0.35 算量模板扩充（23→29）**：新增 roof_waterproof_area（屋面防水 010902001）、stair_concrete_volume（楼梯 010506001）、column_concrete_volume（柱 010502001）、beam_concrete_volume（梁 010505001）、ceiling_area（天棚抹灰 011301001）、floor_finish_area（楼地面 011101001），全部带 GB 50500 清单编码。单测 513 全过
 - **V0.36 P2 只读命令批**：楼层/MEP 三件套/元素关系/GDL 参数读/属性定义/计算单位/导航树共 9 个工具。盘点结论：官方 265 命令中剩余 213 个多为 UI/Teamwork/修订类，价值低。工具 64 个，单测 522 全过
+- **V0.37 成本估算细算引擎**：新增 estimate_cost 工具，细算路径：算量 flat_rows → 消耗量×市场价 → 人材机分解 → 管理 5%/利润 4.5%/税 9% → 含税总价。内置 15 个清单编码消耗量表+2026 市场参考价库，价格/费率/工日单价均可覆盖；未覆盖消耗量的条目不定价并提示。工具 65 个，单测 531 全过
 
 </details>
 

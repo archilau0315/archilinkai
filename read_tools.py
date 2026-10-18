@@ -772,6 +772,45 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def estimate_cost(
+        rows: list[dict[str, Any]],
+        project_name: str,
+        labor_price: float = 130.0,
+        price_overrides: dict[str, float] | None = None,
+        fee_overrides: dict[str, float] | None = None,
+        region: str | None = None,
+    ) -> dict[str, Any]:
+        """成本估算细算：由算量 flat_rows 出人材机分解概算表。
+
+        rows 传 aggregate_quantities / aggregate_by_template 的 flat 数组
+        （须含 code/code_name/code_unit 列，即模板 with_code=true）。
+        细算路径：消耗量 × 市场价 → 人工/材料/机械费 → 管理费/利润/税金 → 总价。
+        labor_price 工日单价（默认 130 元）；price_overrides 覆盖材料市场价
+        （如 {"C30 预拌混凝土": 400.0}）；fee_overrides 覆盖费率
+        （如 {"management_fee": 0.06, "profit": 0.05, "tax": 0.09}）。
+        未覆盖消耗量的条目不定价并在 notes 提示。
+        """
+        def _run() -> dict[str, Any]:
+            from cost_estimator import estimate_from_flat_rows
+            table = estimate_from_flat_rows(
+                rows, project_name, labor_price, price_overrides,
+                fee_overrides, region)
+            s = table["summary"]
+            return success_result(
+                count=len(table["items"]),
+                data={
+                    "summary": s,
+                    "items": table["items"],
+                    "notes": table["notes"],
+                    "fee_rates": table["fee_rates"],
+                    "labor_price": table["labor_price"],
+                    "region": table["region"],
+                    "date": table["date"],
+                },
+            )
+        return safe(None, _run)
+
+    @mcp.tool()
     def export_table(
         rows: list[dict[str, Any]] | None = None,
         sheets: list[dict[str, Any]] | None = None,
