@@ -693,9 +693,9 @@ def test_wall_core_volume_formula_none_skipped():
 
 
 def test_template_count_after_v027():
-    """V0.35 后模板总数应为 29（23+6 个扩充模板）。"""
+    """V0.39 后模板总数应为 40（29+11 个扩充模板）。"""
     from archilinkai.aggregate_service import QUANTITY_TEMPLATES
-    assert len(QUANTITY_TEMPLATES) == 29
+    assert len(QUANTITY_TEMPLATES) == 40
 
 
 def test_template_door_window_area_registered():

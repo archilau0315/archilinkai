@@ -400,3 +400,33 @@
 - 待办：Python314 重装包 + 重启 Trae 后，MCP 层复测修复项
 - 待确认：GetProjectInfo 返回项目名"未命名项目"（导航树内容与 1.1办公楼改造 一致），疑路径解析或用户侧另存
 - 遗留：UpdateZones 需含 Zone 的项目才能复测
+
+---
+
+## 2026-10-18 V0.39 算量估价深度补强
+
+### 变更
+- cost_estimator.py：消耗量表 15→23 条，补 8 个编码
+  - 011406001 墙面喷刷涂料 / 010801001 木质门 / 010807001 金属窗 /
+    010805001 幕墙 / 011001001 保温隔热墙面 / 010803001 保温隔热屋面 /
+    011702001 现浇混凝土模板 / 011102001 地面找平层 / 011302001 天棚喷刷涂料
+- cost_estimator.py PRICE_BOOK：+22 项材料市场价
+  （涂料/腻子/铝合金型材/中空玻璃/密封胶/木材/门窗五金/保温板/粘结抹面砂浆/
+  木模板/钢模板/模板支撑等）
+- aggregate_service.py：算量模板 29→40，+11 个模板
+  - 墙面抹灰/内墙涂料/屋面保温/屋面找平/地面找平/地砖/天棚涂料/
+    踢脚线/风管面积/管道长度/桥架长度
+- aggregate_service.py：已有模板补 code_override
+  - wall_paint_area→011406001、wall_insulation_area→011001001、
+    formwork_area→011702001
+
+### 真机验证（AC28 测试文件，1 面墙）
+- 5 模板全链路：masonry_volume / wall_paint_area / formwork_area /
+  wall_insulation_area / wall_plaster_area
+- 覆盖率 66.7% → 100%（formwork/涂料/保温全部从 skipped 变 detailed）
+- 含税合计 3259.54 元
+
+### 验证
+- 单测 553 全过（模板数断言 29→40）
+- 注：本机 pip install -e 因 archilinkai.exe 被运行中 MCP 服务占用失败，
+  但源码已加载（aggregate_service.__file__ 指向 src），重启 Trae 后正式生效
