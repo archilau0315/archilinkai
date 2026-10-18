@@ -97,17 +97,30 @@ flowchart TB
 
 ### 安装
 
-**方式一：从 PyPI 安装（推荐，发布后可用）**
+**方式一：从 PyPI 安装（推荐）**
+
+无需专门建目录，在任意位置打开命令行执行一行即可：
 
 ```bash
 pip install archilinkai
-# 启动（archilinkai 命令）
-archilinkai
-# 或
+```
+
+包会装进 Python 的 site-packages，`archilinkai` 命令加入 PATH，任何目录都能直接用。
+
+```bash
+archilinkai          # 启动
 python -m archilinkai
 ```
 
-**方式二：从源码安装（当前开发态）**
+> 想隔离环境（不污染全局 Python）时才用虚拟环境，目录位置随你：
+> ```bash
+> python -m venv D:\archilinkai-env
+> D:\archilinkai-env\Scripts\activate
+> pip install archilinkai
+> ```
+> 此时 MCP 客户端配置里的 `command` 需写绝对路径，如 `"D:/archilinkai-env/Scripts/archilinkai.exe"`。
+
+**方式二：从源码安装（开发态）**
 
 ```bash
 pip install -e ".[dev]"
