@@ -507,3 +507,99 @@ def test_update_zones(monkeypatch):
     assert calls["params"]["keepStampPosition"] is False
     assert calls["params"]["undoTopTrim"] is True
     assert calls["params"]["undoBottomTrim"] is True
+
+
+def test_get_connected_elements(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"connectedElements": [[{"elementId": {"guid": "W1"}}]]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_connected_elements(["H1", "H2"], "Window")
+    assert calls["cmd"] == "GetConnectedElements"
+    assert calls["params"]["connectedElementType"] == "Window"
+    assert calls["params"]["elements"] == [
+        {"elementId": {"guid": "H1"}},
+        {"elementId": {"guid": "H2"}},
+    ]
+    assert rows == [[{"elementId": {"guid": "W1"}}]]
+
+
+def test_move_elements(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"executionResults": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    items = [{"elementId": {"guid": "E1"},
+              "moveVector": {"x": 1.0, "y": 2.0, "z": 0.0}, "copy": False}]
+    tapir_adapter.adapter.move_elements(items)
+    assert calls["cmd"] == "MoveElements"
+    assert calls["params"]["elementsWithMoveVectors"] == items
+
+
+def test_rotate_elements(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"executionResults": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rot = {"beginPoint": {"x": 1, "y": 0}, "endPoint": {"x": 0, "y": 1},
+           "origin": {"x": 0, "y": 0}}
+    items = [{"elementId": {"guid": "E1"}, "rotation": rot, "copy": True}]
+    tapir_adapter.adapter.rotate_elements(items)
+    assert calls["cmd"] == "RotateElements"
+    assert calls["params"]["elementsWithRotations"] == items
+
+
+def test_get_element_preview_image(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"previewImage": "aGVsbG8="}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    b64 = tapir_adapter.adapter.get_element_preview_image("E1", "2D", "jpg", 256, 256)
+    assert calls["cmd"] == "GetElementPreviewImage"
+    assert calls["params"]["elementId"] == {"guid": "E1"}
+    assert calls["params"]["imageType"] == "2D"
+    assert calls["params"]["format"] == "jpg"
+    assert calls["params"]["width"] == 256
+    assert b64 == "aGVsbG8="
+
+
+def test_get_building_material_physical_properties(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"properties": [{"density": 2400}]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_building_material_physical_properties(["B1"])
+    assert calls["cmd"] == "GetBuildingMaterialPhysicalProperties"
+    assert calls["params"]["attributeIds"] == [{"attributeId": {"guid": "B1"}}]
+    assert rows == [{"density": 2400}]
+

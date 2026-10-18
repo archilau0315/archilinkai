@@ -410,6 +410,110 @@ class TapirAdapter:
         }
         return self.execute("UpdateZones", params, instance)
 
+    # ---- P0 命令：连接关系 / 移动旋转 / 预览图 / 材料物理性能 ----
+
+    def get_connected_elements(
+        self,
+        guids: list[str],
+        connected_element_type: str,
+        instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetConnectedElements：查宿主元素上挂的指定类型子元素。
+
+        如墙上的门窗、幕墙的框架/面板、楼梯的踏踢板、栏杆的立柱/扶手。
+        返回 connectedElements（按请求顺序与宿主对应）。
+        """
+        params = {
+            "elements": [{"elementId": {"guid": g}} for g in guids],
+            "connectedElementType": connected_element_type,
+        }
+        result = self.execute("GetConnectedElements", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("connectedElements", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def move_elements(
+        self,
+        elements_with_move_vectors: list[dict[str, Any]],
+        instance: str | None = None,
+    ) -> Any:
+        """MoveElements：按向量移动元素。
+
+        elements_with_move_vectors 每项：
+        {"elementId": {"guid": ...}, "moveVector": {"x": .., "y": .., "z": ..},
+         "copy": False(可选，True 时移动副本)}
+        """
+        params = {"elementsWithMoveVectors": elements_with_move_vectors}
+        return self.execute("MoveElements", params, instance)
+
+    def rotate_elements(
+        self,
+        elements_with_rotations: list[dict[str, Any]],
+        instance: str | None = None,
+    ) -> Any:
+        """RotateElements：绕参考点旋转元素。
+
+        elements_with_rotations 每项：
+        {"elementId": {"guid": ...},
+         "rotation": {"beginPoint": {"x","y"}, "endPoint": {"x","y"},
+                      "origin": {"x","y"}},
+         "copy": False(可选)}
+        """
+        params = {"elementsWithRotations": elements_with_rotations}
+        return self.execute("RotateElements", params, instance)
+
+    def get_element_preview_image(
+        self,
+        guid: str,
+        image_type: str = "3D",
+        image_format: str = "png",
+        width: int = 128,
+        height: int = 128,
+        instance: str | None = None,
+    ) -> str:
+        """GetElementPreviewImage：取元素预览图，返回 base64 字符串。
+
+        image_type: 2D / Section / 3D（默认 3D）；image_format: png / jpg。
+        """
+        params: dict[str, Any] = {
+            "elementId": {"guid": guid},
+            "imageType": image_type,
+            "format": image_format,
+            "width": width,
+            "height": height,
+        }
+        result = self.execute("GetElementPreviewImage", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            return data.get("previewImage", "")
+        return str(data or "")
+
+    def get_building_material_physical_properties(
+        self,
+        attribute_ids: list[str],
+        instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetBuildingMaterialPhysicalProperties：读建筑材料物理性能。
+
+        attribute_ids 为建筑材料 attributeId.guid 列表（包装成
+        [{"attributeId": {"guid": ...}}]，与 GetLayers 同格式）。
+        返回 properties 列表。
+        """
+        params = {
+            "attributeIds": [{"attributeId": {"guid": g}} for g in attribute_ids]
+        }
+        result = self.execute(
+            "GetBuildingMaterialPhysicalProperties", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("properties", [])
+        else:
+            rows = list(data or [])
+        return rows
+
 
 def _to_dict(value: Any) -> Any:
     """把 Tapir 返回的对象（可能是 namedtuple/dataclass）转成 dict/list。

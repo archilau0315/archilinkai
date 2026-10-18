@@ -359,6 +359,70 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def get_connected_elements(
+        guids: list[str],
+        connected_element_type: str,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """查宿主元素上挂的指定类型子元素（经 Tapir GetConnectedElements）。
+
+        如墙上的门窗（connected_element_type="Window"/"Door"）、
+        幕墙的框架/面板、楼梯的踏踢板、栏杆的立柱/扶手。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_connected_elements(
+                guids, connected_element_type, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), connected_elements=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_element_preview_image(
+        guid: str,
+        image_type: str = "3D",
+        image_format: str = "png",
+        width: int = 128,
+        height: int = 128,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """取元素预览图（经 Tapir GetElementPreviewImage），返回 base64 字符串。
+
+        image_type: 2D / Section / 3D；image_format: png / jpg。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            b64 = _tapir.get_element_preview_image(
+                guid, image_type, image_format, width, height, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=1 if b64 else 0,
+                data={"guid": guid, "image_type": image_type,
+                      "format": image_format, "preview_image": b64},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_building_material_properties(
+        attribute_ids: list[str], instance: str | None = None,
+    ) -> dict[str, Any]:
+        """读建筑材料物理性能（经 Tapir GetBuildingMaterialPhysicalProperties）。
+
+        attribute_ids 为建筑材料 attributeId.guid 列表。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_building_material_physical_properties(
+                attribute_ids, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), properties=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
     def get_element_geometry_info(
         element_guids: list[str], instance: str | None = None
     ) -> dict[str, Any]:

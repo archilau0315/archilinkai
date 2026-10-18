@@ -43,3 +43,30 @@
 - Zone 相关 2 个命令在当前项目报错，单测通过，参数格式正确，属项目数据或 Tapir 版本限制
 
 ---
+
+## 2026-10-17 V0.33 P0 Tapir 命令批：连接关系/移动旋转/预览图/材料物理性能
+
+### 变更
+- tapir_adapter.py：+5 便捷方法
+  - get_connected_elements(guids, connected_element_type)
+  - move_elements(elements_with_move_vectors)
+  - rotate_elements(elements_with_rotations)
+  - get_element_preview_image(guid, image_type, image_format, width, height)
+  - get_building_material_physical_properties(attribute_ids)
+- read_tools.py：+3 只读工具
+  - get_connected_elements（墙→窗、幕墙→框架、楼梯→踏踢板等）
+  - get_element_preview_image（2D/Section/3D，png/jpg，返回 base64）
+  - get_building_material_properties（建筑材料物理性能）
+- write_tools.py：+2 写入工具（confirm 模式）
+  - move_elements(guids, dx, dy, dz, copy, confirm)
+  - rotate_elements(guids, origin, begin_point, end_point, copy, confirm)
+- tests/unit/test_tapir_adapter.py：+5 用例
+
+### 备注
+- 单测 506 → 511 全过
+- 工具数 48 → 53
+- 真机验证：AC28 未启动，跳过；单测已覆盖参数格式
+- MoveElements/RotateElements 输出为 ExecutionResults（批量执行结果）
+- GetBuildingMaterialPhysicalProperties 的 attributeIds 用 [{attributeId:{guid}}] 包装（与 GetLayers 一致）
+
+---

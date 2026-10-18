@@ -294,6 +294,85 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def move_elements(
+        element_guids: list[str],
+        dx: float,
+        dy: float,
+        dz: float = 0.0,
+        copy: bool = False,
+        confirm: bool = False,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """按向量批量移动元素（经 Tapir MoveElements）。
+
+        dx/dy/dz 为移动向量（米）；copy=true 时移动副本（原元素保留）。
+        confirm=true 时才执行。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            vec = {"x": dx, "y": dy, "z": dz}
+            if not confirm:
+                return success_result(
+                    instance=info.instance_id, project=info.project_name,
+                    count=len(element_guids),
+                    data={"message": f"预览：将移动 {len(element_guids)} 个元素。",
+                          "move_vector": vec, "copy": copy,
+                          "element_guids": element_guids},
+                )
+            payload = [
+                {"elementId": {"guid": g}, "moveVector": vec, "copy": copy}
+                for g in element_guids
+            ]
+            result = _tapir.move_elements(payload, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(element_guids),
+                data={"message": f"已移动 {len(element_guids)} 个元素。",
+                      "move_vector": vec, "copy": copy, "result": result},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def rotate_elements(
+        element_guids: list[str],
+        origin: dict[str, float],
+        begin_point: dict[str, float],
+        end_point: dict[str, float],
+        copy: bool = False,
+        confirm: bool = False,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """绕参考点批量旋转元素（经 Tapir RotateElements）。
+
+        origin 为旋转中心，begin_point→end_point 定义旋转弧（均含 x/y）。
+        copy=true 时旋转副本。confirm=true 时才执行。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rot = {"beginPoint": begin_point, "endPoint": end_point,
+                   "origin": origin}
+            if not confirm:
+                return success_result(
+                    instance=info.instance_id, project=info.project_name,
+                    count=len(element_guids),
+                    data={"message": f"预览：将旋转 {len(element_guids)} 个元素。",
+                          "rotation": rot, "copy": copy,
+                          "element_guids": element_guids},
+                )
+            payload = [
+                {"elementId": {"guid": g}, "rotation": rot, "copy": copy}
+                for g in element_guids
+            ]
+            result = _tapir.rotate_elements(payload, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(element_guids),
+                data={"message": f"已旋转 {len(element_guids)} 个元素。",
+                      "rotation": rot, "copy": copy, "result": result},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
     def preview_model_plan(
         plan: dict[str, Any], instance: str | None = None
     ) -> dict[str, Any]:
