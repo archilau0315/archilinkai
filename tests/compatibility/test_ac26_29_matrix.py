@@ -16,9 +16,9 @@ PROJECT_ROOT = os.path.dirname(
 )
 sys.path.insert(0, PROJECT_ROOT)
 
-import property_service
-from instance_manager import manager as im
-from tapir_adapter import adapter as tapir
+from archibridge import property_service
+from archibridge.instance_manager import manager as im
+from archibridge.tapir_adapter import adapter as tapir
 
 
 # 模块级 fixture（不能写成类里的 class-scoped 实例方法，新版 pytest 会报错）

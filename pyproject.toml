@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "archibridge"
+version = "0.38.0"
+description = "筑联 ArchiBridge：AI 智能体与 ArchiCAD 之间的 MCP 桥梁（查询/建模/算量/估价/报表）"
+readme = "readme.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["archicad", "bim", "mcp", "ai", "quantity-takeoff", "estimate"]
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Topic :: Scientific/Engineering :: CAD",
+]
+dependencies = [
+    "mcp>=1.0",
+    "archicad>=27.0.0",
+    "openpyxl>=3.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+archibridge = "archibridge.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

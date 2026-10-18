@@ -6,8 +6,8 @@
 
 import pytest
 
-from errors import ConfirmRequiredError
-from operation_service import _values_match, _verify_status, operations
+from archibridge.errors import ConfirmRequiredError
+from archibridge.operation_service import _values_match, _verify_status, operations
 
 
 # --- _values_match ------------------------------------------------------

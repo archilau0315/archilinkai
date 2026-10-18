@@ -2,7 +2,7 @@
 
 import pytest
 
-from geometry_service import summarize, summarize_all
+from archibridge.geometry_service import summarize, summarize_all
 
 
 # 墙的最小完整样本

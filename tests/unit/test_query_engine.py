@@ -5,15 +5,15 @@
 
 import pytest
 
-from errors import PaginationInvalidError
-from query_engine import (
+from archibridge.errors import PaginationInvalidError
+from archibridge.query_engine import (
     _normalize,
     _to_number,
     apply_operator,
     decode_cursor,
     encode_cursor,
 )
-from schemas import Operator
+from archibridge.schemas import Operator
 
 
 # --- apply_operator：9 种操作符 -------------------------------------------

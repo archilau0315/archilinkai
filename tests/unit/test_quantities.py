@@ -2,7 +2,7 @@
 
 import pytest
 
-from property_service import PropertyService, PropertyType
+from archibridge.property_service import PropertyService, PropertyType
 
 
 @pytest.fixture()

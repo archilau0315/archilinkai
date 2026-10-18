@@ -189,3 +189,34 @@
 - 工具数 65 → 66
 
 ---
+
+---
+
+## 2026-10-18 V0.39（S0）包产品化：archicad-mcp → 筑联 ArchiBridge
+
+### 变更
+- 目录重组：37 个模块 git mv 到 src/archibridge/（保留 git 历史）；
+  regression.py / benchmark.py 留在根目录作开发脚本
+- 新增 src/archibridge/__init__.py（__version__='0.38.0' 版本单源）+ __main__.py
+- 全部 .py + tests import 改写：import X → from archibridge import X（68 文件 281 行，脚本批量）
+- 新增 pyproject.toml：包名 archibridge，console_scripts 入口 archibridge=archibridge.server:main，
+  依赖 mcp/archicad/openpyxl，pip install -e . 可编辑安装验证通过
+- server.py（包内）：mcp 名改 archibridge；模块级 discover_instances 移入 main()
+  （单测提速 49s→6.5s）；启动横幅带版本号
+- 新增根目录兼容薄壳 server.py：sys.path 注入 src 后调 archibridge.server.main，
+  旧版 MCP 配置 python server.py 不失效
+- 新增 CHANGELOG.md：readme 版本历史迁移至此（Keep a Changelog 风格分区）
+- 新增 .github/workflows/ci.yml：win/mac × py3.10/3.12 矩阵 + 版本一致性校验 + tag 触发 PyPI 发布
+- readme：标题品牌化（筑联 ArchiBridge）、客户端矩阵表述、安装段改 pip/三入口
+- benchmark.py：源码态 sys.path 注入
+
+### 顺手修复
+- read_tools.py 中 get_gdl_parameters 重复定义两处（V0.33 与早期批次），
+  删旧版保留 V0.33 版（FastMCP 启动警告消除）
+
+### 验证
+- 三入口全通：archibridge / python -m archibridge / python server.py
+- 537 单测全过；pip install -e . 正常
+
+### 备注
+- S0 验收清单剩余：干净虚拟机 uvx 验证、PyPI 发布（待 tag 推送后走 CI）

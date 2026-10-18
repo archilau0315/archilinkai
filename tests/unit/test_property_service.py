@@ -5,8 +5,8 @@
 
 import pytest
 
-from errors import PropertyTypeMismatchError, PropertyTypeUnknownError
-from property_service import (
+from archibridge.errors import PropertyTypeMismatchError, PropertyTypeUnknownError
+from archibridge.property_service import (
     PropertyType,
     parse_property_type,
     validate_and_encode,
@@ -169,7 +169,7 @@ class _FakeMgr:
 
 @pytest.fixture()
 def fake_service():
-    from property_service import PropertyService
+    from archibridge.property_service import PropertyService
     conn = _FakeConn()
     return PropertyService(_FakeMgr(conn)), conn
 

@@ -6,16 +6,16 @@ discover/refresh 需 archicad 连接，留给集成测试；
 
 import pytest
 
-from errors import (
+from archibridge.errors import (
     InstanceDisconnectedError,
     InstanceNotFoundError,
     MultipleInstancesError,
     NoInstanceAvailableError,
     ProjectIdentityChangedError,
 )
-import instance_manager as im_mod
-from instance_manager import InstanceEntry, InstanceManager
-from schemas import InstanceInfo, InstanceStatus
+from archibridge import instance_manager as im_mod
+from archibridge.instance_manager import InstanceEntry, InstanceManager
+from archibridge.schemas import InstanceInfo, InstanceStatus
 
 
 def _make_info(instance_id="ac29-1", **kw):

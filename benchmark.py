@@ -12,12 +12,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable
 
-import instance_manager
-from tapir_adapter import adapter as _tapir
+# 源码态（未 pip install）从项目根直接跑时补 src 路径
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+
+from archibridge import instance_manager
+from archibridge.tapir_adapter import adapter as _tapir
 
 
 def measure(fn: Callable[[], Any], rounds: int = 3) -> dict[str, Any]:

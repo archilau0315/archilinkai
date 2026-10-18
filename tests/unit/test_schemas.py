@@ -1,6 +1,6 @@
 """schemas.py 单元测试：数据结构 to_dict 与 success_result。"""
 
-from schemas import (
+from archibridge.schemas import (
     ElementSummary,
     Filter,
     InstanceInfo,

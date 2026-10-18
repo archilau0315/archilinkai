@@ -5,8 +5,8 @@
 - executionResults 行 → CreateResult
 """
 
-from channel_base import CreateResult
-from tapir_channel import TapirChannel
+from archibridge.channel_base import CreateResult
+from archibridge.tapir_channel import TapirChannel
 import pytest
 
 

@@ -10,10 +10,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from channel_base import CreateResult
-from errors import ConfirmRequiredError
-from modify_service import ModifyService
-from schemas import InstanceInfo, InstanceStatus
+from archibridge.channel_base import CreateResult
+from archibridge.errors import ConfirmRequiredError
+from archibridge.modify_service import ModifyService
+from archibridge.schemas import InstanceInfo, InstanceStatus
 
 
 INFO = InstanceInfo(
@@ -156,7 +156,7 @@ def test_execute_point_change_verified(svc):
 
 
 def test_capability_gate_blocks(svc):
-    from errors import ChannelCapabilityError
+    from archibridge.errors import ChannelCapabilityError
 
     svc._channel.supports_modify.return_value = False
     with pytest.raises(ChannelCapabilityError):
@@ -165,7 +165,7 @@ def test_capability_gate_blocks(svc):
 
 def test_missing_target_reported_plainly(svc):
     """构件不在项目里：报"不存在"，不报"项目变化"。"""
-    from errors import InvalidArgumentError
+    from archibridge.errors import InvalidArgumentError
 
     # 默认 details 只有 WALL-GUID；查另一个 GUID
     svc._read_details = MagicMock(return_value={})

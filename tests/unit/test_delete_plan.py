@@ -3,8 +3,8 @@
 
 import pytest
 
-from delete_plan import DeletePlan
-from errors import InvalidArgumentError
+from archibridge.delete_plan import DeletePlan
+from archibridge.errors import InvalidArgumentError
 
 
 def test_basic_ok():

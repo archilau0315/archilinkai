@@ -7,7 +7,7 @@
 
 import pytest
 
-import instance_manager
+from archibridge import instance_manager
 
 try:
     instance_manager.manager.discover_instances()

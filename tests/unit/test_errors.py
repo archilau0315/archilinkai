@@ -2,7 +2,7 @@
 
 import pytest
 
-from errors import (
+from archibridge.errors import (
     ArchicadMCPError,
     ConfirmRequiredError,
     ErrorCode,

@@ -2,8 +2,8 @@
 
 import pytest
 
-from estimate_schema import create_estimate_item, create_estimate_table
-from quota_matcher import QuotaMatcher, extract_specs, convert_unit, similarity
+from archibridge.estimate_schema import create_estimate_item, create_estimate_table
+from archibridge.quota_matcher import QuotaMatcher, extract_specs, convert_unit, similarity
 
 
 class TestExtractSpecs:

@@ -1,6 +1,6 @@
 """lint_model_plan 单元测试。"""
 
-import server
+from archibridge import server
 
 
 class _MCP:

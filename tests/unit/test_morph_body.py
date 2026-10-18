@@ -3,9 +3,9 @@
 
 import pytest
 
-from errors import InvalidArgumentError
-from model_plan import ModelPlan
-from tapir_channel import TapirChannel
+from archibridge.errors import InvalidArgumentError
+from archibridge.model_plan import ModelPlan
+from archibridge.tapir_channel import TapirChannel
 
 
 # 一个四面体：底面三角 + 顶点，4 顶点 4 面

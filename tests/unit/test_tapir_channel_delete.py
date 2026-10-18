@@ -3,8 +3,8 @@
 
 import pytest
 
-from channel_base import CreateResult
-from tapir_channel import TapirChannel
+from archibridge.channel_base import CreateResult
+from archibridge.tapir_channel import TapirChannel
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ def ch():
 def test_delete_empty_returns_ok_without_call(ch, monkeypatch):
     called = []
     # _tapir 在 tapir_channel 模块内被导入
-    import tapir_channel
+    from archibridge import tapir_channel
     monkeypatch.setattr(
         tapir_channel, "_tapir",
         _FakeTapir(called, {"success": True})
@@ -27,7 +27,7 @@ def test_delete_empty_returns_ok_without_call(ch, monkeypatch):
 
 def test_delete_success(ch, monkeypatch):
     called = []
-    import tapir_channel
+    from archibridge import tapir_channel
     monkeypatch.setattr(
         tapir_channel, "_tapir",
         _FakeTapir(called, {"success": True})
@@ -47,7 +47,7 @@ def test_delete_success(ch, monkeypatch):
 
 def test_delete_failure(ch, monkeypatch):
     called = []
-    import tapir_channel
+    from archibridge import tapir_channel
     monkeypatch.setattr(
         tapir_channel, "_tapir",
         _FakeTapir(called, {

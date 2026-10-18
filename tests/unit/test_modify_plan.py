@@ -2,8 +2,8 @@
 
 import pytest
 
-from errors import InvalidArgumentError
-from modify_plan import ModifyPlan, MAX_ITEMS
+from archibridge.errors import InvalidArgumentError
+from archibridge.modify_plan import ModifyPlan, MAX_ITEMS
 
 
 def _wall(guid="G-1", **changes):
