@@ -101,41 +101,80 @@ flowchart TB
    `~/Library/Application Support/GRAPHISOFT/ARCHICAD {版本}/Add-Ons/`
    （或直接在 Add-On 管理器里手动添加任意位置）
 
-   也可用本包自带脚本自动下载（自动按平台筛选）：
+   也可用本包自带命令自动下载（自动按平台筛选）：
    ```bash
-   python installer/download_tapir.py 28            # 自动检测 Win/Mac
-   python installer/download_tapir.py 28 --platform mac --out ~/Downloads
+   archilinkai download-tapir 28            # 自动检测 Win/Mac
+   archilinkai download-tapir 28 --platform mac --out ~/Downloads
+   archilinkai download-tapir 28 --platform all            # Win+Mac 并存
    ```
 
 ### 安装
 
 **方式一：从 PyPI 安装（推荐）**
 
-无需专门建目录，在任意位置打开命令行执行一行即可：
+pip 包是纯 Python wheel，Win 和 Mac 通用。无需专门建目录，任意位置一行搞定：
 
 ```bash
 pip install archilinkai
 ```
 
-包会装进 Python 的 site-packages，`archilinkai` 命令加入 PATH，任何目录都能直接用。
+装完后 `archilinkai` 命令加入 PATH，任何目录都能用：
 
 ```bash
-archilinkai          # 启动
-python -m archilinkai
+archilinkai doctor     # 环境自检
+archilinkai serve      # 启动 MCP 服务
 ```
 
-> 想隔离环境（不污染全局 Python）时才用虚拟环境，目录位置随你：
+> 想隔离环境（不污染全局 Python）时才用虚拟环境，目录位置随你。
+> Win 示例：
 > ```bash
 > python -m venv D:\archilinkai-env
 > D:\archilinkai-env\Scripts\activate
 > pip install archilinkai
 > ```
-> 此时 MCP 客户端配置里的 `command` 需写绝对路径，如 `"D:/archilinkai-env/Scripts/archilinkai.exe"`。
+> Mac 示例：
+> ```bash
+> python3 -m venv ~/archilinkai-env
+> source ~/archilinkai-env/bin/activate
+> pip install archilinkai
+> ```
+> 虚拟环境下 MCP 客户端配置里的 `command` 需写绝对路径。
 
 **方式二：从源码安装（开发态）**
 
 ```bash
 pip install -e ".[dev]"
+```
+
+---
+
+#### Windows 用户完整流程
+
+```bash
+# 1. 装包
+pip install archilinkai
+
+# 2. 下载对应版本 Tapir（自动下 Win .apx）
+archilinkai download-tapir 28 --out "C:\Program Files\Graphisoft\Archicad 28\Add-Ons"
+
+# 3. ArchiCAD 里：选项 → Add-On 管理器 → 添加 → 选 .apx
+# 4. 验证
+archilinkai doctor
+```
+
+#### macOS 用户完整流程
+
+```bash
+# 1. 装包
+pip install archilinkai
+
+# 2. 下载对应版本 Tapir（自动下 Mac .zip 并解压出 .bundle）
+archilinkai download-tapir 28 --out ~/Downloads
+
+# 3. ArchiCAD 里：选项 → Add-On 管理器 → 添加 → 选 .bundle
+#    或把 .bundle 放到 ~/Library/Application Support/GRAPHISOFT/ARCHICAD 28/Add-Ons/
+# 4. 验证
+archilinkai doctor
 ```
 
 ### 启动

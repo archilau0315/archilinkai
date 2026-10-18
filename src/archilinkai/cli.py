@@ -1,9 +1,10 @@
-"""archilinkai CLI：serve / doctor / install。
+"""archilinkai CLI：serve / doctor / install / download-tapir。
 
 - serve（默认）：启动 MCP server（stdio），等价 python -m archilinkai
 - doctor：环境自检（doctor.py）
 - install <client>：向 MCP 客户端写入 server 配置（客户端矩阵见 data/clients.json）
 - install generic：打印通用 MCP JSON 片段
+- download-tapir <版本>：下载对应平台 Tapir（win/mac/all）
 """
 
 from __future__ import annotations
@@ -91,6 +92,19 @@ def cmd_serve(args) -> int:
     return 0
 
 
+def cmd_download_tapir(args) -> int:
+    from archilinkai import download_tapir
+    try:
+        paths = download_tapir.download(args.ac_version, Path(args.out),
+                                        args.platform)
+    except Exception as exc:  # noqa: BLE001
+        print(f"下载失败：{exc}", file=sys.stderr)
+        return 1
+    for p in paths:
+        print(f"已下载：{p}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="archilinkai",
@@ -100,6 +114,11 @@ def main() -> int:
     p_inst = sub.add_parser("install", help="向 MCP 客户端写入配置")
     p_inst.add_argument("client", nargs="?", default="generic",
                         help="claude/cursor/cline/witsy/cherry/codex/generic")
+    p_dt = sub.add_parser("download-tapir", help="下载 Tapir Add-On")
+    p_dt.add_argument("ac_version", help="ArchiCAD 主版本，如 28")
+    p_dt.add_argument("--out", default="./tapir_download", help="下载目录")
+    p_dt.add_argument("--platform", choices=["win", "mac", "all"], default=None,
+                      help="目标平台，默认按当前系统检测；all 双平台并存")
     p_serve = sub.add_parser("serve", help="启动 MCP server（默认 stdio）")
     p_serve.add_argument("--http", action="store_true",
                          help="HTTP 模式（远程/平台接入，需 token）")
@@ -113,6 +132,8 @@ def main() -> int:
         return cmd_doctor(args)
     if args.cmd == "install":
         return cmd_install(args)
+    if args.cmd == "download-tapir":
+        return cmd_download_tapir(args)
     return cmd_serve(args)
 
 

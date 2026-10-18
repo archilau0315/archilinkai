@@ -343,3 +343,17 @@
 ### 备注
 - Mac 上 archilinkai 本体无需改动（Python/FastMCP/archicad 包均跨平台）
 - CI 已含 macOS × py3.10/3.12 矩阵
+
+---
+
+## 2026-10-18 Win/Mac 双平台并存分发
+
+### 变更
+- 新增 src/archilinkai/download_tapir.py（包内模块，pip 可用）
+- cli.py 新增 download-tapir 子命令（archilinkai download-tapir 28 [--platform win|mac|all]）
+- installer/download_tapir.py 改为薄壳转发（向后兼容）
+- readme 安装段重构为 Windows/macOS 两个并列完整流程，用户按系统自选
+
+### 备注
+- download() 返回 list[Path]，all 模式 Win+Mac 各下一份并存
+- pip 包纯 Python wheel，Win/Mac 通用
