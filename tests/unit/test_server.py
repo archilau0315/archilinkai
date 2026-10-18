@@ -7,15 +7,15 @@ _instance_info 已随 P1 工具迁入 write_tools._info，在对应测试段覆�
 
 import pytest
 
-from archibridge import server
-from archibridge import write_tools
-from archibridge.errors import (
+from archilinkai import server
+from archilinkai import write_tools
+from archilinkai.errors import (
     ArchicadMCPError,
     ConfirmRequiredError,
     ErrorCode,
     InstanceNotFoundError,
 )
-from archibridge.schemas import success_result
+from archilinkai.schemas import success_result
 
 
 # --- _safe：成功路径透传 -----------------------------------------------
@@ -104,7 +104,7 @@ def test_instance_info_returns_info_when_available():
     """单实例时 _info 返回 info。"""
     from unittest.mock import MagicMock
 
-    from archibridge.schemas import InstanceInfo, InstanceStatus
+    from archilinkai.schemas import InstanceInfo, InstanceStatus
 
     info = InstanceInfo(
         instance_id="ac29-1", port=19723, version=29, build=3000,

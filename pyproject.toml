@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "archibridge"
+name = "archilinkai"
 version = "0.38.0"
-description = "筑联 ArchiBridge：AI 智能体与 ArchiCAD 之间的 MCP 桥梁（查询/建模/算量/估价/报表）"
+description = "筑元智联 ArchiLinkAI：AI 智能体与 ArchiCAD 之间的 MCP 桥梁（查询/建模/算量/估价/报表）"
 readme = "readme.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -26,7 +26,7 @@ dependencies = [
 dev = ["pytest>=8.0"]
 
 [project.scripts]
-archibridge = "archibridge.server:main"
+archilinkai = "archilinkai.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -6,10 +6,10 @@ plan_preview 多段描述。
 
 import pytest
 
-from archibridge.errors import InvalidArgumentError
-from archibridge.model_plan import ModelPlan
-from archibridge.plan_preview import _describe
-from archibridge.tapir_channel import TapirChannel
+from archilinkai.errors import InvalidArgumentError
+from archilinkai.model_plan import ModelPlan
+from archilinkai.plan_preview import _describe
+from archilinkai.tapir_channel import TapirChannel
 
 
 def test_stair_path_ok():

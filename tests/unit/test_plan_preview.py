@@ -1,7 +1,7 @@
 """plan_preview.py 单元测试：统计、墙总长、预览文字。"""
 
-from archibridge.model_plan import ModelPlan
-from archibridge.plan_preview import build_preview
+from archilinkai.model_plan import ModelPlan
+from archilinkai.plan_preview import build_preview
 
 
 def _plan(elements):

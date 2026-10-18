@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from archibridge import server
+from archilinkai import server
 
 
 class _Capturer:

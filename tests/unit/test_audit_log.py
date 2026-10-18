@@ -8,8 +8,8 @@ import tempfile
 
 import pytest
 
-from archibridge.audit_log import OperationLogger
-from archibridge.schemas import OperationLog
+from archilinkai.audit_log import OperationLogger
+from archilinkai.schemas import OperationLog
 
 
 @pytest.fixture

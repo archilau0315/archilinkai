@@ -5,8 +5,8 @@
 
 import pytest
 
-from archibridge.errors import ArchicadMCPError, ErrorCode
-from archibridge.model_plan import MAX_ELEMENTS, ModelPlan
+from archilinkai.errors import ArchicadMCPError, ErrorCode
+from archilinkai.model_plan import MAX_ELEMENTS, ModelPlan
 
 
 def _plan(elements, instance=None):

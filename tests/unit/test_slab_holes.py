@@ -7,18 +7,18 @@ tapir_channel 创建/修改参数拼装、modify_service 洞比对。
 
 import pytest
 
-from archibridge.errors import ArchicadMCPError, ErrorCode, InvalidArgumentError
-from archibridge.model_plan import ModelPlan
-from archibridge.modify_plan import ModifyPlan
-from archibridge.tapir_channel import TapirChannel
-from archibridge import modify_service
+from archilinkai.errors import ArchicadMCPError, ErrorCode, InvalidArgumentError
+from archilinkai.model_plan import ModelPlan
+from archilinkai.modify_plan import ModifyPlan
+from archilinkai.tapir_channel import TapirChannel
+from archilinkai import modify_service
 
 
 # --- plan_values.hole_polygons ----------------------------------------------
 
 
 def test_hole_polygons_ok():
-    from archibridge.plan_values import hole_polygons
+    from archilinkai.plan_values import hole_polygons
     raw = [[{"x": 0, "y": 0}, {"x": 1, "y": 0}, {"x": 1, "y": 1}]]
     out = hole_polygons(raw, "f")
     assert out == [[{"x": 0.0, "y": 0.0}, {"x": 1.0, "y": 0.0},
@@ -26,19 +26,19 @@ def test_hole_polygons_ok():
 
 
 def test_hole_polygons_empty_rejected():
-    from archibridge.plan_values import hole_polygons
+    from archilinkai.plan_values import hole_polygons
     with pytest.raises(InvalidArgumentError):
         hole_polygons([], "f")
 
 
 def test_hole_polygons_too_few_points():
-    from archibridge.plan_values import hole_polygons
+    from archilinkai.plan_values import hole_polygons
     with pytest.raises(InvalidArgumentError):
         hole_polygons([[{"x": 0, "y": 0}, {"x": 1, "y": 0}]], "f")
 
 
 def test_hole_polygons_bad_point():
-    from archibridge.plan_values import hole_polygons
+    from archilinkai.plan_values import hole_polygons
     with pytest.raises(InvalidArgumentError):
         hole_polygons([[{"x": 0, "y": 0}, {"x": 1, "y": 0}, {"x": "a"}]], "f")
 

@@ -1,6 +1,6 @@
 # 更新日志（Changelog）
 
-筑联 ArchiBridge 版本历史。当前包版本以 `src/archibridge/__init__.py` 为单源（与 pyproject.toml 同步，CI 校验）。
+筑元智联 ArchiLinkAI 版本历史。当前包版本以 `src/archilinkai/__init__.py` 为单源（与 pyproject.toml 同步，CI 校验）。
 
 > 早期版本号 V0.x 为研发迭代号；自 0.38.0 起进入包发布号（与 V0.38 对应）。
 

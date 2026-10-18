@@ -21,8 +21,8 @@ from typing import Any, Callable
 # 源码态（未 pip install）从项目根直接跑时补 src 路径
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from archibridge import instance_manager
-from archibridge.tapir_adapter import adapter as _tapir
+from archilinkai import instance_manager
+from archilinkai.tapir_adapter import adapter as _tapir
 
 
 def measure(fn: Callable[[], Any], rounds: int = 3) -> dict[str, Any]:

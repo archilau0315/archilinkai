@@ -1,6 +1,6 @@
-<div align="center">
+﻿<div align="center">
 
-# 筑联 ArchiBridge（ArchiCAD MCP Server）
+# 筑元智联 ArchiLinkAI（ALAI）
 
 AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（Claude Desktop、Cursor、Trae、Kimi、Codex、Dify、Coze 等）都能通过自然语言查询、建模、算量、估价 ArchiCAD 26–29 项目。
 
@@ -100,11 +100,11 @@ flowchart TB
 **方式一：从 PyPI 安装（推荐，发布后可用）**
 
 ```bash
-pip install archibridge
-# 启动（archibridge 命令）
-archibridge
+pip install archilinkai
+# 启动（archilinkai 命令）
+archilinkai
 # 或
-python -m archibridge
+python -m archilinkai
 ```
 
 **方式二：从源码安装（当前开发态）**
@@ -118,8 +118,8 @@ pip install -e ".[dev]"
 三种启动方式等价：
 
 ```bash
-archibridge          # PyPI 安装后的命令入口
-python -m archibridge
+archilinkai          # PyPI 安装后的命令入口
+python -m archilinkai
 python server.py     # 源码目录兼容壳（保留旧配置可用）
 ```
 
@@ -152,7 +152,7 @@ MCP Server 用 stdio 通信，主流客户端配置如下。`server.py` 路径�
   "mcpServers": {
     "archicad": {
       "command": "python",
-      "args": ["E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archicad-mcp/server.py"]
+      "args": ["E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archilinkai/server.py"]
     }
   }
 }
@@ -169,7 +169,7 @@ Kimi 桌面端支持 MCP，在设置 → MCP 服务器中添加，或编辑配�
   "mcpServers": {
     "archicad": {
       "command": "python",
-      "args": ["E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archicad-mcp/server.py"]
+      "args": ["E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archilinkai/server.py"]
     }
   }
 }
@@ -186,7 +186,7 @@ Trae 在 `设置 → MCP → 添加 MCP Server` 中以表单填写，或直接�
   "mcpServers": {
     "archicad": {
       "command": "python",
-      "args": ["${workspaceFolder}/archicad-mcp/server.py"]
+      "args": ["${workspaceFolder}/archilinkai/server.py"]
     }
   }
 }
@@ -203,7 +203,7 @@ Codex 用 **TOML** 配置（不是 JSON），文件：`C:\Users\<用户名>\.cod
 ```toml
 [mcp_servers.archicad]
 command = "C:/Python314/python.exe"
-args = ["E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archicad-mcp/server.py"]
+args = ["E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archilinkai/server.py"]
 ```
 
 验证：`codex mcp list`（若 `codex` 不在 PATH，用实际安装路径的 codex.exe），看到 archicad 状态 `enabled` 即可。本项目已配置完成。
@@ -221,7 +221,7 @@ WorkBuddy 桌面版读取的用户级配置：`C:\Users\<用户名>\.workbuddy\m
       "type": "stdio",
       "command": "C:/Python314/python.exe",
       "args": [
-        "E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archicad-mcp/server.py"
+        "E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archilinkai/server.py"
       ]
     }
   }
@@ -302,7 +302,7 @@ python benchmark.py --instance ac29-1 --rounds 3
 ## 项目结构
 
 ```
-archicad-mcp/
+archilinkai/
 ├── server.py              # FastMCP 入口：异常包装 + 四层工具注册
 ├── read_tools.py          # P0 只读工具注册（35 个，从 server.py 拆出）
 ├── write_tools.py         # P1 安全写入工具注册（16 个，从 server.py 拆出）
@@ -532,6 +532,6 @@ MCP 传输层验证方式：`_probe_mcp_client.py`（mcp SDK 客户端，stdio �
 
 <div align="center">
 
-[⬆ 回到顶部](#archicad-mcp-server)
+[⬆ 回到顶部](#archilinkai-server)
 
 </div>

@@ -11,7 +11,7 @@ import pytest
 from types import SimpleNamespace
 
 import conftest
-from archibridge import instance_manager
+from archilinkai import instance_manager
 
 # 工具函数藏在各 *_tools.register() 内部，server 模块并不直接暴露；
 # 用 conftest._collect 抓出全部工具，绑成 server 命名空间供下方调用
@@ -36,7 +36,7 @@ FIRE_PROP = "耐火等级"
 @pytest.fixture(scope="module")
 def prop_name() -> str:
     """取一个主实例真实存在的字符串类型属性名（环境无关）。"""
-    from archibridge import property_service
+    from archilinkai import property_service
     conn = instance_manager.manager.get_conn(PRIMARY)
     names = conn.commands.GetAllPropertyNames()
     assert names, "项目无任何属性"

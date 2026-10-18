@@ -2,8 +2,8 @@
 
 import pytest
 
-from archibridge import aggregate_service
-from archibridge.aggregate_service import AggregateService, _group
+from archilinkai import aggregate_service
+from archilinkai.aggregate_service import AggregateService, _group
 
 
 class TestGroup:
@@ -129,7 +129,7 @@ def test_aggregate_with_classification(svc, monkeypatch):
 # --- 模板 ---------------------------------------------------------------
 
 def test_templates_exist():
-    from archibridge.aggregate_service import QUANTITY_TEMPLATES, get_template
+    from archilinkai.aggregate_service import QUANTITY_TEMPLATES, get_template
     assert "concrete_volume" in QUANTITY_TEMPLATES
     assert get_template("concrete_volume")["quantity"] == "General_NetVolume"
     assert get_template("no_such") is None
@@ -284,7 +284,7 @@ def test_export_csv_logic(tmp_path):
 # --- 公式求值 -----------------------------------------------------------
 
 def test_formula_vars():
-    from archibridge.formula_eval import formula_vars
+    from archilinkai.formula_eval import formula_vars
     assert formula_vars("General_NetVolume * 1.03") == ["General_NetVolume"]
     vars2 = formula_vars("General_SurfaceArea + General_NetVolume")
     assert set(vars2) == {"General_SurfaceArea", "General_NetVolume"}
@@ -292,7 +292,7 @@ def test_formula_vars():
 
 
 def test_eval_formula_basic():
-    from archibridge.formula_eval import eval_formula
+    from archilinkai.formula_eval import eval_formula
     assert eval_formula("General_NetVolume * 1.03",
                         {"General_NetVolume": 10.0}) == 10.3
     assert eval_formula("General_SurfaceArea * 2",
@@ -302,14 +302,14 @@ def test_eval_formula_basic():
 
 
 def test_eval_formula_none():
-    from archibridge.formula_eval import eval_formula
+    from archilinkai.formula_eval import eval_formula
     assert eval_formula("General_NetVolume * 1.03",
                         {"General_NetVolume": None}) is None
     assert eval_formula("General_NetVolume * 1.03", {}) is None
 
 
 def test_eval_formula_sub_div():
-    from archibridge.formula_eval import eval_formula
+    from archilinkai.formula_eval import eval_formula
     assert eval_formula("General_GrossVolume - General_NetVolume",
                         {"General_GrossVolume": 10.0, "General_NetVolume": 8.0}) == 2.0
     assert eval_formula("General_SurfaceArea / 2",
@@ -318,7 +318,7 @@ def test_eval_formula_sub_div():
 
 def test_eval_formula_rejects_call():
     """公式不允许函数调用等危险操作。"""
-    from archibridge.formula_eval import eval_formula
+    from archilinkai.formula_eval import eval_formula
     with pytest.raises(ValueError):
         eval_formula("__import__('os')", {})
     with pytest.raises(ValueError):
@@ -326,7 +326,7 @@ def test_eval_formula_rejects_call():
 
 
 def test_eval_formula_rejects_syntax():
-    from archibridge.formula_eval import eval_formula
+    from archilinkai.formula_eval import eval_formula
     with pytest.raises(ValueError, match="语法错误"):
         eval_formula("1 +", {})
 
@@ -429,7 +429,7 @@ def test_template_wall_paint_area(svc):
 
 
 def test_template_paint_in_list():
-    from archibridge.aggregate_service import QUANTITY_TEMPLATES
+    from archilinkai.aggregate_service import QUANTITY_TEMPLATES
     assert "wall_paint_area" in QUANTITY_TEMPLATES
     tpl = QUANTITY_TEMPLATES["wall_paint_area"]
     assert "formula" in tpl
@@ -457,7 +457,7 @@ def test_aggregate_custom_template_formula(svc):
 
 def test_validate_template_accepts_formula():
     """有 formula 无 quantity 也能通过校验。"""
-    from archibridge.aggregate_service import validate_template
+    from archilinkai.aggregate_service import validate_template
     validate_template({
         "formula": "General_NetVolume * 1.03",
         "group_by": ["story"],
@@ -469,7 +469,7 @@ def test_validate_template_accepts_formula():
 
 def test_code_table_lookup():
     """code_table 提供 GB 50500 清单编码。"""
-    from archibridge import code_table
+    from archilinkai import code_table
     assert code_table.lookup("Wall")["code"] == "010502001"
     assert code_table.lookup("Wall")["unit"] == "m³"
     assert code_table.lookup("NotAType") is None
@@ -532,7 +532,7 @@ def test_custom_template_with_code(svc):
 def test_report_service_build(tmp_path):
     """report_service 生成清单格式 xlsx。"""
     import os
-    from archibridge import report_service
+    from archilinkai import report_service
 
     rows = [
         {"story": 0, "type": "Wall", "count": 2,
@@ -573,7 +573,7 @@ def test_report_service_build(tmp_path):
 def test_report_service_picks_value_column_auto(tmp_path):
     """未传 value_column 时自动探测 sum 列。"""
     import os
-    from archibridge import report_service
+    from archilinkai import report_service
 
     rows = [
         {"type": "Wall", "sum": 3.0, "code": "010502001",
@@ -586,14 +586,14 @@ def test_report_service_picks_value_column_auto(tmp_path):
 
 def test_report_service_rejects_empty():
     """rows 空时报错。"""
-    from archibridge import report_service
+    from archilinkai import report_service
     with pytest.raises(ValueError, match="为空"):
         report_service.build_report([])
 
 
 def test_report_service_rejects_missing_value_column(tmp_path):
     """rows 无量值列时报错。"""
-    from archibridge import report_service
+    from archilinkai import report_service
     rows = [{"type": "Wall", "code": "010502001",
              "code_name": "墙", "code_unit": "m³"}]
     with pytest.raises(ValueError, match="量值列"):
@@ -602,7 +602,7 @@ def test_report_service_rejects_missing_value_column(tmp_path):
 
 def test_report_service_total_when_unit_consistent(tmp_path):
     """所有项单位一致时显示合计行。"""
-    from archibridge import report_service
+    from archilinkai import report_service
     from openpyxl import load_workbook
 
     rows = [
@@ -622,7 +622,7 @@ def test_report_service_total_when_unit_consistent(tmp_path):
 
 def test_report_service_no_total_when_unit_mixed(tmp_path):
     """单位不一致时不显示合计。"""
-    from archibridge import report_service
+    from archilinkai import report_service
     from openpyxl import load_workbook
 
     rows = [
@@ -644,7 +644,7 @@ def test_report_service_no_total_when_unit_mixed(tmp_path):
 
 def test_template_wall_composite_layers_registered():
     """wall_composite_layers 模板已注册，含 3 个量（按面积+面积+体积）。"""
-    from archibridge.aggregate_service import QUANTITY_TEMPLATES
+    from archilinkai.aggregate_service import QUANTITY_TEMPLATES
     tpl = QUANTITY_TEMPLATES["wall_composite_layers"]
     assert tpl["quantities"] == [
         "Wall_NetInsideSurfaceArea", "Wall_NetOutsideSurfaceArea", "General_NetVolume"]
@@ -653,7 +653,7 @@ def test_template_wall_composite_layers_registered():
 
 def test_template_wall_insulation_area_registered():
     """wall_insulation_area 模板已注册（按面积算，不是厚度）。"""
-    from archibridge.aggregate_service import QUANTITY_TEMPLATES
+    from archilinkai.aggregate_service import QUANTITY_TEMPLATES
     tpl = QUANTITY_TEMPLATES["wall_insulation_area"]
     assert tpl["quantity"] == "Wall_NetOutsideSurfaceArea"
     assert tpl["with_code"] is True
@@ -661,7 +661,7 @@ def test_template_wall_insulation_area_registered():
 
 def test_template_wall_core_volume_formula():
     """wall_core_volume 用公式：净体积-内层-外层。"""
-    from archibridge.aggregate_service import QUANTITY_TEMPLATES
+    from archilinkai.aggregate_service import QUANTITY_TEMPLATES
     tpl = QUANTITY_TEMPLATES["wall_core_volume"]
     assert "General_NetVolume - Wall_InsideSkinVolume - Wall_OutsideSkinVolume" \
         == tpl["formula"]
@@ -672,7 +672,7 @@ def test_template_wall_core_volume_formula():
 
 def test_wall_core_volume_formula_eval():
     """核心层体积公式正确求值：4.5 - 0.2 - 0.1 = 4.2。"""
-    from archibridge.formula_eval import eval_formula
+    from archilinkai.formula_eval import eval_formula
     result = eval_formula(
         "General_NetVolume - Wall_InsideSkinVolume - Wall_OutsideSkinVolume",
         {"General_NetVolume": 4.5,
@@ -683,7 +683,7 @@ def test_wall_core_volume_formula_eval():
 
 def test_wall_core_volume_formula_none_skipped():
     """复合墙非复合层属性为 None 时公式结果为 None。"""
-    from archibridge.formula_eval import eval_formula
+    from archilinkai.formula_eval import eval_formula
     result = eval_formula(
         "General_NetVolume - Wall_InsideSkinVolume - Wall_OutsideSkinVolume",
         {"General_NetVolume": 4.5,
@@ -694,13 +694,13 @@ def test_wall_core_volume_formula_none_skipped():
 
 def test_template_count_after_v027():
     """V0.35 后模板总数应为 29（23+6 个扩充模板）。"""
-    from archibridge.aggregate_service import QUANTITY_TEMPLATES
+    from archilinkai.aggregate_service import QUANTITY_TEMPLATES
     assert len(QUANTITY_TEMPLATES) == 29
 
 
 def test_template_door_window_area_registered():
     """door_area / window_area / door_window_area 模板已注册（V0.29 门窗专属）。"""
-    from archibridge.aggregate_service import QUANTITY_TEMPLATES
+    from archilinkai.aggregate_service import QUANTITY_TEMPLATES
     assert QUANTITY_TEMPLATES["door_area"]["element_types"] == ["Door"]
     assert QUANTITY_TEMPLATES["window_area"]["element_types"] == ["Window"]
     assert "formula" in QUANTITY_TEMPLATES["door_window_area"]
@@ -708,7 +708,7 @@ def test_template_door_window_area_registered():
 
 def test_template_curtain_wall_area_registered():
     """curtain_wall_area 模板已注册（V0.28 幕墙专属）。"""
-    from archibridge.aggregate_service import QUANTITY_TEMPLATES
+    from archilinkai.aggregate_service import QUANTITY_TEMPLATES
     tpl = QUANTITY_TEMPLATES["curtain_wall_area"]
     assert tpl["quantity"] == "General_SurfaceArea"
     assert tpl["element_types"] == ["CurtainWall"]
@@ -717,7 +717,7 @@ def test_template_curtain_wall_area_registered():
 
 def test_template_railing_length_registered():
     """railing_length 模板已注册（V0.29 栏杆专属，只读类型）。"""
-    from archibridge.aggregate_service import QUANTITY_TEMPLATES
+    from archilinkai.aggregate_service import QUANTITY_TEMPLATES
     tpl = QUANTITY_TEMPLATES["railing_length"]
     assert tpl["quantity"] == "General_3DLength"
     assert tpl["element_types"] == ["Railing"]

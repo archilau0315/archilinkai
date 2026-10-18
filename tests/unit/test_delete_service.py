@@ -5,11 +5,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from archibridge.channel_base import CreateResult
-from archibridge.delete_service import DeleteService
-from archibridge.errors import (ChannelCapabilityError, ConfirmRequiredError,
+from archilinkai.channel_base import CreateResult
+from archilinkai.delete_service import DeleteService
+from archilinkai.errors import (ChannelCapabilityError, ConfirmRequiredError,
                     InvalidArgumentError)
-from archibridge.schemas import InstanceInfo, InstanceStatus
+from archilinkai.schemas import InstanceInfo, InstanceStatus
 
 
 INFO = InstanceInfo(

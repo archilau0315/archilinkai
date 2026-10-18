@@ -10,10 +10,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from archibridge import audit_log
-from archibridge.channel_base import CreateResult, ModelChannel
-from archibridge.create_service import CreateService
-from archibridge.errors import (
+from archilinkai import audit_log
+from archilinkai.channel_base import CreateResult, ModelChannel
+from archilinkai.create_service import CreateService
+from archilinkai.errors import (
     ChannelCapabilityError, ConfirmRequiredError, ErrorCode,
 )
 

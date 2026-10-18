@@ -3,10 +3,10 @@
 
 import pytest
 
-from archibridge.errors import InvalidArgumentError
-from archibridge.model_plan import ModelPlan
-from archibridge.plan_preview import build_preview
-from archibridge.tapir_channel import _COMMAND, TapirChannel
+from archilinkai.errors import InvalidArgumentError
+from archilinkai.model_plan import ModelPlan
+from archilinkai.plan_preview import build_preview
+from archilinkai.tapir_channel import _COMMAND, TapirChannel
 
 
 def _plan(element):

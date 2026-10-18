@@ -2,9 +2,9 @@
 
 import pytest
 
-from archibridge.errors import ConfirmRequiredError
-from archibridge import gdl_service as mod
-from archibridge.gdl_service import GDLService
+from archilinkai.errors import ConfirmRequiredError
+from archilinkai import gdl_service as mod
+from archilinkai.gdl_service import GDLService
 
 
 def _svc(monkeypatch):

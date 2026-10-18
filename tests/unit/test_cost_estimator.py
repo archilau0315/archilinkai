@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from archibridge.cost_estimator import (
+from archilinkai.cost_estimator import (
     CONSUMPTION,
     CostEstimator,
     estimate_from_flat_rows,
@@ -100,7 +100,7 @@ def test_fee_overrides():
 
 def test_estimate_from_flat_rows_pipeline(monkeypatch):
     # mock 清单聚合链（避免依赖 report_service 的真实数据）
-    from archibridge.estimate_schema import aggregate_rows_to_estimate_items
+    from archilinkai.estimate_schema import aggregate_rows_to_estimate_items
 
     rows = [{
         "type_name": "柱", "story_name": "首层",
@@ -142,7 +142,7 @@ def test_build_estimate_report(tmp_path):
     table = est.estimate_table(
         [_item(qty=100.0),
          _item(code="010505003", name="现浇混凝土板", qty=50.0)], "办公楼改造")
-    from archibridge.cost_estimator import build_estimate_report
+    from archilinkai.cost_estimator import build_estimate_report
     path = build_estimate_report(table, "v38_test", str(tmp_path))
     assert path.endswith(".xlsx")
     assert "v38_test_" in path
@@ -168,6 +168,6 @@ def test_build_estimate_report(tmp_path):
 
 
 def test_build_estimate_report_empty_raises():
-    from archibridge.cost_estimator import build_estimate_report
+    from archilinkai.cost_estimator import build_estimate_report
     with pytest.raises(ValueError):
         build_estimate_report({"items": [], "summary": {}}, "x", ".")

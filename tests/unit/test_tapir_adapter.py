@@ -5,7 +5,7 @@ TapirAdapter.execute 需 archicad 连接，留给集成测试。
 
 from dataclasses import dataclass
 
-from archibridge.tapir_adapter import _to_dict
+from archilinkai.tapir_adapter import _to_dict
 
 
 # --- 基础类型原样返回 --------------------------------------------------
@@ -110,7 +110,7 @@ def test_deeply_nested_object():
 
 def test_get_attributes_layers(monkeypatch):
     """GetAttributes Layer：dict 返回取 attributes 键。"""
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     fake = {
         "attributes": [
@@ -129,7 +129,7 @@ def test_get_attributes_layers(monkeypatch):
 
 def test_get_attributes_empty(monkeypatch):
     """无该类型属性时返回空列表。"""
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     monkeypatch.setattr(
         tapir_adapter.adapter, "execute",
@@ -139,7 +139,7 @@ def test_get_attributes_empty(monkeypatch):
 
 def test_get_attributes_passes_command_and_type(monkeypatch):
     """校验命令名与 attributeType 参数透传正确。"""
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -159,7 +159,7 @@ def test_get_attributes_passes_command_and_type(monkeypatch):
 
 def test_get_available_library_parts_all(monkeypatch):
     """无 filterByTypeId 时返回全部库部件。"""
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     fake = {
         "libraryParts": [
@@ -179,7 +179,7 @@ def test_get_available_library_parts_all(monkeypatch):
 
 def test_get_available_library_parts_filtered(monkeypatch):
     """filterByTypeId 透传正确。"""
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -196,7 +196,7 @@ def test_get_available_library_parts_filtered(monkeypatch):
 
 def test_get_available_library_parts_empty(monkeypatch):
     """无库部件时返回空列表。"""
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     monkeypatch.setattr(
         tapir_adapter.adapter, "execute",
@@ -210,7 +210,7 @@ def test_get_available_library_parts_empty(monkeypatch):
 
 def test_get_subelements_of_hierarchical(monkeypatch):
     """GetSubelementsOfHierarchicalElements：返回按类型分组。"""
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     fake = {
         "subelements": [
@@ -233,7 +233,7 @@ def test_get_subelements_of_hierarchical(monkeypatch):
 
 def test_get_subelements_of_hierarchical_empty(monkeypatch):
     """无子构件时返回空列表。"""
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     monkeypatch.setattr(
         tapir_adapter.adapter, "execute",
@@ -244,7 +244,7 @@ def test_get_subelements_of_hierarchical_empty(monkeypatch):
 
 def test_get_subelements_of_hierarchical_guids_wrapped(monkeypatch):
     """校验 elements 参数包装正确。"""
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -266,7 +266,7 @@ def test_get_subelements_of_hierarchical_guids_wrapped(monkeypatch):
 
 
 def test_get_collisions_cmd_and_params(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -287,7 +287,7 @@ def test_get_collisions_cmd_and_params(monkeypatch):
 
 
 def test_get_collisions_result(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     fake = {
         "collisions": [
@@ -306,7 +306,7 @@ def test_get_collisions_result(monkeypatch):
 
 
 def test_get_layers_cmd_and_params(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -326,7 +326,7 @@ def test_get_layers_cmd_and_params(monkeypatch):
 
 
 def test_create_layers_cmd_and_params(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -344,7 +344,7 @@ def test_create_layers_cmd_and_params(monkeypatch):
 
 
 def test_delete_attributes_cmd_and_params(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -364,7 +364,7 @@ def test_delete_attributes_cmd_and_params(monkeypatch):
 
 
 def test_get_favorites_by_type(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -381,7 +381,7 @@ def test_get_favorites_by_type(monkeypatch):
 
 
 def test_apply_favorites_to_elements(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -406,7 +406,7 @@ def test_apply_favorites_to_elements(monkeypatch):
 
 
 def test_get_ifc_ids_of_elements(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -423,7 +423,7 @@ def test_get_ifc_ids_of_elements(monkeypatch):
 
 
 def test_get_elements_by_ifc_ids(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -440,7 +440,7 @@ def test_get_elements_by_ifc_ids(monkeypatch):
 
 
 def test_get_ifc_properties_of_elements(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -459,7 +459,7 @@ def test_get_ifc_properties_of_elements(monkeypatch):
 
 
 def test_set_details_of_elements(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -476,7 +476,7 @@ def test_set_details_of_elements(monkeypatch):
 
 
 def test_get_zone_boundaries(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -492,7 +492,7 @@ def test_get_zone_boundaries(monkeypatch):
 
 
 def test_update_zones(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -510,7 +510,7 @@ def test_update_zones(monkeypatch):
 
 
 def test_get_connected_elements(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -531,7 +531,7 @@ def test_get_connected_elements(monkeypatch):
 
 
 def test_move_elements(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -549,7 +549,7 @@ def test_move_elements(monkeypatch):
 
 
 def test_rotate_elements(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -568,7 +568,7 @@ def test_rotate_elements(monkeypatch):
 
 
 def test_get_element_preview_image(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -588,7 +588,7 @@ def test_get_element_preview_image(monkeypatch):
 
 
 def test_get_building_material_physical_properties(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -605,7 +605,7 @@ def test_get_building_material_physical_properties(monkeypatch):
 
 
 def test_get_layer_combinations(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -623,7 +623,7 @@ def test_get_layer_combinations(monkeypatch):
 
 
 def test_create_layer_combinations(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -643,7 +643,7 @@ def test_create_layer_combinations(monkeypatch):
 
 
 def test_get_stories(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     def _fake(cmd, params, instance):
         assert cmd == "GetStories"
@@ -656,7 +656,7 @@ def test_get_stories(monkeypatch):
 
 
 def test_get_gdl_parameters_of_elements(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -673,7 +673,7 @@ def test_get_gdl_parameters_of_elements(monkeypatch):
 
 
 def test_get_mep_elements(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -694,7 +694,7 @@ def test_get_mep_elements(monkeypatch):
 
 
 def test_get_mep_routing_elements(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -710,7 +710,7 @@ def test_get_mep_routing_elements(monkeypatch):
 
 
 def test_get_mep_ports(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -726,7 +726,7 @@ def test_get_mep_ports(monkeypatch):
 
 
 def test_get_relations_of_elements(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
@@ -743,7 +743,7 @@ def test_get_relations_of_elements(monkeypatch):
 
 
 def test_get_all_properties(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     def _fake(cmd, params, instance):
         assert cmd == "GetAllProperties"
@@ -756,7 +756,7 @@ def test_get_all_properties(monkeypatch):
 
 
 def test_get_calculation_units(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     def _fake(cmd, params, instance):
         assert cmd == "GetCalculationUnits"
@@ -768,7 +768,7 @@ def test_get_calculation_units(monkeypatch):
 
 
 def test_get_navigator_item_tree(monkeypatch):
-    from archibridge import tapir_adapter
+    from archilinkai import tapir_adapter
 
     calls = {}
 
