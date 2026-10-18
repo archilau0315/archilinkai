@@ -30,6 +30,13 @@ DEFAULT_LIMITS: dict[str, float] = {
     "stair_min_width": 1.1,             # 楼梯梯段最小宽度(m)
     "railing_min_height": 1.05,         # 栏杆最小高度(m)
     "railing_high_height": 1.10,        # 临空高度>24m 栏杆最小高度(m)
+    # ---- V0.44 增强 ----
+    "riser_max_public": 0.175,          # 公共建筑踏步最大高度(m)
+    "riser_max_residential": 0.15,      # 住宅踏步最大高度(m)
+    "tread_min_public": 0.28,           # 公共建筑踏步最小深度(m)
+    "tread_min_residential": 0.26,      # 住宅踏步最小深度(m)
+    "window_floor_ratio_residential": 0.1429,  # 居住房间窗地比 1/7
+    "window_floor_ratio_office": 0.125,        # 办公房间窗地比 1/8
 }
 
 
@@ -366,6 +373,129 @@ def check_railing_height(
     return violations
 
 
+# ---- 规则 8：楼梯踏步尺寸检查 ------------------------------------------
+
+def check_stair_tread(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+    building_type: str = "multi",
+) -> list[dict[str, Any]]:
+    """踏步高 ≤ 限值、踏步深 ≥ 限值。
+
+    building_type: public(公共) / residential(住宅)。
+    """
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    is_public = building_type in ("public", "office", "multi", "high")
+    riser_max = (lim["riser_max_public"] if is_public
+                 else lim["riser_max_residential"])
+    tread_min = (lim["tread_min_public"] if is_public
+                 else lim["tread_min_residential"])
+    stairs = _fetch_elements("Stair", instance)
+    if not stairs:
+        return []
+    guids = [s["guid"] for s in stairs]
+    props = _get_props(
+        guids,
+        ["Stair_RiserHeight", "Stair_TreadDepth",
+         "General_RiserHeight", "General_TreadDepth"],
+        instance)
+    violations: list[dict[str, Any]] = []
+    for s in stairs:
+        p = props.get(s["guid"], {})
+        riser = (_num(p.get("Stair_RiserHeight"))
+                 or _num(p.get("General_RiserHeight")))
+        tread = (_num(p.get("Stair_TreadDepth"))
+                 or _num(p.get("General_TreadDepth")))
+        if riser is not None and riser > riser_max:
+            violations.append({
+                "guid": s["guid"], "name": s.get("name", ""),
+                "story": s.get("story_index"), "rule": "踏步高度超限",
+                "value": round(riser, 3), "limit": riser_max,
+                "message": f"踏步高 {riser:.3f}m 超过 {riser_max:.3f}m",
+            })
+        if tread is not None and tread < tread_min:
+            violations.append({
+                "guid": s["guid"], "name": s.get("name", ""),
+                "story": s.get("story_index"), "rule": "踏步深度不足",
+                "value": round(tread, 3), "limit": tread_min,
+                "message": f"踏步深 {tread:.3f}m 小于 {tread_min:.3f}m",
+            })
+    return violations
+
+
+# ---- 规则 9：窗地比检查 -------------------------------------------------
+
+def check_window_floor_ratio(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+    building_type: str = "office",
+) -> list[dict[str, Any]]:
+    """按楼层汇总：总窗面积 / 总房间面积 ≥ 限值。
+
+    简化实现：按 story_index 分组，窗面积用 Window_Height×Window_Width
+    或 General_NetArea，房间面积用 Zone 的 General_NetArea。
+    无 Zone 的楼层跳过。
+    """
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    ratio_min = (lim["window_floor_ratio_residential"]
+                 if building_type == "residential"
+                 else lim["window_floor_ratio_office"])
+
+    zones = _fetch_elements("Zone", instance)
+    windows = _fetch_elements("Window", instance)
+    if not zones or not windows:
+        return []
+
+    # 每层 Zone 总面积
+    zprops = _get_props(
+        [z["guid"] for z in zones], ["General_NetArea"], instance)
+    story_floor_area: dict[int, float] = {}
+    for z in zones:
+        st = z.get("story_index")
+        area = _num(zprops.get(z["guid"], {}).get("General_NetArea"))
+        if st is None or area is None:
+            continue
+        story_floor_area[int(st)] = story_floor_area.get(int(st), 0.0) + area
+
+    # 每层窗总面积
+    wprops = _get_props(
+        [w["guid"] for w in windows],
+        ["General_NetArea", "Window_Height", "Window_Width"], instance)
+    story_window_area: dict[int, float] = {}
+    for w in windows:
+        st = w.get("story_index")
+        if st is None:
+            continue
+        p = wprops.get(w["guid"], {})
+        area = _num(p.get("General_NetArea"))
+        if area is None:
+            h = _num(p.get("Window_Height"))
+            wd = _num(p.get("Window_Width"))
+            if h is not None and wd is not None:
+                area = h * wd
+        if area is None:
+            continue
+        story_window_area[int(st)] = story_window_area.get(int(st), 0.0) + area
+
+    violations: list[dict[str, Any]] = []
+    for st, floor_area in story_floor_area.items():
+        if floor_area <= 0:
+            continue
+        win_area = story_window_area.get(st, 0.0)
+        ratio = win_area / floor_area
+        if ratio < ratio_min:
+            violations.append({
+                "story": st,
+                "rule": "窗地比不足",
+                "value": round(ratio, 4),
+                "limit": ratio_min,
+                "message": (f"第 {st} 层窗地比 {ratio:.3f} "
+                            f"小于 {ratio_min:.3f}"
+                            f"（窗 {win_area:.1f}㎡ / 地面 {floor_area:.1f}㎡）"),
+            })
+    return violations
+
+
 # ---- 汇总入口 -----------------------------------------------------------
 
 def run_review(
@@ -383,6 +513,7 @@ def run_review(
     all_rules = [
         "wall_thickness", "openings", "headroom", "collisions",
         "fire_zone_area", "stair_width", "railing_height",
+        "stair_tread", "window_floor_ratio",
     ]
     rules = rules or all_rules
     results: dict[str, list[dict[str, Any]]] = {}
@@ -401,6 +532,11 @@ def run_review(
             results[r] = check_stair_width(instance, limits)
         elif r == "railing_height":
             results[r] = check_railing_height(instance, limits, high_rise)
+        elif r == "stair_tread":
+            results[r] = check_stair_tread(instance, limits, building_type)
+        elif r == "window_floor_ratio":
+            results[r] = check_window_floor_ratio(
+                instance, limits, building_type)
     total = sum(len(v) for v in results.values())
     return {
         "rules_checked": rules,

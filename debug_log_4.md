@@ -537,3 +537,27 @@
 - fire_zone_area 的 Zone 面积属性名（General_NetArea/General_Area）
 - stair_width 的 Stair_Width 属性名
 - railing_height 的 Railing_Height 属性名
+
+---
+
+## 2026-10-19 V0.44 规范审查增强（+2 条规则，办公楼项目验证）
+
+### 变更
+- code_review_service.py：新增 2 条审查规则
+  - stair_tread：踏步高 ≤ 0.175m(公共)/0.15m(住宅)、踏步深 ≥ 0.28m/0.26m
+  - window_floor_ratio：窗地比 ≥ 1/7(居住)/1/8(办公)，按楼层汇总
+- DEFAULT_LIMITS：+6 项限值（riser/tread/window_floor_ratio）
+- run_review：all_rules 扩到 9 条
+- code_review_tools.py：更新工具描述
+
+### 真机验证（办公楼改造项目）
+- 9 条规则全跑通，total=2820 violations
+- wall_thickness：588 条（检出 0.05m/0.02m 装饰薄墙）
+- collisions：2222 条（柱 vs 机电管线）
+- railing_height：10 条（1.0m 栏杆 < 1.05m，真实违规）
+- stair_width/railing_height 属性名验证通过
+- 其余规则因办公楼项目无对应构件返回 0
+
+### 验证
+- 全量单测 553 全过
+- code_review_service.py 547 行（合规）
