@@ -370,3 +370,33 @@
 
 ### 备注
 - pip 包为推荐安装方式后，源码路径式配置已无必要
+
+---
+
+## 2026-10-18 真机验证批次（AC28 办公楼改造）+ 2 个 bug 修复
+
+### 真机验证结果（ac28-1，端到端）
+- V0.33：GetConnectedElements / GetElementPreviewImage / GetBuildingMaterialPhysicalProperties / MoveElements-Preview / RotateElements-Preview 全 PASS
+- V0.34：GetLayerCombinations（49 组合）PASS；CreateLayerCombinations-Preview PASS
+- V0.36：list_stories / list_all_properties / get_calculation_units / get_navigator_tree / list_mep_elements / get_element_relations / get_gdl_parameters 全 PASS（项目无 MEP 构件，列表为空属正常）
+- Zone 复测：get_zone_boundaries 在无 Zone 项目返回结构化空结果（count=0），历史报错确认为旧项目数据问题，非 Tapir 限制
+- estimate_project 全链路 PASS：masonry_volume + wall_paint_area + formwork_area → 细算 2 项精确、formwork 未覆盖自动跳过并标注（覆盖率 66.7%），含税合计 6261.84 元，xlsx 导出成功（验证后已删）
+
+### 修复 1：success_result() 拒收自定义关键字参数
+- 现象：list_attributes / get_connected_elements 等真机报 "success_result() got an unexpected keyword argument"
+- 根因：schemas.py success_result 签名固定 5 参，V0.33+ 多个工具传自定义键（attribute_type / connected_elements / **data 展开等）
+- 修复：schemas.py 加 **extra 形参，额外键并入 data，一处改动覆盖全部坏调用点
+- 波及面核对：read_tools.py 中 attribute_type=、connected_elements=、type_id=、**data 展开均随此修复生效
+
+### 修复 2：profile 墙无 floorPlanPolygons 时 bounding_box 缺失
+- 现象：真机集成测试 test_get_element_geometry_info KeyError 'bounding_box'
+- 根因：办公楼改造项目中带 profile 的墙，Tapir GetDetailsOfElements 不返回 floorPlanPolygons，_bounding_box 返回 None 导致键缺省
+- 修复：geometry_service.py 新增 _fallback_wall_points()——直墙用参考线起止点沿法线扩厚度/2 推算矩形 4 角点兜底
+
+### 验证
+- 单测 553 全过；真机集成测试重跑 PASS（含 bounding_box 断言）
+
+### 备注
+- 待办：Python314 重装包 + 重启 Trae 后，MCP 层复测修复项
+- 待确认：GetProjectInfo 返回项目名"未命名项目"（导航树内容与 1.1办公楼改造 一致），疑路径解析或用户侧另存
+- 遗留：UpdateZones 需含 Zone 的项目才能复测

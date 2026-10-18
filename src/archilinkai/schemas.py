@@ -303,8 +303,11 @@ def success_result(
     count: int | None = None,
     items: list[dict[str, Any]] | None = None,
     data: dict[str, Any] | None = None,
+    **extra: Any,
 ) -> dict[str, Any]:
-    """便捷构造成功返回。"""
+    """便捷构造成功返回。额外关键字参数并入 data，避免调用方传自定义键报错。"""
+    if extra:
+        data = {**(data or {}), **extra}
     return ToolResult(
         status="success",
         instance=instance,

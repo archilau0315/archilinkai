@@ -32,8 +32,14 @@ def _all_polygon_points(detail: dict) -> list[dict]:
 
 
 def _bounding_box(detail: dict, d: dict) -> dict[str, Any] | None:
-    """平面投影包围盒取自全部多边形顶点；z 范围取楼层相对底/顶。"""
+    """平面投影包围盒取自全部多边形顶点；z 范围取楼层相对底/顶。
+
+    无多边形时（如带 profile 的墙 Tapir 不返回 floorPlanPolygons），
+    用起止点±厚度/2 的矩形角点兜底推算。
+    """
     pts = _all_polygon_points(detail)
+    if not pts:
+        pts = _fallback_wall_points(d)
     if not pts:
         return None
     xs = [float(p["x"]) for p in pts]
@@ -52,6 +58,27 @@ def _bounding_box(detail: dict, d: dict) -> dict[str, Any] | None:
         },
         "note": "z 相对所在楼层；x/y 为项目坐标。",
     }
+
+
+def _fallback_wall_points(d: dict) -> list[dict]:
+    """直墙兜底：参考线起止点沿法线方向各扩厚度/2，得墙体矩形 4 角点。"""
+    if d.get("geometryType") not in (None, "Straight"):
+        return []
+    beg, end = d.get("begCoordinate"), d.get("endCoordinate")
+    if not beg or not end:
+        return []
+    dx, dy = end["x"] - beg["x"], end["y"] - beg["y"]
+    length = math.hypot(dx, dy)
+    if length <= 0:
+        return []
+    thickness = float(d.get("begThickness", 0) or 0)
+    nx, ny = -dy / length * thickness / 2, dx / length * thickness / 2
+    return [
+        {"x": beg["x"] + nx, "y": beg["y"] + ny},
+        {"x": beg["x"] - nx, "y": beg["y"] - ny},
+        {"x": end["x"] + nx, "y": end["y"] + ny},
+        {"x": end["x"] - nx, "y": end["y"] - ny},
+    ]
 
 
 def summarize(detail: dict[str, Any]) -> dict[str, Any]:
