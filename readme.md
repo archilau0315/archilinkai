@@ -136,6 +136,20 @@ archilinkai install generic   # 打印通用 MCP JSON 片段，任意客户端�
 
 支持的客户端矩阵见 `src/archilinkai/data/clients.json`（Claude/Cursor/Cline/Witsy/Cherry Studio/Codex 等，可随版本扩充）。
 
+### HTTP 远程模式（平台接入）
+
+供 Dify/Coze/n8n 等非 stdio 平台及远程智能体接入（需 `pip install 'archilinkai[http]'`）：
+
+```bash
+archilinkai serve --http --port 8000 --token <你的密钥>
+# 或环境变量：set ALAI_TOKEN=<密钥>
+```
+
+- 安全默认：无 token 拒绝启动；默认只绑 `127.0.0.1`（跨机访问显式 `--host 0.0.0.0`）
+- Bearer 鉴权：请求头 `Authorization: Bearer <token>`，未带/错误一律 401
+- 全量请求审计：`output/http_audit.jsonl`（时间/方法/路径/状态，不含正文）
+- 接入点：`POST http://<host>:<port>/mcp`（MCP streamable-http 协议）
+
 ### AC28 + AC29 双版本并存说明
 
 本项目支持同时连接多个 ArchiCAD 大版本实例。装的是 AC28 和 AC29 时需注意：

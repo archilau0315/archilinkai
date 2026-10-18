@@ -259,3 +259,24 @@
 ### 验证
 - 546 单测全过（537+9）
 - 真机缺省：doctor 正确报实例/Tapir FAIL 并给出修复提示；install generic 输出正常
+
+---
+
+## 2026-10-18 V0.41（S3）HTTP 网关：远程/平台接入模式
+
+### 变更
+- 新增 src/archilinkai/gateway.py：
+  - BearerAuthMiddleware（纯 ASGI，无框架依赖）：Bearer 鉴权，错误 token 401；
+    正确请求透传并用 spy_send 捕获真实状态码
+  - 全量审计 → output/http_audit.jsonl（时间/方法/路径/状态/token 前缀，不含正文）
+  - build_http_app：兼容 FastMCP streamable_http_app / http_app 两种工厂名
+  - run_http 安全默认：无 token（参数或 ALAI_TOKEN 环境变量）拒绝启动；
+    缺 uvicorn 给明确安装提示；默认绑 127.0.0.1
+- cli.py：serve 子命令加 --http/--host/--port/--token
+- pyproject：optional-dependencies 新增 http = uvicorn>=0.30
+- tests/unit/test_gateway.py：+7 用例（401 两种/透传/审计/非 http scope/启动守卫）
+- readme：新增「HTTP 远程模式（平台接入）」节；.gitignore 补 output/
+
+### 验证
+- 553 单测全过（546+7）
+- 真机冒烟：错 token 401；对 token + MCP initialize 200；审计两条记录正确

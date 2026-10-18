@@ -24,6 +24,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+http = ["uvicorn>=0.30"]
 
 [project.scripts]
 archilinkai = "archilinkai.cli:main"
