@@ -91,22 +91,7 @@ flowchart TB
 1. **ArchiCAD 26–29** 已启动并打开项目（主目标 AC29 build 3000+）
 2. 选项 → 工作环境 → 连接端口 已启用
 3. **Python ≥ 3.10**
-4. 对应版本的 **Tapir Add-On** 已加载
-   - 下载：https://github.com/ENZYME-APD/tapir-archicad-automation
-   - 通过 选项 → Add-On 管理器 → 添加 加载
-
-   **Windows**：下载 `TapirAddOn_AC{版本}_Win.apx` 放入 Add-Ons 目录（如 `C:\Program Files\Graphisoft\Archicad 28\Add-Ons\`）
-
-   **macOS**：下载 `TapirAddOn_AC{版本}_Mac.zip`，解压出 `.bundle`，放入
-   `~/Library/Application Support/GRAPHISOFT/ARCHICAD {版本}/Add-Ons/`
-   （或直接在 Add-On 管理器里手动添加任意位置）
-
-   也可用本包自带命令自动下载（自动按平台筛选）：
-   ```bash
-   archilinkai download-tapir 28            # 自动检测 Win/Mac
-   archilinkai download-tapir 28 --platform mac --out ~/Downloads
-   archilinkai download-tapir 28 --platform all            # Win+Mac 并存
-   ```
+4. 对应版本的 **Tapir Add-On** 已加载（装完本包后用 `archilinkai download-tapir` 自动下载，见下方分平台完整流程）
 
 ### 安装
 
@@ -219,10 +204,10 @@ archilinkai serve --http --port 8000 --token <你的密钥>
 非技术用户可下载双击安装（无需手动装 Python/写配置），见 [docs/s2_installer.md](docs/s2_installer.md)：
 
 - 安装器捆绑嵌入式 Python + 本地 wheel，`pip install --no-index` 离线安装
-- 自动写入 MCP 客户端配置；Tapir 按 AC 版本从 GitHub 自动下载（[download_tapir.py](installer/download_tapir.py)）
+- 自动写入 MCP 客户端配置；Tapir 按 AC 版本从 GitHub 自动下载（内部复用 `archilinkai.download_tapir`）
 - AC 版本→Tapir 映射维护在 `src/archilinkai/data/tapir_versions.json`
 
-> **macOS**：桌面安装器仅支持 Windows（Inno Setup）。Mac 用户走 pip 安装即可，见上方「安装」段；Tapir 用 `installer/download_tapir.py` 自动筛选 `_Mac.zip` 资产并解压 `.bundle`。
+> **macOS**：桌面安装器仅支持 Windows（Inno Setup）。Mac 用户走 pip 安装即可，见上方「安装」段；Tapir 用 `archilinkai download-tapir 28` 自动筛选 `_Mac.zip` 资产并解压 `.bundle`。
 
 ### AC28 + AC29 双版本并存说明
 
@@ -237,21 +222,22 @@ archilinkai serve --http --port 8000 --token <你的密钥>
 
 ## 客户端配置
 
-MCP Server 用 stdio 通信，主流客户端配置如下。`server.py` 路径换成你的绝对路径（Windows 用正斜杠或双反斜杠）。
+MCP Server 用 stdio 通信。`pip install archilinkai` 后，`archilinkai` 命令在 PATH 里，客户端配置直接写命令名即可，Windows / Mac 通用。
+
+> 也可用 `archilinkai install claude` / `archilinkai install cursor` 自动写入配置。
 
 <details>
 <summary><b>Claude Desktop / Cursor</b></summary>
 
 配置文件位置：
-- Claude Desktop：`%APPDATA%\Claude\claude_desktop_config.json`
+- Claude Desktop：`%APPDATA%\Claude\claude_desktop_config.json`（Mac：`~/Library/Application Support/Claude/`）
 - Cursor：设置 → MCP → 新增
 
 ```json
 {
   "mcpServers": {
-    "archicad": {
-      "command": "python",
-      "args": ["E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archilinkai/server.py"]
+    "archilinkai": {
+      "command": "archilinkai"
     }
   }
 }
@@ -266,9 +252,8 @@ Kimi 桌面端支持 MCP，在设置 → MCP 服务器中添加，或编辑配�
 ```json
 {
   "mcpServers": {
-    "archicad": {
-      "command": "python",
-      "args": ["E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archilinkai/server.py"]
+    "archilinkai": {
+      "command": "archilinkai"
     }
   }
 }
@@ -278,20 +263,19 @@ Kimi 桌面端支持 MCP，在设置 → MCP 服务器中添加，或编辑配�
 <details>
 <summary><b>Trae（Trae CN / Trae IDE）</b></summary>
 
-Trae 在 `设置 → MCP → 添加 MCP Server` 中以表单填写，或直接编辑 `.trae/mcp.json`。项目内已用 Trae 内置变量 `${workspaceFolder}`（启动时自动替换为本机项目根目录），同一份配置 Windows / Mac 通用：
+Trae 在 `设置 → MCP → 添加 MCP Server` 中以表单填写，或编辑用户级 MCP 配置文件（`%APPDATA%\Trae CN\User\mcp.json`，Mac：`~/Library/Application Support/Trae CN/User/mcp.json`）：
 
 ```json
 {
   "mcpServers": {
-    "archicad": {
-      "command": "python",
-      "args": ["${workspaceFolder}/archilinkai/server.py"]
+    "archilinkai": {
+      "command": "archilinkai"
     }
   }
 }
 ```
 
-Mac 上若提示找不到 `python`，把 `"python"` 改成 `"python3"`（或 Python 完整路径）即可。
+若提示找不到命令，改用绝对路径：Windows 为 `"C:/Python314/Scripts/archilinkai.exe"`（用 `where archilinkai` 查询），Mac 为 `"~/.local/bin/archilinkai"` 或虚拟环境内的实际路径。
 </details>
 
 <details>
@@ -300,12 +284,12 @@ Mac 上若提示找不到 `python`，把 `"python"` 改成 `"python3"`（或 Pyt
 Codex 用 **TOML** 配置（不是 JSON），文件：`C:\Users\<用户名>\.codex\config.toml`。在文件末尾追加：
 
 ```toml
-[mcp_servers.archicad]
-command = "C:/Python314/python.exe"
-args = ["E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archilinkai/server.py"]
+[mcp_servers.archilinkai]
+command = "archilinkai"
+args = []
 ```
 
-验证：`codex mcp list`（若 `codex` 不在 PATH，用实际安装路径的 codex.exe），看到 archicad 状态 `enabled` 即可。本项目已配置完成。
+验证：`codex mcp list`（若 `codex` 不在 PATH，用实际安装路径的 codex.exe），看到 archilinkai 状态 `enabled` 即可。
 </details>
 
 <details>
@@ -316,18 +300,15 @@ WorkBuddy 桌面版读取的用户级配置：`C:\Users\<用户名>\.workbuddy\m
 ```json
 {
   "mcpServers": {
-    "archicad": {
+    "archilinkai": {
       "type": "stdio",
-      "command": "C:/Python314/python.exe",
-      "args": [
-        "E:/works/Aidev/kbitai绝对安全/kbitai_com_cn/aitools/acmcp/archilinkai/server.py"
-      ]
+      "command": "archilinkai"
     }
   }
 }
 ```
 
-**保存后必须手动信任**：打开 WorkBuddy → 连接器管理 → 右上角"自定义连接器" → 找到 archicad → 点"信任"。之后改动 command/args 需重新信任。本项目配置文件已创建，信任步骤需本人操作。
+**保存后必须手动信任**：打开 WorkBuddy → 连接器管理 → 右上角"自定义连接器" → 找到 archilinkai → 点"信任"。之后改动 command/args 需重新信任。
 </details>
 
 ### ⚠️ 重要：本地 server 限制

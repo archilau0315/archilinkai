@@ -357,3 +357,16 @@
 ### 备注
 - download() 返回 list[Path]，all 模式 Win+Mac 各下一份并存
 - pip 包纯 Python wheel，Win/Mac 通用
+
+---
+
+## 2026-10-18 readme 安装指引更新
+
+### 变更
+- 运行前提：去重 Tapir 详细下载说明（改指向分平台流程），修顺序问题（原前提里就用 download-tapir 但包未装）
+- 客户端配置：5 个客户端全部改用 "command": "archilinkai"（旧 server.py 源码路径写法废弃），补 Mac 配置文件路径与绝对路径回退说明
+- 桌面安装器：引用改为 archilinkai.download_tapir / CLI 命令
+- WorkBuddy 段：残留旧名 archicad → archilinkai
+
+### 备注
+- pip 包为推荐安装方式后，源码路径式配置已无必要
