@@ -561,3 +561,28 @@
 ### 验证
 - 全量单测 553 全过
 - code_review_service.py 547 行（合规）
+
+---
+
+## 2026-10-19 V0.45 门净宽扣门框修正
+
+### 问题
+用户指出 check_openings 用的门宽是洞口宽（含门框），未扣门框算净宽。
+探测发现 ArchiCAD 只暴露 General_Width/General_Height（洞口尺寸），
+原代码用 Door_Width/Door_Height 属性名错误（返回 None），
+导致办公楼项目 openings 规则始终返回 0。
+
+### 变更
+- code_review_service.py check_openings：
+  - 属性名改 General_Width/General_Height（ArchiCAD 实际可用）
+  - 新增门框余量参数 door_frame_allowance（默认 0.10m，两侧合计）
+  - 新增上框余量参数 door_head_allowance（默认 0.05m）
+  - 净宽 = 洞口宽 - door_frame_allowance，净高 = 洞口高 - door_head_allowance
+  - 违规信息同时显示洞口/净宽/扣除值，便于复核
+  - 窗台高度加 General_SillHeight 兜底
+- DEFAULT_LIMITS：+2 项（door_frame_allowance / door_head_allowance）
+
+### 真机验证（办公楼改造项目）
+- openings 从 0 → 53 条违规
+- 检出样本：洞口 0.80m - 门框 0.10m = 净宽 0.70m < 0.8m
+- 单测 553 全过

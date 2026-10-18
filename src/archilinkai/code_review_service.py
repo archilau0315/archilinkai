@@ -37,6 +37,9 @@ DEFAULT_LIMITS: dict[str, float] = {
     "tread_min_residential": 0.26,      # 住宅踏步最小深度(m)
     "window_floor_ratio_residential": 0.1429,  # 居住房间窗地比 1/7
     "window_floor_ratio_office": 0.125,        # 办公房间窗地比 1/8
+    # ---- V0.45 门框余量 ----
+    "door_frame_allowance": 0.10,     # 门洞两侧门框合计宽度(m)，净宽=洞口宽-此值
+    "door_head_allowance": 0.05,      # 门上框高度(m)，净高=洞口高-此值
 }
 
 
@@ -100,8 +103,15 @@ def check_openings(
     instance: str | None,
     limits: dict[str, float] | None = None,
 ) -> list[dict[str, Any]]:
-    """门洞高≥2.0m、宽≥0.8m；外窗窗台高≥0.9m。"""
+    """门洞**净宽**≥0.8m、净高≥2.0m；外窗窗台高≥0.9m。
+
+    ArchiCAD 只暴露洞口尺寸（General_Width/Height，含门框），
+    净宽 = 洞口宽 - door_frame_allowance（默认两侧合计 0.10m），
+    净高 = 洞口高 - door_head_allowance（默认上框 0.05m）。
+    """
     lim = {**DEFAULT_LIMITS, **(limits or {})}
+    frame_w = lim["door_frame_allowance"]
+    head_h = lim["door_head_allowance"]
     violations: list[dict[str, Any]] = []
 
     # 门
@@ -109,34 +119,44 @@ def check_openings(
     if doors:
         guids = [d["guid"] for d in doors]
         props = _get_props(
-            guids, ["Door_Height", "Door_Width"], instance)
+            guids, ["General_Width", "General_Height"], instance)
         for d in doors:
             p = props.get(d["guid"], {})
-            h = _num(p.get("Door_Height"))
-            w = _num(p.get("Door_Width"))
-            if h is not None and h < lim["door_min_height"]:
-                violations.append({
-                    "guid": d["guid"], "name": d.get("name", ""),
-                    "story": d.get("story_index"), "rule": "门洞高度不足",
-                    "value": round(h, 3), "limit": lim["door_min_height"],
-                    "message": f"门洞高 {h:.2f}m 小于 {lim['door_min_height']:.1f}m",
-                })
-            if w is not None and w < lim["door_min_width"]:
-                violations.append({
-                    "guid": d["guid"], "name": d.get("name", ""),
-                    "story": d.get("story_index"), "rule": "门洞宽度不足",
-                    "value": round(w, 3), "limit": lim["door_min_width"],
-                    "message": f"门洞宽 {w:.2f}m 小于 {lim['door_min_width']:.1f}m",
-                })
+            rough_w = _num(p.get("General_Width"))
+            rough_h = _num(p.get("General_Height"))
+            if rough_h is not None:
+                clear_h = rough_h - head_h
+                if clear_h < lim["door_min_height"]:
+                    violations.append({
+                        "guid": d["guid"], "name": d.get("name", ""),
+                        "story": d.get("story_index"), "rule": "门洞净高不足",
+                        "value": round(clear_h, 3), "limit": lim["door_min_height"],
+                        "message": (f"门洞净高 {clear_h:.2f}m（洞口 {rough_h:.2f}m "
+                                    f"- 上框 {head_h:.2f}m）小于 "
+                                    f"{lim['door_min_height']:.1f}m"),
+                    })
+            if rough_w is not None:
+                clear_w = rough_w - frame_w
+                if clear_w < lim["door_min_width"]:
+                    violations.append({
+                        "guid": d["guid"], "name": d.get("name", ""),
+                        "story": d.get("story_index"), "rule": "门洞净宽不足",
+                        "value": round(clear_w, 3), "limit": lim["door_min_width"],
+                        "message": (f"门洞净宽 {clear_w:.2f}m（洞口 {rough_w:.2f}m "
+                                    f"- 门框 {frame_w:.2f}m）小于 "
+                                    f"{lim['door_min_width']:.1f}m"),
+                    })
 
     # 窗（窗台高度）
     windows = _fetch_elements("Window", instance)
     if windows:
         guids = [w["guid"] for w in windows]
         props = _get_props(
-            guids, ["Window_SillHeight"], instance)
+            guids, ["Window_SillHeight", "General_SillHeight"], instance)
         for w in windows:
-            sill = _num(props.get(w["guid"], {}).get("Window_SillHeight"))
+            p = props.get(w["guid"], {})
+            sill = (_num(p.get("Window_SillHeight"))
+                    or _num(p.get("General_SillHeight")))
             if sill is not None and sill < lim["window_sill_min"]:
                 violations.append({
                     "guid": w["guid"], "name": w.get("name", ""),
