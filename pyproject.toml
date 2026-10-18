@@ -8,13 +8,16 @@ version = "0.38.0"
 description = "筑元智联 ArchiLinkAI：AI 智能体与 ArchiCAD 之间的 MCP 桥梁（查询/建模/算量/估价/报表）"
 readme = "readme.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 keywords = ["archicad", "bim", "mcp", "ai", "quantity-takeoff", "estimate"]
 classifiers = [
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: MacOS",
-    "Topic :: Scientific/Engineering :: CAD",
+    "Topic :: Multimedia :: Graphics :: 3D Modeling",
+    "Topic :: Scientific/Engineering",
 ]
 dependencies = [
     "mcp>=1.0",
