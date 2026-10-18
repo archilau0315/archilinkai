@@ -21,21 +21,26 @@ def register(mcp: FastMCP, safe) -> None:
     def run_code_review(
         rules: list[str] | None = None,
         limits: dict[str, float] | None = None,
+        building_type: str = "multi",
+        high_rise: bool = False,
         instance: str | None = None,
     ) -> dict[str, Any]:
         """建筑规范强条审查，返回违规清单。
 
         rules 可选子集：wall_thickness（墙厚）/ openings（门窗洞口）/
-        headroom（净高）/ collisions（碰撞），默认全部。
-        limits 覆盖规范限值（单位 m），常用键：
-          wall_min_thickness / door_min_height / door_min_width /
-          window_sill_min / headroom_room 等，详见 DEFAULT_LIMITS。
+        headroom（净高）/ collisions（碰撞）/ fire_zone_area（防火分区面积）/
+        stair_width（楼梯宽度）/ railing_height（栏杆高度），默认全部。
+        building_type: high/multi（影响防火分区面积限值）；
+        high_rise: 是否高层（影响栏杆高度限值）。
+        limits 覆盖规范限值（单位 m），常用键见 list_code_review_limits。
         返回：per_rule（各规则违规数）、violations（违规明细）、
         total_violations、passed。
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
-            result = run_review(rules, limits, instance)
+            result = run_review(
+                rules, limits, instance,
+                building_type=building_type, high_rise=high_rise)
             return success_result(
                 instance=info.instance_id, project=info.project_name,
                 count=result["total_violations"], data=result,

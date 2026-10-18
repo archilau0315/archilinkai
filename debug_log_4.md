@@ -515,3 +515,25 @@
 
 ### 验证
 - 全量单测 553 全过
+
+---
+
+## 2026-10-18 V0.43 规范审查增强（+3 条规则）
+
+### 变更
+- code_review_service.py：新增 3 条审查规则
+  - fire_zone_area：防火分区面积（高层 1500㎡ / 多层 2500㎡），用 Zone 面积
+  - stair_width：楼梯梯段宽度 ≥ 1.1m
+  - railing_height：栏杆高度 ≥ 1.05m（高层 ≥ 1.10m）
+- DEFAULT_LIMITS：+5 项限值（fire_zone/stair/railing）
+- run_review：加 building_type(high/multi)、high_rise 参数
+- code_review_tools.py run_code_review：透传 building_type / high_rise
+
+### 真机验证（AC28 测试文件）
+- 7 条规则全跑通，per_rule 全 0，passed=True
+- 测试文件无 Zone/Stair/Railing，新增规则返回空列表（无异常）
+
+### 待办公楼项目验证
+- fire_zone_area 的 Zone 面积属性名（General_NetArea/General_Area）
+- stair_width 的 Stair_Width 属性名
+- railing_height 的 Railing_Height 属性名

@@ -24,6 +24,12 @@ DEFAULT_LIMITS: dict[str, float] = {
     "headroom_room": 2.4,              # 房间最小净高
     "headroom_stair": 2.2,             # 楼梯最小净高
     "headroom_garage": 2.2,            # 车库最小净高
+    # ---- V0.43 增强 ----
+    "fire_zone_max_area_high": 1500.0,  # 高层防火分区最大面积(㎡)
+    "fire_zone_max_area_multi": 2500.0, # 多层防火分区最大面积(㎡)
+    "stair_min_width": 1.1,             # 楼梯梯段最小宽度(m)
+    "railing_min_height": 1.05,         # 栏杆最小高度(m)
+    "railing_high_height": 1.10,        # 临空高度>24m 栏杆最小高度(m)
 }
 
 
@@ -259,15 +265,125 @@ def check_collisions(
     return violations
 
 
+# ---- 规则 5：防火分区面积检查 ------------------------------------------
+
+def check_fire_zone_area(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+    building_type: str = "multi",
+) -> list[dict[str, Any]]:
+    """防火分区面积≤限值。
+
+    building_type: high(高层, 1500㎡) / multi(多层, 2500㎡)。
+    用 Zone 面积；无 Zone 时返回空。
+    """
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    max_area = (lim["fire_zone_max_area_high"]
+                if building_type == "high"
+                else lim["fire_zone_max_area_multi"])
+    zones = _fetch_elements("Zone", instance)
+    if not zones:
+        return []
+    guids = [z["guid"] for z in zones]
+    props = _get_props(
+        guids, ["General_NetArea", "General_Area"], instance)
+    violations: list[dict[str, Any]] = []
+    for z in zones:
+        p = props.get(z["guid"], {})
+        area = _num(p.get("General_NetArea")) or _num(p.get("General_Area"))
+        if area is None:
+            continue
+        if area > max_area:
+            violations.append({
+                "guid": z["guid"], "name": z.get("name", ""),
+                "story": z.get("story_index"), "rule": "防火分区面积超限",
+                "value": round(area, 2), "limit": max_area,
+                "message": (f"防火分区面积 {area:.1f}㎡ 超过限值 "
+                            f"{max_area:.0f}㎡"),
+            })
+    return violations
+
+
+# ---- 规则 6：楼梯宽度检查 ----------------------------------------------
+
+def check_stair_width(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """楼梯梯段宽度≥1.1m。"""
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    stairs = _fetch_elements("Stair", instance)
+    if not stairs:
+        return []
+    guids = [s["guid"] for s in stairs]
+    props = _get_props(
+        guids, ["Stair_Width", "General_Width"], instance)
+    violations: list[dict[str, Any]] = []
+    for s in stairs:
+        p = props.get(s["guid"], {})
+        w = _num(p.get("Stair_Width")) or _num(p.get("General_Width"))
+        if w is None:
+            continue
+        if w < lim["stair_min_width"]:
+            violations.append({
+                "guid": s["guid"], "name": s.get("name", ""),
+                "story": s.get("story_index"), "rule": "楼梯宽度不足",
+                "value": round(w, 3), "limit": lim["stair_min_width"],
+                "message": f"楼梯宽 {w:.2f}m 小于 {lim['stair_min_width']:.1f}m",
+            })
+    return violations
+
+
+# ---- 规则 7：栏杆高度检查 ----------------------------------------------
+
+def check_railing_height(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+    high_rise: bool = False,
+) -> list[dict[str, Any]]:
+    """栏杆高度≥1.05m；高层/临空>24m 时≥1.10m。"""
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    min_h = lim["railing_high_height"] if high_rise else lim["railing_min_height"]
+    railings = _fetch_elements("Railing", instance)
+    if not railings:
+        return []
+    guids = [r["guid"] for r in railings]
+    props = _get_props(
+        guids, ["Railing_Height", "General_Height"], instance)
+    violations: list[dict[str, Any]] = []
+    for r in railings:
+        p = props.get(r["guid"], {})
+        h = _num(p.get("Railing_Height")) or _num(p.get("General_Height"))
+        if h is None:
+            continue
+        if h < min_h:
+            violations.append({
+                "guid": r["guid"], "name": r.get("name", ""),
+                "story": r.get("story_index"), "rule": "栏杆高度不足",
+                "value": round(h, 3), "limit": min_h,
+                "message": f"栏杆高 {h:.2f}m 小于 {min_h:.2f}m",
+            })
+    return violations
+
+
 # ---- 汇总入口 -----------------------------------------------------------
 
 def run_review(
     rules: list[str] | None = None,
     limits: dict[str, float] | None = None,
     instance: str | None = None,
+    building_type: str = "multi",
+    high_rise: bool = False,
 ) -> dict[str, Any]:
-    """执行规范审查，返回各规则违规清单与汇总。"""
-    all_rules = ["wall_thickness", "openings", "headroom", "collisions"]
+    """执行规范审查，返回各规则违规清单与汇总。
+
+    building_type: high/multi（影响防火分区面积限值）；
+    high_rise: 是否高层（影响栏杆高度限值）。
+    """
+    all_rules = [
+        "wall_thickness", "openings", "headroom", "collisions",
+        "fire_zone_area", "stair_width", "railing_height",
+    ]
     rules = rules or all_rules
     results: dict[str, list[dict[str, Any]]] = {}
     for r in rules:
@@ -279,6 +395,12 @@ def run_review(
             results[r] = check_headroom(instance, limits)
         elif r == "collisions":
             results[r] = check_collisions(instance)
+        elif r == "fire_zone_area":
+            results[r] = check_fire_zone_area(instance, limits, building_type)
+        elif r == "stair_width":
+            results[r] = check_stair_width(instance, limits)
+        elif r == "railing_height":
+            results[r] = check_railing_height(instance, limits, high_rise)
     total = sum(len(v) for v in results.values())
     return {
         "rules_checked": rules,
