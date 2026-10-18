@@ -874,18 +874,29 @@ def register(mcp: FastMCP, safe) -> None:
     @mcp.tool()
     def import_custom_quota(
         custom: dict[str, dict[str, Any]],
-        preview: bool = True,
+        save: bool = False,
+        clear: bool = False,
     ) -> dict[str, Any]:
-        """校验并预览自定义定额，返回与内置表合并结果。
+        """校验并预览自定义定额，可选持久化（跨重启自动加载）。
 
         custom 格式：{编码: {"labor_qty": 工日,
                 "materials": [[材料名, 消耗量, 单位], ...],
                 "machines": [[机械名, 台班, 单位], ...]}}
-        自定义项覆盖同编码内置项。preview=true 仅预览不落盘。
-        返回：accepted（接收条目数）、invalid（非法条目及原因）、
-        overridden（被覆盖的内置编码）、total（合并后总数）、sample（前3条）。
+        save=true 时把校验通过的条目写入用户目录，下次 CostEstimator 自动加载；
+        clear=true 时删除已持久化的定额（与 save 互斥，优先 clear）。
+        返回：accepted_count、invalid、overridden_builtin、merged_total、
+        sample、saved_path（save=true 时）。
         """
-        from archilinkai.cost_estimator import CONSUMPTION, merge_custom_consumption
+        from archilinkai.cost_estimator import (
+            CONSUMPTION,
+            clear_persisted_consumption,
+            merge_custom_consumption,
+            save_persisted_consumption,
+        )
+
+        if clear:
+            clear_persisted_consumption()
+            return {"cleared": True, "note": "已删除持久化定额。"}
 
         accepted: dict[str, dict[str, Any]] = {}
         invalid: dict[str, str] = {}
@@ -917,14 +928,24 @@ def register(mcp: FastMCP, safe) -> None:
         merged = merge_custom_consumption(accepted)
         overridden = [c for c in accepted if c in CONSUMPTION]
         sample = dict(list(accepted.items())[:3])
-        return {
+        result = {
             "accepted_count": len(accepted),
             "invalid": invalid,
             "overridden_builtin": overridden,
             "merged_total": len(merged),
             "sample": sample,
-            "note": "直接把 accepted 传给 estimate_project 的 custom_consumption 即可生效。",
         }
+        if save and accepted:
+            path = save_persisted_consumption(accepted)
+            result["saved_path"] = path
+            result["note"] = (
+                f"已持久化 {len(accepted)} 条定额到 {path}，"
+                "下次 estimate_project 自动加载。")
+        else:
+            result["note"] = (
+                "预览模式：把 accepted 传给 estimate_project 的 "
+                "custom_consumption 即时生效，或加 save=true 持久化。")
+        return result
 
     @mcp.tool()
     def export_table(

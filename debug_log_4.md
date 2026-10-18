@@ -455,3 +455,35 @@
 
 ### 验证
 - 单测 88 全过（cost_estimator + estimate_schema + aggregate）
+
+---
+
+## 2026-10-18 V0.41 机电/装修定额补全 + 自定义定额持久化
+
+### 变更
+- cost_estimator.py PRICE_BOOK：+22 项机电/装修材料市场价
+  - 块料：地砖/墙砖/粘结剂/填缝剂/踢脚线/壁纸/壁纸胶
+  - 给排水：镀锌钢管/PPR管/PVC排水管/阀门/水龙头/坐便器/洗脸盆/淋浴器
+  - 暖通：镀锌钢板/风管保温棉/风口/消声器/风机盘管
+  - 电气：桥架/电力电缆/PVC线管/BV电线/开关插座/吸顶灯/LED灯带
+- cost_estimator.py CONSUMPTION：23→38 条（+15 条机电/装修定额）
+  - 装修：块料楼地面/墙面块料面层/踢脚线/墙面壁纸
+  - 给排水：镀锌钢管/卫生器具
+  - 暖通：通风管道/通风空调设备
+  - 电气：桥架/电力电缆/配管/配线/开关插座/照明灯具
+- cost_estimator.py 自定义定额持久化：
+  - load_persisted_consumption / save_persisted_consumption / clear_persisted_consumption
+  - 路径：~/.archilinkai/custom_quota.json
+  - CostEstimator.__init__ 自动加载持久化定额（优先级：传入 > 持久化 > 内置）
+- read_tools.py import_custom_quota：preview 参数改为 save/clear
+  - save=true 持久化，clear=true 删除
+
+### 真机验证（AC28 测试文件，砖砌体 2.4m³）
+- import_custom_quota(save=true)：持久化 1 条到 ~/.archilinkai/custom_quota.json
+- 不传 custom_consumption 跑估价：自动加载持久化定额，
+  labor 405.6→624.0（自定义 labor_qty=2.0 生效）
+- import_custom_quota(clear=true)：清除后恢复内置 labor=405.6
+
+### 验证
+- 单测 88 全过
+- 文件行数 774（未超 800）

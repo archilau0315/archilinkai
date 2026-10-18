@@ -68,6 +68,38 @@ PRICE_BOOK: dict[str, float] = {
     "模板支撑": 8.0,          # 元/m²
     # 楼地面
     "水泥砂浆": 330.0,        # 元/m³（复用 M10 水泥砂浆语义）
+    # ---- V0.41 补充：块料/壁纸 ----
+    "地砖 600x600": 60.0,     # 元/m²
+    "墙砖 300x600": 55.0,     # 元/m²
+    "瓷砖粘结剂": 1.2,        # 元/kg
+    "填缝剂": 2.0,            # 元/kg
+    "瓷砖踢脚线": 12.0,       # 元/m
+    "壁纸": 35.0,             # 元/m²
+    "壁纸胶": 5.0,            # 元/kg
+    # ---- V0.41 补充：给排水 ----
+    "镀锌钢管 DN25": 35.0,    # 元/m
+    "PPR给水管 DN25": 12.0,   # 元/m
+    "PVC排水管 DN110": 45.0,  # 元/m
+    "阀门": 65.0,             # 元/个
+    "水龙头": 35.0,           # 元/个
+    "坐便器": 800.0,          # 元/套
+    "洗脸盆": 350.0,          # 元/套
+    "淋浴器": 250.0,          # 元/套
+    # ---- V0.41 补充：暖通 ----
+    "镀锌钢板 δ=0.75": 45.0,  # 元/m²（风管主材）
+    "风管保温棉": 22.0,       # 元/m²
+    "百叶风口": 80.0,         # 元/个
+    "消声器": 200.0,          # 元/个
+    "风机盘管": 1500.0,       # 元/台
+    # ---- V0.41 补充：电气 ----
+    "桥架 200x100": 45.0,     # 元/m
+    "电力电缆 YJV-3x16": 85.0,  # 元/m
+    "PVC线管 DN20": 6.0,      # 元/m
+    "BV电线 2.5mm²": 3.2,     # 元/m
+    "BV电线 4mm²": 5.5,       # 元/m
+    "开关插座": 18.0,         # 元/套
+    "吸顶灯": 80.0,           # 元/套
+    "LED灯带": 12.0,          # 元/m
 }
 
 # 人工与机械单价（元）
@@ -228,6 +260,94 @@ CONSUMPTION: dict[str, dict[str, Any]] = {
                       ("腻子粉", 0.5, "kg")],
         "machines": [],
     },
+    # ---- V0.41 补充：装修块料/壁纸 ----
+    "011105002": {  # 块料楼地面（地砖）
+        "labor_qty": 0.25,
+        "materials": [("地砖 600x600", 1.02, "m²"),
+                      ("瓷砖粘结剂", 4.0, "kg"),
+                      ("填缝剂", 0.3, "kg")],
+        "machines": [("砂浆搅拌机", 0.02, "台班")],
+    },
+    "011204001": {  # 墙面块料面层（墙砖）
+        "labor_qty": 0.35,
+        "materials": [("墙砖 300x600", 1.03, "m²"),
+                      ("瓷砖粘结剂", 5.0, "kg"),
+                      ("填缝剂", 0.4, "kg")],
+        "machines": [],
+    },
+    "011105003": {  # 踢脚线（瓷砖）
+        "labor_qty": 0.05,
+        "materials": [("瓷砖踢脚线", 1.05, "m"),
+                      ("瓷砖粘结剂", 0.5, "kg")],
+        "machines": [],
+    },
+    "011407001": {  # 墙面壁纸
+        "labor_qty": 0.12,
+        "materials": [("壁纸", 1.10, "m²"),
+                      ("壁纸胶", 0.3, "kg")],
+        "machines": [],
+    },
+    # ---- V0.41 补充：给排水 ----
+    "031001001": {  # 镀锌钢管（给水，综合 DN25）
+        "labor_qty": 0.18,
+        "materials": [("镀锌钢管 DN25", 1.02, "m"),
+                      ("阀门", 0.02, "个")],
+        "machines": [],
+    },
+    "031004001": {  # 卫生器具（坐便器+洗脸盆+淋浴器综合）
+        "labor_qty": 1.5,
+        "materials": [("坐便器", 0.35, "套"),
+                      ("洗脸盆", 0.35, "套"),
+                      ("淋浴器", 0.30, "套"),
+                      ("水龙头", 1.0, "个")],
+        "machines": [],
+    },
+    # ---- V0.41 补充：暖通 ----
+    "030702001": {  # 通风管道（镀锌钢板风管）
+        "labor_qty": 0.30,
+        "materials": [("镀锌钢板 δ=0.75", 1.15, "m²"),
+                      ("风管保温棉", 1.0, "m²")],
+        "machines": [],
+    },
+    "030701001": {  # 通风空调设备（风机盘管）
+        "labor_qty": 1.0,
+        "materials": [("风机盘管", 1.0, "台"),
+                      ("百叶风口", 2.0, "个"),
+                      ("消声器", 0.5, "个")],
+        "machines": [],
+    },
+    # ---- V0.41 补充：电气 ----
+    "030404031": {  # 桥架
+        "labor_qty": 0.15,
+        "materials": [("桥架 200x100", 1.02, "m")],
+        "machines": [],
+    },
+    "030408001": {  # 电力电缆
+        "labor_qty": 0.30,
+        "materials": [("电力电缆 YJV-3x16", 1.02, "m")],
+        "machines": [],
+    },
+    "030411001": {  # 配管（PVC线管）
+        "labor_qty": 0.12,
+        "materials": [("PVC线管 DN20", 1.03, "m")],
+        "machines": [],
+    },
+    "030412001": {  # 配线（BV电线）
+        "labor_qty": 0.05,
+        "materials": [("BV电线 2.5mm²", 1.10, "m")],
+        "machines": [],
+    },
+    "030404035": {  # 开关插座
+        "labor_qty": 0.10,
+        "materials": [("开关插座", 1.0, "套")],
+        "machines": [],
+    },
+    "030412004": {  # 照明灯具（吸顶灯）
+        "labor_qty": 0.20,
+        "materials": [("吸顶灯", 1.0, "套"),
+                      ("LED灯带", 0.5, "m")],
+        "machines": [],
+    },
 }
 
 # 未命中编码时按名称关键词兜底（材料分解粒度粗，作参考值）
@@ -290,6 +410,60 @@ def merge_custom_consumption(
     return merged
 
 
+# ---- 自定义定额持久化（用户目录，跨重启自动加载） ---------------------
+
+def _persisted_quota_path() -> str:
+    import os
+    return os.path.join(
+        os.path.expanduser("~"), ".archilinkai", "custom_quota.json")
+
+
+def load_persisted_consumption() -> dict[str, dict[str, Any]]:
+    """读取已持久化的自定义定额，无文件或损坏返回 {}。"""
+    import json
+    import os
+    path = _persisted_quota_path()
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def save_persisted_consumption(
+    custom: dict[str, dict[str, Any]],
+) -> str:
+    """把自定义定额写入用户目录，下次 CostEstimator 自动加载。返回路径。"""
+    import json
+    import os
+    path = _persisted_quota_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    # materials/machines 转 list 以便 JSON 序列化
+    serializable = {}
+    for code, cons in (custom or {}).items():
+        if not isinstance(cons, dict) or "labor_qty" not in cons:
+            continue
+        serializable[str(code)] = {
+            "labor_qty": float(cons["labor_qty"]),
+            "materials": [list(m) for m in cons.get("materials", [])],
+            "machines": [list(m) for m in cons.get("machines", [])],
+        }
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(serializable, f, ensure_ascii=False, indent=2)
+    return path
+
+
+def clear_persisted_consumption() -> None:
+    """删除已持久化的自定义定额。"""
+    import os
+    path = _persisted_quota_path()
+    if os.path.exists(path):
+        os.remove(path)
+
+
 class CostEstimator:
     """细算估算器：消耗量 × 市场价 → 人材机 → 取费 → 总价。"""
 
@@ -311,8 +485,11 @@ class CostEstimator:
             self.fees.update(fee_overrides)
         self.region = region
         self.notes: list[str] = []
-        # 消耗量表：内置 + 自定义合并（自定义优先）
-        self.consumption = merge_custom_consumption(custom_consumption)
+        # 消耗量表：内置 + 持久化定额 + 本次传入自定义（优先级递增）
+        persisted = load_persisted_consumption()
+        merged = {**persisted, **(custom_consumption or {})}
+        self.consumption = merge_custom_consumption(merged)
+        self.persisted_count = len(persisted)
 
     def estimate_item(self, item: dict[str, Any]) -> dict[str, Any]:
         """细算单条目，就地填人材机字段并标记 calc_mode。
