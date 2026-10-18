@@ -8,6 +8,7 @@
 - delete_tools：构件删除
 - plan_tools：建模计划辅助
 - diagnostic_tools：诊断运维
+- code_review_tools：规范审查
 
 启动时尝试 discover_instances；无真机时允许启动，工具调用时报错。
 入口：archilinkai 命令 / python -m archilinkai / 根目录兼容薄壳 server.py。
@@ -21,6 +22,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from archilinkai import __version__
+from archilinkai import code_review_tools
 from archilinkai import diagnostic_tools
 from archilinkai import instance_manager
 from archilinkai import modify_tools
@@ -53,6 +55,7 @@ modify_tools.register(mcp, _safe)
 delete_tools.register(mcp, _safe)
 plan_tools.register(mcp, _safe)
 diagnostic_tools.register(mcp, _safe)
+code_review_tools.register(mcp, _safe)
 
 
 # 启动时尝试发现实例；失败不阻塞启动（无真机时仍可启动 server）

@@ -487,3 +487,31 @@
 ### 验证
 - 单测 88 全过
 - 文件行数 774（未超 800）
+
+---
+
+## 2026-10-18 V0.42 规范审查（方向2 MVP）
+
+### 新增模块
+- code_review_service.py（295 行）：4 条规范强条审查规则
+  - wall_thickness：墙厚 ≥ 隔墙限值 0.09m（承重墙 0.18m）
+  - openings：门洞高≥2.0m/宽≥0.8m、外窗窗台高≥0.9m
+  - headroom：净高 ≥ 2.4m（按楼层标高 - 梁/板高度估算）
+  - collisions：结构(柱梁墙板) vs 机电(MEPRoutingElement) 碰撞
+- code_review_tools.py：注册 run_code_review + list_code_review_limits
+- server.py：注册 code_review_tools
+- tests/integration/conftest.py：收集 code_review_tools
+
+### 真机验证（AC28 测试文件，1 面墙厚 0.2m）
+- run_code_review(['wall_thickness'])：0 违规（0.2m ≥ 0.09m）
+- 严格限值 wall_min_thickness=0.3：检出 1 条违规（墙厚 0.2m）
+- 全规则：per_rule 全 0，passed=True
+- list_code_review_limits：返回 10 项默认限值
+
+### 待验证（需办公楼项目）
+- 门窗洞口属性名（Door_Height/Door_Width/Window_SillHeight）
+- 净高属性名（Beam_Height/Slab_Thickness）及楼层标高对齐
+- 碰撞检查需有机电构件
+
+### 验证
+- 全量单测 553 全过

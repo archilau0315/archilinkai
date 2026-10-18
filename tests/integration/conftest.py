@@ -32,6 +32,7 @@ def _collect() -> dict:
     server.delete_tools.register(cap, server._safe)
     server.plan_tools.register(cap, server._safe)
     server.diagnostic_tools.register(cap, server._safe)
+    server.code_review_tools.register(cap, server._safe)
     return cap.tools
 
 
