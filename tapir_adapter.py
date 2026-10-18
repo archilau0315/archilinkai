@@ -514,6 +514,44 @@ class TapirAdapter:
             rows = list(data or [])
         return rows
 
+    def get_layer_combinations(
+        self,
+        attribute_ids: list[str],
+        instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetLayerCombinations：读图层组合详情（含每层显隐/锁定/线框/交叉组）。
+
+        注意入参 key 是 attributes（非 attributeIds）。列全部图层组合可用
+        get_attributes("LayerCombination")。
+        """
+        params = {
+            "attributes": [{"attributeId": {"guid": g}} for g in attribute_ids]
+        }
+        result = self.execute("GetLayerCombinations", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("layerCombinations", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def create_layer_combinations(
+        self,
+        layer_combination_data_array: list[dict[str, Any]],
+        overwrite_existing: bool = False,
+        instance: str | None = None,
+    ) -> Any:
+        """CreateLayerCombinations：创建或覆盖图层组合。
+
+        每项含 name + layers；layers 每项含 attributeId + isHidden/isLocked/
+        isWireframe/intersectionGroupNr（全必填）。
+        """
+        params = {
+            "layerCombinationDataArray": layer_combination_data_array,
+            "overwriteExisting": overwrite_existing,
+        }
+        return self.execute("CreateLayerCombinations", params, instance)
+
 
 def _to_dict(value: Any) -> Any:
     """把 Tapir 返回的对象（可能是 namedtuple/dataclass）转成 dict/list。

@@ -373,6 +373,39 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def create_layer_combinations(
+        layer_combination_data: list[dict[str, Any]],
+        overwrite_existing: bool = False,
+        confirm: bool = False,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """创建或覆盖图层组合（经 Tapir CreateLayerCombinations）。
+
+        layer_combination_data 每项含 name + layers；layers 每项含
+        attributeId（图层 guid）+ isHidden/isLocked/isWireframe/intersectionGroupNr。
+        confirm=true 时才执行；overwrite_existing=true 时同名组合会被覆盖。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            if not confirm:
+                return success_result(
+                    instance=info.instance_id, project=info.project_name,
+                    count=len(layer_combination_data),
+                    data={"message": f"预览：将创建/覆盖 {len(layer_combination_data)} 个图层组合。",
+                          "layer_combination_data": layer_combination_data,
+                          "overwrite_existing": overwrite_existing},
+                )
+            result = _tapir.create_layer_combinations(
+                layer_combination_data, overwrite_existing, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(layer_combination_data),
+                data={"message": f"已创建/覆盖 {len(layer_combination_data)} 个图层组合。",
+                      "result": result},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
     def preview_model_plan(
         plan: dict[str, Any], instance: str | None = None
     ) -> dict[str, Any]:

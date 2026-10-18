@@ -9,7 +9,7 @@
 [![MCP](https://img.shields.io/badge/MCP-Protocol-black?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIweiIvPjwvc3ZnPg==)](https://modelcontextprotocol.io/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-server-green)](https://github.com/jlowin/fastmcp)
 [![Tapir](https://img.shields.io/badge/Tapir-Add--On-yellow)](https://github.com/ENZYME-APD/tapir-archicad-automation)
-[![Tests](https://img.shields.io/badge/tests-511%20pass-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-513%20pass-brightgreen)](tests/)
 [![Status](https://img.shields.io/badge/status-active-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)](#)
 
@@ -46,13 +46,13 @@
 
 | 能力 | 说明 |
 |---|---|
-| 🛠 **53 个 MCP 工具** | 覆盖只读查询、安全写入、修改、删除、计划辅助、诊断运维 |
+| 🛠 **55 个 MCP 工具** | 覆盖只读查询、安全写入、修改、删除、计划辅助、诊断运维 |
 | 🏗 **15 类构件建模** | 墙、柱、梁、板、门、窗、楼梯、屋顶、变形体、家具、灯具、网面、洞口、房间区域、机电管线 |
 | 📊 **23 个算量模板** | 混凝土体积、墙体分层、幕墙、栏杆、门窗洞口面积、模板估算、外檐真石漆、砌体工程等 |
 | 📋 **GB 50500 清单** | 自动映射清单编码、出标准清单报表（xlsx + 标题/项目信息/合计行） |
 | 🔒 **四阶段写入** | Preview → Confirm → Execute → Verify，支持 Ctrl+Z 撤销 |
 | 🆔 **项目身份强校验** | 写入前核对项目路径 + 元素 GUID，防止项目被切换导致误写 |
-| 🧪 **511 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
+| 🧪 **513 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
 | 🖥 **多版本多实例** | 同一套代码兼容 AC26–29，支持双实例并存（ac29-1 / ac28-1） |
 
 ---
@@ -65,7 +65,7 @@ flowchart TB
         C[Claude Desktop / Cursor / Kimi / Trae / Codex / WorkBuddy]
     end
     subgraph Server["ArchiCAD MCP Server"]
-        S[Python FastMCP<br/>53 工具]
+        S[Python FastMCP<br/>55 工具]
     end
     subgraph AC["ArchiCAD 实例"]
         A1[AC29 + Tapir]
@@ -269,7 +269,7 @@ python regression.py                   # 一键回归（单测+集成+兼容+基
 
 | 测试类型 | 通过 | 跳过 | 失败 |
 |---|---|---|---|
-| 单元测试 | 511 | 0 | 0 |
+| 单元测试 | 513 | 0 | 0 |
 | 集成测试 | 25 | 2 | 0 |
 | 兼容性测试 | 12 | 1 | 0 |
 
@@ -290,8 +290,8 @@ python benchmark.py --instance ac29-1 --rounds 3
 ```
 archicad-mcp/
 ├── server.py              # FastMCP 入口：异常包装 + 四层工具注册
-├── read_tools.py          # P0 只读工具注册（25 个，从 server.py 拆出）
-├── write_tools.py         # P1 安全写入工具注册（15 个，从 server.py 拆出）
+├── read_tools.py          # P0 只读工具注册（26 个，从 server.py 拆出）
+├── write_tools.py         # P1 安全写入工具注册（16 个，从 server.py 拆出）
 ├── modify_tools.py        # 构件修改工具注册（2 个，V0.4）
 ├── delete_tools.py        # 构件删除工具注册（2 个，V0.7）
 ├── plan_tools.py          # 计划辅助工具注册（1 个，V0.10）
@@ -341,7 +341,7 @@ archicad-mcp/
 
 ## 工具一览
 
-### P0 只读工具（25 个）
+### P0 只读工具（26 个）
 
 | 工具 | 说明 |
 |---|---|
@@ -374,8 +374,9 @@ archicad-mcp/
 | `get_connected_elements` | 查宿主元素上挂的子元素（墙→门窗、幕墙→框架等） |
 | `get_element_preview_image` | 取元素预览图（2D/Section/3D，返回 base64） |
 | `get_building_material_properties` | 读建筑材料物理性能 |
+| `get_layer_combination_details` | 读图层组合详情（每层显隐/锁定/线框/交叉组） |
 
-### P1 安全写入工具（15 个）
+### P1 安全写入工具（16 个）
 
 | 工具 | 说明 |
 |---|---|
@@ -394,6 +395,7 @@ archicad-mcp/
 | `update_zones` | 更新所有 Zone 几何与印章（需 confirm=true） |
 | `move_elements` | 按向量批量移动元素（需 confirm=true） |
 | `rotate_elements` | 绕参考点批量旋转元素（需 confirm=true） |
+| `create_layer_combinations` | 创建/覆盖图层组合（需 confirm=true） |
 
 ### 构件修改 / 删除 / 计划辅助（5 个）
 
@@ -414,7 +416,7 @@ archicad-mcp/
 | `get_operation_status` | 查操作状态 |
 | `get_operation_log` | 查操作日志 |
 
-> 工具总数：**53 个**
+> 工具总数：**55 个**
 
 ### 已支持建模构件（15 类）
 
@@ -495,6 +497,7 @@ archicad-mcp/
 - **V0.31 库部件+层级子构件**：新增 list_library_parts（2894 项库部件，Object 1272/Picture 1535，含 skippedCount 诊断）和 get_subelements_of_hierarchical（幕墙拆框架/面板/分隔条，楼梯拆踏板/踢板/结构）。真机验证：幕墙 46→框架 39+面板 10，楼梯 19→踏板 22+踢板 22+结构 3。工具 37 个，单测 493 全过
 - **V0.32 P1 Tapir 命令批**：新增 12 个 adapter 便捷方法、6 个只读工具（get_collisions / list_favorites / get_ifc_ids / get_elements_by_ifc_ids / get_ifc_properties / get_zone_boundaries）、5 个写入工具（create_layers / delete_attributes / apply_favorites / set_element_details / update_zones）。真机验证：碰撞检测 2 对、图层 5 项、收藏夹 17 项、IFC ID/属性读写正常；Zone 相关 2 命令因项目数据问题报错，单测通过。工具 48 个，单测 506 全过
 - **V0.33 P0 Tapir 命令批**：新增 get_connected_elements（墙→门窗/幕墙→框架/楼梯→踏踢板）、get_element_preview_image（2D/Section/3D base64 预览图）、get_building_material_properties（材料物理性能）、move_elements、rotate_elements（均 confirm 模式）。工具 53 个，单测 511 全过
+- **V0.34 图层组合**：新增 get_layer_combination_details（读组合内每层显隐/锁定/线框/交叉组）和 create_layer_combinations（创建/覆盖组合，confirm 模式）。工具 55 个，单测 513 全过
 
 </details>
 

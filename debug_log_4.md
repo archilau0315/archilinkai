@@ -70,3 +70,21 @@
 - GetBuildingMaterialPhysicalProperties 的 attributeIds 用 [{attributeId:{guid}}] 包装（与 GetLayers 一致）
 
 ---
+
+## 2026-10-18 V0.34 P1 收尾：图层组合
+
+### 变更
+- tapir_adapter.py：+2 便捷方法
+  - get_layer_combinations(attribute_ids)（注意入参 key 是 attributes 非 attributeIds）
+  - create_layer_combinations(layer_combination_data_array, overwrite_existing=False)
+- read_tools.py：+1 只读工具 get_layer_combination_details
+- write_tools.py：+1 写入工具 create_layer_combinations（confirm 模式）
+- tests/unit/test_tapir_adapter.py：+2 用例
+
+### 备注
+- 单测 511 → 513 全过
+- 工具数 53 → 55
+- 图层组合每层字段全必填：attributeId/isHidden/isLocked/isWireframe/intersectionGroupNr
+- 真机验证跳过（AC 未启动）
+
+---

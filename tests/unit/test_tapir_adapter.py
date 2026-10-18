@@ -603,3 +603,42 @@ def test_get_building_material_physical_properties(monkeypatch):
     assert calls["params"]["attributeIds"] == [{"attributeId": {"guid": "B1"}}]
     assert rows == [{"density": 2400}]
 
+
+def test_get_layer_combinations(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"layerCombinations": [{"name": "01 组合", "layers": []}]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_layer_combinations(["LC1"])
+    assert calls["cmd"] == "GetLayerCombinations"
+    # 入参 key 是 attributes（非 attributeIds）
+    assert calls["params"]["attributes"] == [{"attributeId": {"guid": "LC1"}}]
+    assert rows == [{"name": "01 组合", "layers": []}]
+
+
+def test_create_layer_combinations(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"attributeIds": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    data = [{"name": "新组合", "layers": [
+        {"attributeId": {"guid": "L1"}, "isHidden": False, "isLocked": False,
+         "isWireframe": False, "intersectionGroupNr": 1}]}]
+    tapir_adapter.adapter.create_layer_combinations(data, True)
+    assert calls["cmd"] == "CreateLayerCombinations"
+    assert calls["params"]["layerCombinationDataArray"] == data
+    assert calls["params"]["overwriteExisting"] is True
+
+

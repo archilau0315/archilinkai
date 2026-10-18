@@ -423,6 +423,25 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def get_layer_combination_details(
+        attribute_ids: list[str], instance: str | None = None,
+    ) -> dict[str, Any]:
+        """读图层组合详情（经 Tapir GetLayerCombinations）。
+
+        attribute_ids 为图层组合 attributeId.guid 列表（先用
+        list_attributes("LayerCombination") 取全部组合的 id）。
+        返回每层显隐/锁定/线框/交叉组。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_layer_combinations(attribute_ids, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), layer_combinations=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
     def get_element_geometry_info(
         element_guids: list[str], instance: str | None = None
     ) -> dict[str, Any]:
