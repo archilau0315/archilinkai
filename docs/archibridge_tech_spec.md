@@ -17,13 +17,22 @@ AI 智能体（Trae/Claude/Cursor，智能层，不做）
 ArchiCAD 26–30 + Tapir Add-On（通道层）
 ```
 
-**与 Trae 等产品的三层结合**：
+**与任意 AI 智能体的接入矩阵（客户端无关原则）**：
 
-| 层级 | 形态 | 实现阶段 |
-|---|---|---|
-| 协议层 | MCP 配置接入，AI 直接获得全部工具 | S0（已具备能力） |
-| 场景层 | 工作流封装为自定义智能体/技能（如「造价助手」） | S1 附带模板 |
-| 平台层 | HTTP+token，团队/云 Agent 接入 | S3 |
+筑联只依赖 MCP 标准协议，不做任何客户端绑定；凡是「能说人话的智能体」都属目标接入对象，按用户使用习惯自然分流：
+
+| 接入方式 | 适用客户端/平台 | 接入动作 | 阶段 |
+|---|---|---|---|
+| **stdio MCP**（本机模式） | Claude Desktop、Cursor、Trae、Kimi、Codex CLI、Cherry Studio、Witsy、Cline、5ire 等 | 客户端 MCP 配置指向 `archibridge`（或用 `archibridge install <client>` 自动写） | S0 起 |
+| **Streamable HTTP MCP**（远程模式） | 云端 Agent、企业 Agent 网关、远程使用场景 | HTTP + Bearer token 指向本地/团队网关 | S3 |
+| **非 MCP 平台经网关** | Dify、Coze、GPTs、n8n、LangChain/LlamaIndex 自建 Agent | S3 网关适配（HTTP）或官方 MCP 适配器 | S3 |
+| **场景技能层** | 上述任意客户端的自定义智能体/工作流 | 使用 docs/recipes 提示词模板组合工具（建模助手/造价助手/审图助手） | S1 附带 |
+
+设计约束（贯穿各阶段）：
+- 工具描述语言保持中性（不引用特定客户端品牌）
+- S1 install 矩阵覆盖主流客户端，未知客户端提供通用 JSON 片段自配
+- S3 网关不感知客户端来源，鉴权只看 token
+- 所有文档示例同时给出至少两种客户端的配置（避免惯性绑死某一家）
 
 **不做的事**：不做 GUI 重应用；不做 AC 内嵌 AI 面板（远期可选）；不自研 LLM。
 
@@ -213,19 +222,22 @@ jobs:
 
 ### 4.2 `archibridge install <client>`
 
-| 参数 | 写入目标 |
+| client | 写入目标 |
 |---|---|
 | claude | `%APPDATA%\Claude\claude_desktop_config.json` |
 | cursor | `~/.cursor/mcp.json` |
 | trae | Trae MCP 配置文件 |
-| all | 逐个探测已安装并写入 |
+| kimi / codex / cherry / witsy / cline / 5ire | 各自配置文件（按客户端探测路径表） |
+| generic | 打印通用 MCP JSON 片段，指导用户手动粘贴到任意客户端 |
+| all | 逐个探测已安装客户端并写入 |
 
 - 写入前备份原文件（`.bak`）；已存在同名 server 时询问覆盖
 - 命令体：Windows `python -m archibridge`（记录安装 Python 绝对路径）
+- 探测不到的客户端自动跳过并提示可用 generic 模式；客户端路径表外置于 `src/archibridge/data/clients.json`（可随版本更新，无需改代码）
 
 ### 4.3 场景技能模板
 
-`docs/recipes/` 下提供 3 个 Trae/Claude 智能体提示词模板：建模助手 / 造价助手 / 审图助手（引用工具名与四阶段写入规范）。
+`docs/recipes/` 下提供 3 个通用智能体提示词模板：建模助手 / 造价助手 / 审图助手（引用工具名与四阶段写入规范，模板头注明适用于任意支持 MCP 的客户端）。
 
 ---
 
