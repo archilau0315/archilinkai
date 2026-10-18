@@ -106,3 +106,29 @@
 - 全部带 code_override（GB 50500 清单编码）
 
 ---
+
+## 2026-10-18 V0.36 P2 只读命令批：楼层/MEP/关系/属性/单位/导航树
+
+### 变更
+- tapir_adapter.py：+9 便捷方法
+  - get_stories / get_gdl_parameters_of_elements / get_mep_elements /
+    get_mep_routing_elements / get_mep_ports / get_relations_of_elements /
+    get_all_properties / get_calculation_units / get_navigator_item_tree
+- read_tools.py：+9 只读工具
+  - list_stories / get_gdl_parameters / list_mep_elements /
+    get_mep_routing_elements / get_mep_ports / get_element_relations /
+    list_all_properties / get_calculation_units / get_navigator_tree
+- tests/unit/test_tapir_adapter.py：+9 用例
+
+### 盘点结论
+- 官方 265 命令，接入后未覆盖 213 个；大部分为 UI 交互/项目开关/Teamwork/修订管理，对 LLM 工作流价值低
+- 本批挑选对建模/算量/审图最有用的 9 个只读命令
+- GetMEPRoutingElements 解决"机电构件普通接口无法查看"痛点
+- 写入类 P2（标注/BCF/Teamwork/Modify 系列/设计选项/修订）暂缓
+
+### 备注
+- 单测 513 → 522 全过
+- 工具数 55 → 64
+- 真机验证跳过（AC 未启动）
+
+---

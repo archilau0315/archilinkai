@@ -552,6 +552,123 @@ class TapirAdapter:
         }
         return self.execute("CreateLayerCombinations", params, instance)
 
+    # ---- P2 命令：楼层/MEP/关系/属性/单位/导航树（只读） ----
+
+    def get_stories(self, instance: str | None = None) -> dict[str, Any]:
+        """GetStories：楼层列表（索引/标高/楼层名），无入参。"""
+        result = self.execute("GetStories", None, instance)
+        data = _to_dict(result)
+        return data if isinstance(data, dict) else {}
+
+    def get_gdl_parameters_of_elements(
+        self, guids: list[str], instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetGDLParametersOfElements：读元素 GDL 参数（配套 SetGDL 写入）。"""
+        params = {"elements": [{"elementId": {"guid": g}} for g in guids]}
+        result = self.execute("GetGDLParametersOfElements", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("gdlParametersOfElements", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def get_mep_elements(
+        self,
+        element_types: list[str] | None = None,
+        domains: list[str] | None = None,
+        instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetMEPElements：列项目全部 MEP 元素（可选类型/专业过滤）。"""
+        params: dict[str, Any] = {}
+        if element_types:
+            params["elementTypes"] = element_types
+        if domains:
+            params["domains"] = domains
+        result = self.execute("GetMEPElements", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("elements", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def get_mep_routing_elements(
+        self, guids: list[str], instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetMEPRoutingElements：读 MEP 管线详情（普通接口看不到 MEP 用这个）。"""
+        params = {"elements": [{"elementId": {"guid": g}} for g in guids]}
+        result = self.execute("GetMEPRoutingElements", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("routingElements", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def get_mep_ports(
+        self, guids: list[str], instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetMEPPorts：读 MEP 元素端口（位置/形状/尺寸/连接状态，AC28+）。"""
+        params = {"elements": [{"elementId": {"guid": g}} for g in guids]}
+        result = self.execute("GetMEPPorts", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("elementPorts", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def get_relations_of_elements(
+        self,
+        guids: list[str],
+        other_element_type: str | None = None,
+        instance: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """GetRelationsOfElements：读元素关系（宿主/连接等，按请求顺序对应）。"""
+        params: dict[str, Any] = {
+            "elements": [{"elementId": {"guid": g}} for g in guids]
+        }
+        if other_element_type:
+            params["otherElementType"] = other_element_type
+        result = self.execute("GetRelationsOfElements", params, instance)
+        data = _to_dict(result)
+        if isinstance(data, dict):
+            rows = data.get("relations", [])
+        else:
+            rows = list(data or [])
+        return rows
+
+    def get_all_properties(
+        self, instance: str | None = None,
+    ) -> dict[str, Any]:
+        """GetAllProperties：全部属性定义+属性组（算量属性名排查用）。"""
+        result = self.execute("GetAllProperties", None, instance)
+        data = _to_dict(result)
+        return data if isinstance(data, dict) else {"properties": []}
+
+    def get_calculation_units(
+        self, instance: str | None = None,
+    ) -> dict[str, Any]:
+        """GetCalculationUnits：项目计算单位（长度/面积/体积/角度精度）。"""
+        result = self.execute("GetCalculationUnits", None, instance)
+        data = _to_dict(result)
+        return data if isinstance(data, dict) else {}
+
+    def get_navigator_item_tree(
+        self,
+        map_id: str = "ProjectMap",
+        publisher_set_name: str | None = None,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """GetNavigatorItemTree：导航树（ProjectMap/PublicViewMap/LayoutBook/PublisherSets）。"""
+        params: dict[str, Any] = {"navigatorMapId": map_id}
+        if publisher_set_name:
+            params["publisherSetName"] = publisher_set_name
+        result = self.execute("GetNavigatorItemTree", params, instance)
+        data = _to_dict(result)
+        return data if isinstance(data, dict) else {}
+
 
 def _to_dict(value: Any) -> Any:
     """把 Tapir 返回的对象（可能是 namedtuple/dataclass）转成 dict/list。

@@ -642,3 +642,146 @@ def test_create_layer_combinations(monkeypatch):
     assert calls["params"]["overwriteExisting"] is True
 
 
+def test_get_stories(monkeypatch):
+    import tapir_adapter
+
+    def _fake(cmd, params, instance):
+        assert cmd == "GetStories"
+        assert params is None
+        return {"firstStory": -1, "lastStory": 4, "stories": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    data = tapir_adapter.adapter.get_stories()
+    assert data["lastStory"] == 4
+
+
+def test_get_gdl_parameters_of_elements(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"gdlParametersOfElements": [{"parameters": []}]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_gdl_parameters_of_elements(["E1"])
+    assert calls["cmd"] == "GetGDLParametersOfElements"
+    assert calls["params"]["elements"] == [{"elementId": {"guid": "E1"}}]
+    assert rows == [{"parameters": []}]
+
+
+def test_get_mep_elements(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"elements": [{"type": "Duct"}]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_mep_elements(["Duct"], ["Mechanical"])
+    assert calls["cmd"] == "GetMEPElements"
+    assert calls["params"] == {"elementTypes": ["Duct"], "domains": ["Mechanical"]}
+    assert rows == [{"type": "Duct"}]
+
+    calls.clear()
+    tapir_adapter.adapter.get_mep_elements()
+    assert calls["params"] == {}
+
+
+def test_get_mep_routing_elements(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"routingElements": [{"segments": []}]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_mep_routing_elements(["M1"])
+    assert calls["cmd"] == "GetMEPRoutingElements"
+    assert rows == [{"segments": []}]
+
+
+def test_get_mep_ports(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"elementPorts": [{"ports": []}]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_mep_ports(["M1"])
+    assert calls["cmd"] == "GetMEPPorts"
+    assert rows == [{"ports": []}]
+
+
+def test_get_relations_of_elements(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"relations": [{"type": "Window"}]}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    rows = tapir_adapter.adapter.get_relations_of_elements(["E1"], "Window")
+    assert calls["cmd"] == "GetRelationsOfElements"
+    assert calls["params"]["otherElementType"] == "Window"
+    assert rows == [{"type": "Window"}]
+
+
+def test_get_all_properties(monkeypatch):
+    import tapir_adapter
+
+    def _fake(cmd, params, instance):
+        assert cmd == "GetAllProperties"
+        assert params is None
+        return {"properties": [{"name": "General_Area"}], "propertyGroups": []}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    data = tapir_adapter.adapter.get_all_properties()
+    assert data["properties"] == [{"name": "General_Area"}]
+
+
+def test_get_calculation_units(monkeypatch):
+    import tapir_adapter
+
+    def _fake(cmd, params, instance):
+        assert cmd == "GetCalculationUnits"
+        return {"length": {"unit": "Meter", "decimals": 3}}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    data = tapir_adapter.adapter.get_calculation_units()
+    assert data["length"]["unit"] == "Meter"
+
+
+def test_get_navigator_item_tree(monkeypatch):
+    import tapir_adapter
+
+    calls = {}
+
+    def _fake(cmd, params, instance):
+        calls["cmd"] = cmd
+        calls["params"] = params
+        return {"navigatorItemTree": {"name": "0. 地下室"}}
+
+    monkeypatch.setattr(tapir_adapter.adapter, "execute", _fake)
+    data = tapir_adapter.adapter.get_navigator_item_tree("PublicViewMap")
+    assert calls["cmd"] == "GetNavigatorItemTree"
+    assert calls["params"]["navigatorMapId"] == "PublicViewMap"
+    assert "publisherSetName" not in calls["params"]
+    assert data["navigatorItemTree"]["name"] == "0. 地下室"
+
+

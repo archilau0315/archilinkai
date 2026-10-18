@@ -442,6 +442,153 @@ def register(mcp: FastMCP, safe) -> None:
         return safe(instance, _run)
 
     @mcp.tool()
+    def list_stories(instance: str | None = None) -> dict[str, Any]:
+        """列楼层：索引、标高、楼层名（经 Tapir GetStories）。"""
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            data = _tapir.get_stories(instance)
+            stories = data.get("stories", [])
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(stories) if isinstance(stories, list) else 0, **data,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_gdl_parameters(
+        guids: list[str], instance: str | None = None,
+    ) -> dict[str, Any]:
+        """读元素 GDL 参数（经 Tapir GetGDLParametersOfElements）。
+
+        配合 set_gdl_parameters 写入前先读当前值。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_gdl_parameters_of_elements(guids, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), gdl_parameters=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def list_mep_elements(
+        element_types: list[str] | None = None,
+        domains: list[str] | None = None,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """列项目全部 MEP 元素（经 Tapir GetMEPElements）。
+
+        element_types 可选（如 Duct/Pipe/CableCarrier）；domains 可选
+        （Mechanical/Electrical/Piping/FireFighting/Telecom）。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_mep_elements(element_types, domains, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), elements=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_mep_routing_elements(
+        guids: list[str], instance: str | None = None,
+    ) -> dict[str, Any]:
+        """读 MEP 管线详情（经 Tapir GetMEPRoutingElements）。
+
+        普通查询接口看不到 MEP 构建内容时用这个。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_mep_routing_elements(guids, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), routing_elements=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_mep_ports(
+        guids: list[str], instance: str | None = None,
+    ) -> dict[str, Any]:
+        """读 MEP 元素端口：位置/形状/尺寸/连接状态（经 Tapir GetMEPPorts，AC28+）。"""
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_mep_ports(guids, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), element_ports=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_element_relations(
+        guids: list[str],
+        other_element_type: str | None = None,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """读元素关系（宿主/连接等，经 Tapir GetRelationsOfElements）。
+
+        other_element_type 可选，只返回与该类型元素的关系。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            rows = _tapir.get_relations_of_elements(
+                guids, other_element_type, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(rows), relations=rows,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def list_all_properties(instance: str | None = None) -> dict[str, Any]:
+        """列全部属性定义+属性组（经 Tapir GetAllProperties）。
+
+        算量时属性名拼错排查用。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            data = _tapir.get_all_properties(instance)
+            props = data.get("properties", [])
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(props) if isinstance(props, list) else 0, **data,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_calculation_units(instance: str | None = None) -> dict[str, Any]:
+        """读项目计算单位：长度/面积/体积的单位与精度（经 Tapir GetCalculationUnits）。"""
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            data = _tapir.get_calculation_units(instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name, **data,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def get_navigator_tree(
+        map_id: str = "ProjectMap",
+        publisher_set_name: str | None = None,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """读导航树（经 Tapir GetNavigatorItemTree）。
+
+        map_id: ProjectMap / PublicViewMap / LayoutBook / PublisherSets。
+        """
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            data = _tapir.get_navigator_item_tree(
+                map_id, publisher_set_name, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name, **data,
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
     def get_element_geometry_info(
         element_guids: list[str], instance: str | None = None
     ) -> dict[str, Any]:
