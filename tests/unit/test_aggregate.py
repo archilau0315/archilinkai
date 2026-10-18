@@ -367,6 +367,46 @@ def test_aggregate_formula_none_skipped(svc, monkeypatch):
     assert g["sum"] == 0.0
 
 
+def test_aggregate_warnings_on_missing_values(svc, monkeypatch):
+    """量值缺失时返回 warnings 提示（V0.38）。"""
+    class FakePropNone:
+        def get_quantities(self, guids, names, instance=None):
+            return {g: {n: {"value": None, "unit": "m³"} for n in names}
+                    for g in guids}
+        def get_values(self, guids, names, instance=None):
+            return {g: {} for g in guids}
+    monkeypatch.setattr(aggregate_service.property_service, "service", FakePropNone())
+    out = svc.aggregate(
+        quantity="General_NetVolume",
+        group_by=["type"], element_type="Wall",
+    )
+    assert out["warnings"], "应有量值缺失告警"
+    assert "General_NetVolume" in out["warnings"][0]
+    assert out["rows"][0]["sum"] == 0.0
+
+
+def test_aggregate_no_warnings_when_all_present(svc):
+    """量值齐全时 warnings 为空。"""
+    out = svc.aggregate(
+        quantity="General_NetVolume",
+        group_by=["type"], element_type="Wall",
+    )
+    assert out["warnings"] == []
+
+
+def test_aggregate_by_template_transfers_warnings(svc, monkeypatch):
+    """模板算量透传 warnings。"""
+    class FakePropNone:
+        def get_quantities(self, guids, names, instance=None):
+            return {g: {n: {"value": None, "unit": "m³"} for n in names}
+                    for g in guids}
+        def get_values(self, guids, names, instance=None):
+            return {g: {} for g in guids}
+    monkeypatch.setattr(aggregate_service.property_service, "service", FakePropNone())
+    out = svc.aggregate_by_template("concrete_volume")
+    assert out["warnings"]
+
+
 def test_aggregate_formula_missing_both():
     """不传 quantity 也不传 formula 报错。"""
     s = aggregate_service.AggregateService()

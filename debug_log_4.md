@@ -158,3 +158,34 @@
 - 工具数 64 → 65
 
 ---
+
+## 2026-10-18 V0.38 算量估价链路补强（P0 批）
+
+### 变更
+- aggregate_service.py：
+  - aggregate() 返回加 warnings（量值缺失元素数+占比提示，求和按 0 时告警）
+  - aggregate_by_template / aggregate_by_custom_template 收集并透传 warnings
+- cost_estimator.py：
+  - estimate_item 加 calc_mode 标记（detailed/fallback/skipped）
+  - estimate_table 加 coverage 覆盖率统计（含 coverage_pct）
+  - 新增 build_estimate_report()：概算表 xlsx（标题/项目信息/人材机明细/
+    直接费合计/管理费/利润/税金/含税总价/覆盖率/备注，GB 50500 风格排版）
+- read_tools.py：
+  - aggregate_quantities / aggregate_by_template / aggregate_by_custom_template
+    透传 warnings
+  - estimate_cost 返回加 coverage
+  - 新增 estimate_project 一键全链路工具：模板算量→细算→可选导出 xlsx；
+    同编码跨模板自动去重（按传入顺序保留第一个），防止双算
+- tests：test_cost_estimator +3 用例（覆盖率/报表/空表报错），
+  test_aggregate +3 用例（warnings 告警/齐全为空/模板透传）
+
+### 设计要点
+- estimate_project 解决 LLM 三步链路断点，一次调用完成算量+估价+导出
+- 去重防双算：concrete_volume 与 column_concrete_volume 同传时后者被跳过
+- 未定价条目在 xlsx 中显示"—"，覆盖率行写入表尾
+
+### 备注
+- 单测 531 → 537 全过
+- 工具数 65 → 66
+
+---

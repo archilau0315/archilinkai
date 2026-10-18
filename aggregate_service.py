@@ -570,10 +570,20 @@ class AggregateService:
         else:
             units = qvals.get(guids[0], {}).get(quantity, {}).get("unit") \
                 if guids else None
+        # 质量告警：量值缺失的元素（求和时按 0 处理，需提示用户）
+        warnings = []
+        for q in qty_list:
+            n_missing = sum(1 for r in rows if r.get(q) is None)
+            if n_missing and rows:
+                pct = round(n_missing / len(rows) * 100, 1)
+                warnings.append(
+                    f"量值「{q}」缺失 {n_missing}/{len(rows)} 个元素"
+                    f"（{pct}%），求和按 0 计")
         return {
             "unit" if not is_multi else "units": units,
             "rows": groups,
             "flat_rows": _flatten(groups, quantity),
+            "warnings": warnings,
         }
 
     def aggregate_by_template(
@@ -606,6 +616,7 @@ class AggregateService:
         qty_list = quantity if is_multi else [quantity]
         merged: dict[tuple, dict[str, Any]] = {}
         units: dict[str, str | None] = {}
+        template_warnings: list[str] = []
         for et in element_types:
             r = self.aggregate(
                 quantity=quantity, group_by=group_by,
@@ -619,6 +630,7 @@ class AggregateService:
                 units.update(r.get("units", {}))
             else:
                 units["_default"] = r.get("unit") or units.get("_default")
+            template_warnings.extend(r.get("warnings", []))
             for row in r["rows"]:
                 key = tuple(sorted(row["group"].items()))
                 g = merged.setdefault(
@@ -664,6 +676,7 @@ class AggregateService:
             "flat_rows": _flatten(rows, quantity),
             "template": template_name,
             "description": tpl["description"],
+            "warnings": template_warnings,
         }
 
     def aggregate_by_custom_template(
@@ -689,6 +702,7 @@ class AggregateService:
             is_multi = False
         merged: dict[tuple, dict[str, Any]] = {}
         units: dict[str, str | None] = {}
+        template_warnings: list[str] = []
         for et in element_types:
             r = self.aggregate(
                 quantity=quantity, group_by=group_by,
@@ -702,6 +716,7 @@ class AggregateService:
                 units.update(r.get("units", {}))
             else:
                 units["_default"] = r.get("unit") or units.get("_default")
+            template_warnings.extend(r.get("warnings", []))
             for row in r["rows"]:
                 key = tuple(sorted(row["group"].items()))
                 g = merged.setdefault(
@@ -749,6 +764,7 @@ class AggregateService:
             "flat_rows": _flatten(rows, quantity),
             "template": template.get("description", "custom"),
             "description": template.get("description", "自定义模板"),
+            "warnings": template_warnings,
         }
 
 

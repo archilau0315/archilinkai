@@ -115,3 +115,59 @@ def test_estimate_from_flat_rows_pipeline(monkeypatch):
     assert table["summary"]["direct_cost"] > 0
     assert table["project_name"] == "办公楼改造"
     assert len(table["items"]) == 1
+
+
+def test_calc_mode_and_coverage():
+    est = CostEstimator()
+    items = [
+        _item(),                                            # detailed
+        _item(code="999999999", name="异形混凝土构件"),        # fallback
+        _item(code="999999999", name="神秘工艺构件"),          # skipped
+    ]
+    table = est.estimate_table(items, "测试")
+    modes = [i.get("calc_mode") for i in table["items"]]
+    assert modes == ["detailed", "fallback", "skipped"]
+    cov = table["coverage"]
+    assert cov["detailed"] == 1
+    assert cov["fallback"] == 1
+    assert cov["skipped"] == 1
+    assert cov["total"] == 3
+    assert cov["coverage_pct"] == pytest.approx(66.7)
+    # notes 含未覆盖提示
+    assert any("无消耗量参考" in n for n in table["notes"])
+
+
+def test_build_estimate_report(tmp_path):
+    est = CostEstimator()
+    table = est.estimate_table(
+        [_item(qty=100.0),
+         _item(code="010505003", name="现浇混凝土板", qty=50.0)], "办公楼改造")
+    from cost_estimator import build_estimate_report
+    path = build_estimate_report(table, "v38_test", str(tmp_path))
+    assert path.endswith(".xlsx")
+    assert "v38_test_" in path
+
+    from openpyxl import load_workbook
+    wb = load_workbook(path)
+    ws = wb.active
+    assert ws.title == "成本概算表"
+    assert ws.cell(1, 1).value == "工程成本概算表"
+    assert "办公楼改造" in ws.cell(2, 1).value
+    # 表头第 3 行
+    assert ws.cell(3, 2).value == "项目编码"
+    # 数据行第 4 行：柱
+    assert ws.cell(4, 2).value == "010502001"
+    # 直接费合计在数据行之后
+    texts = [ws.cell(r, 1).value for r in range(4, 20)]
+    assert "直接费合计" in texts
+    assert "含税总价" in texts
+    # 取费值与 summary 一致
+    total_row = next(r for r in range(4, 20) if ws.cell(r, 1).value == "含税总价")
+    assert ws.cell(total_row, 7).value == pytest.approx(
+        table["summary"]["total"])
+
+
+def test_build_estimate_report_empty_raises():
+    from cost_estimator import build_estimate_report
+    with pytest.raises(ValueError):
+        build_estimate_report({"items": [], "summary": {}}, "x", ".")

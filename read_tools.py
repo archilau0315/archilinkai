@@ -697,7 +697,8 @@ def register(mcp: FastMCP, safe) -> None:
                 instance=info.instance_id, project=info.project_name,
                 count=len(data["rows"]),
                 data={"unit": data["unit"], "groups": data["rows"],
-                      "flat": data["flat_rows"]},
+                      "flat": data["flat_rows"],
+                      "warnings": data.get("warnings", [])},
             )
         return safe(instance, _run)
 
@@ -729,7 +730,8 @@ def register(mcp: FastMCP, safe) -> None:
                       "description": data["description"],
                       "unit": data["unit"],
                       "groups": data["rows"],
-                      "flat": data["flat_rows"]},
+                      "flat": data["flat_rows"],
+                      "warnings": data.get("warnings", [])},
             )
         return safe(instance, _run)
 
@@ -767,7 +769,8 @@ def register(mcp: FastMCP, safe) -> None:
                       "unit" if "unit" in data else "units":
                           data.get("unit", data.get("units")),
                       "template": data["template"],
-                      "description": data["description"]},
+                      "description": data["description"],
+                      "warnings": data.get("warnings", [])},
             )
         return safe(instance, _run)
 
@@ -800,6 +803,7 @@ def register(mcp: FastMCP, safe) -> None:
                 count=len(table["items"]),
                 data={
                     "summary": s,
+                    "coverage": table.get("coverage", {}),
                     "items": table["items"],
                     "notes": table["notes"],
                     "fee_rates": table["fee_rates"],
@@ -809,6 +813,76 @@ def register(mcp: FastMCP, safe) -> None:
                 },
             )
         return safe(None, _run)
+
+    @mcp.tool()
+    def estimate_project(
+        template_names: list[str],
+        project_name: str,
+        labor_price: float = 130.0,
+        price_overrides: dict[str, float] | None = None,
+        fee_overrides: dict[str, float] | None = None,
+        region: str | None = None,
+        export_xlsx: bool = False,
+        filename: str = "estimate",
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """一键全链路：模板算量 → 成本细算 →（可选）导出概算 xlsx。
+
+        template_names 传模板名列表（用 list_quantity_templates 查询），
+        模板须带清单编码（with_code 自动启用）。同编码跨模板自动去重
+        （按传入顺序保留第一个），避免双算。labor_price 工日单价；
+        price_overrides 覆盖材料市场价；fee_overrides 覆盖费率；
+        export_xlsx=true 时导出 GB 50500 风格概算表并返回文件路径。
+        """
+        def _run() -> dict[str, Any]:
+            from cost_estimator import (
+                build_estimate_report,
+                estimate_from_flat_rows,
+            )
+            info = instance_manager.manager.get_info(instance)
+            all_rows: list[dict[str, Any]] = []
+            seen_codes: set[str] = set()
+            per_template: dict[str, Any] = {}
+            dedup_notes: list[str] = []
+            for tname in template_names:
+                r = aggregate_service.service.aggregate_by_template(
+                    tname, instance)
+                kept = []
+                for row in r.get("flat_rows", []):
+                    code = str(row.get("code") or "")
+                    if code and code in seen_codes:
+                        dedup_notes.append(
+                            f"编码 {code} 已由前序模板统计，跳过「{tname}」")
+                        continue
+                    seen_codes.add(code)
+                    kept.append(row)
+                per_template[tname] = {
+                    "rows": len(r.get("rows", [])),
+                    "kept": len(kept),
+                }
+                all_rows.extend(kept)
+            table = estimate_from_flat_rows(
+                all_rows, project_name, labor_price, price_overrides,
+                fee_overrides, region)
+            table["notes"] = dedup_notes + table.get("notes", [])
+            result: dict[str, Any] = {
+                "per_template": per_template,
+                "summary": table["summary"],
+                "coverage": table.get("coverage", {}),
+                "items": table["items"],
+                "notes": table["notes"],
+                "fee_rates": table["fee_rates"],
+                "labor_price": table["labor_price"],
+                "date": table["date"],
+            }
+            if export_xlsx:
+                result["xlsx_path"] = build_estimate_report(
+                    table, filename or project_name)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(table["items"]), data=result,
+            )
+        return safe(instance, _run)
 
     @mcp.tool()
     def export_table(

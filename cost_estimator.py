@@ -205,14 +205,22 @@ class CostEstimator:
         self.notes: list[str] = []
 
     def estimate_item(self, item: dict[str, Any]) -> dict[str, Any]:
-        """细算单条目，就地填 unit_price/labor_price/material_price/
-        machine_price/labor_qty/material_items/total_price。"""
+        """细算单条目，就地填人材机字段并标记 calc_mode。
+
+        calc_mode: detailed（编码精确命中）/ fallback（关键词兜底）/
+        skipped（无参考，未定价）。
+        """
         code = item.get("code") or ""
         name = item.get("name") or ""
         qty = item.get("quantity") or 0.0
-        cons = CONSUMPTION.get(code) or _fallback_consumption(name)
+        if code in CONSUMPTION:
+            cons, mode = CONSUMPTION[code], "detailed"
+        else:
+            cons = _fallback_consumption(name)
+            mode = "fallback" if cons else "skipped"
         if cons is None:
             self.notes.append(f"{code} {name}：无消耗量参考，未定价")
+            item["calc_mode"] = "skipped"
             return item
 
         # 人工费
@@ -247,6 +255,7 @@ class CostEstimator:
         total = round(labor_cost + material_cost + machine_cost, 2)
         unit_price = round(total / qty, 2) if qty else None
         item.update({
+            "calc_mode": mode,
             "labor_qty": round(labor_qty_total, 3),
             "labor_price": round(labor_cost, 2),
             "material_price": round(material_cost, 2),
@@ -285,7 +294,23 @@ class CostEstimator:
         table["notes"] = list(self.notes)
         table["fee_rates"] = dict(self.fees)
         table["labor_price"] = self.labor_price
+        table["coverage"] = self._coverage(priced)
         return table
+
+    @staticmethod
+    def _coverage(items: list[dict[str, Any]]) -> dict[str, Any]:
+        """细算覆盖率统计。"""
+        n = len(items)
+        modes = {"detailed": 0, "fallback": 0, "skipped": 0}
+        for i in items:
+            m = i.get("calc_mode") or "skipped"
+            modes[m] = modes.get(m, 0) + 1
+        covered = modes["detailed"] + modes["fallback"]
+        return {
+            **modes,
+            "total": n,
+            "coverage_pct": round(covered / n * 100, 1) if n else 100.0,
+        }
 
 
 def estimate_from_flat_rows(
@@ -302,3 +327,157 @@ def estimate_from_flat_rows(
     items = aggregate_rows_to_estimate_items(flat_rows)
     est = CostEstimator(labor_price, price_overrides, fee_overrides, region)
     return est.estimate_table(items, project_name)
+
+
+# ---- 概算表 xlsx 导出（GB 50500 风格排版） ------------------------------
+
+_EST_HEADERS = ["序号", "项目编码", "项目名称", "计量单位", "工程量",
+                "单价(元)", "合价(元)", "人工费(元)", "材料费(元)", "机械费(元)"]
+
+
+def build_estimate_report(
+    table: dict[str, Any],
+    filename: str = "estimate",
+    out_dir: str | None = None,
+) -> str:
+    """概算表 → xlsx（标题/项目信息/人材机明细/合计/取费/备注），返回路径。"""
+    import os
+    import time
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, Side
+    from openpyxl.utils import get_column_letter
+
+    items = table.get("items") or []
+    if not items:
+        raise ValueError("概算表 items 为空，无法生成报表")
+    s = table.get("summary", {})
+    ncol = len(_EST_HEADERS)
+
+    if out_dir is None:
+        out_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "output")
+    os.makedirs(out_dir, exist_ok=True)
+    safe_name = "".join(c for c in filename if c.isalnum() or c in "-_") \
+        or "estimate"
+    path = os.path.join(
+        out_dir, f"{safe_name}_{time.strftime('%Y%m%d_%H%M%S')}.xlsx")
+
+    bold = Font(bold=True, size=11)
+    title_font = Font(bold=True, size=14)
+    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    right = Alignment(horizontal="right", vertical="center")
+    thin = Side(border_style="thin", color="000000")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "成本概算表"
+
+    def _put(row, col, val, font=None, align=center, border_=border):
+        c = ws.cell(row, col, val)
+        c.font = font or Font()
+        c.alignment = align
+        if border_:
+            c.border = border_
+        return c
+
+    # 标题 + 项目信息
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=ncol)
+    c = ws.cell(1, 1, "工程成本概算表")
+    c.font = title_font
+    c.alignment = center
+    ws.row_dimensions[1].height = 28
+    info = (f"工程名称：{table.get('project_name') or '未命名工程'}    "
+            f"编制时间：{table.get('date', time.strftime('%Y-%m-%d'))}    "
+            f"工日单价：{table.get('labor_price', '-')} 元")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=ncol)
+    c = ws.cell(2, 1, info)
+    c.font = bold
+    c.alignment = left
+    ws.row_dimensions[2].height = 22
+
+    # 表头
+    for i, h in enumerate(_EST_HEADERS, 1):
+        _put(3, i, h, bold)
+    ws.row_dimensions[3].height = 22
+
+    # 数据行
+    row_idx = 4
+    for idx, it in enumerate(items, 1):
+        vals = [idx, it.get("code", ""), it.get("name", ""),
+                it.get("unit", ""), it.get("quantity", ""),
+                it.get("unit_price") if it.get("unit_price") is not None else "—",
+                it.get("total_price") if it.get("total_price") is not None else "—",
+                it.get("labor_price") if it.get("labor_price") is not None else "—",
+                it.get("material_price") if it.get("material_price") is not None else "—",
+                it.get("machine_price") if it.get("machine_price") is not None else "—"]
+        for j, v in enumerate(vals, 1):
+            align = left if j == 3 else (
+                right if j >= 6 and isinstance(v, (int, float)) else center)
+            _put(row_idx, j, v, align=align)
+        ws.row_dimensions[row_idx].height = 20
+        row_idx += 1
+
+    # 直接费合计
+    units = {it.get("unit") for it in items if it.get("unit")}
+    if len(units) == 1:
+        ws.merge_cells(start_row=row_idx, start_column=1,
+                       end_row=row_idx, end_column=6)
+        _put(row_idx, 1, "直接费合计", bold)
+        _put(row_idx, 7, s.get("direct_cost", 0), bold, right)
+        for j in (8, 9, 10):
+            _put(row_idx, j, "", bold)
+        ws.row_dimensions[row_idx].height = 20
+        row_idx += 1
+
+    # 取费块
+    fee_rows = [
+        ("企业管理费", s.get("management_fee", 0)),
+        ("利 润", s.get("profit", 0)),
+        ("税 金", s.get("tax", 0)),
+    ]
+    for label, val in fee_rows:
+        ws.merge_cells(start_row=row_idx, start_column=1,
+                       end_row=row_idx, end_column=6)
+        _put(row_idx, 1, label, bold)
+        _put(row_idx, 7, val, bold, right)
+        for j in (8, 9, 10):
+            _put(row_idx, j, "", bold)
+        ws.row_dimensions[row_idx].height = 20
+        row_idx += 1
+    ws.merge_cells(start_row=row_idx, start_column=1,
+                   end_row=row_idx, end_column=6)
+    _put(row_idx, 1, "含税总价", bold)
+    _put(row_idx, 7, s.get("total", 0), bold, right)
+    for j in (8, 9, 10):
+        _put(row_idx, j, "", bold)
+    ws.row_dimensions[row_idx].height = 22
+    row_idx += 2
+
+    # 覆盖率 + 备注
+    cov = table.get("coverage", {})
+    if cov:
+        cov_text = (f"细算覆盖率：{cov.get('coverage_pct', '-')}%  "
+                    f"(精确 {cov.get('detailed', 0)} / 兜底 "
+                    f"{cov.get('fallback', 0)} / 未覆盖 {cov.get('skipped', 0)})")
+        ws.merge_cells(start_row=row_idx, start_column=1,
+                       end_row=row_idx, end_column=ncol)
+        c = ws.cell(row_idx, 1, cov_text)
+        c.alignment = left
+        row_idx += 1
+    for note in table.get("notes") or []:
+        ws.merge_cells(start_row=row_idx, start_column=1,
+                       end_row=row_idx, end_column=ncol)
+        c = ws.cell(row_idx, 1, f"备注：{note}")
+        c.alignment = left
+        row_idx += 1
+
+    # 列宽
+    widths = [6, 14, 24, 9, 12, 12, 14, 12, 14, 12]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    wb.save(path)
+    return path
