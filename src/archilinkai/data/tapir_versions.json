@@ -1,0 +1,11 @@
+{
+  "_comment": "AC 大版本 → Tapir 版本映射。release_tag 对应 GitHub release；APX 资产在该 release 中按 AC 主版本名命名（如 TapirAddOn_AC28.apx）",
+  "versions": {
+    "26": {"release_tag": "v0.66.0", "note": "最后支持 AC26 的 Tapir 版本"},
+    "27": {"release_tag": "v0.66.0"},
+    "28": {"release_tag": "latest"},
+    "29": {"release_tag": "latest"},
+    "30": {"release_tag": "latest", "note": "待 Tapir 发布 AC30 支持后填入"}
+  },
+  "repo": "ENZYME-APD/tapir-archicad-automation"
+}

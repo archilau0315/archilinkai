@@ -150,6 +150,14 @@ archilinkai serve --http --port 8000 --token <你的密钥>
 - 全量请求审计：`output/http_audit.jsonl`（时间/方法/路径/状态，不含正文）
 - 接入点：`POST http://<host>:<port>/mcp`（MCP streamable-http 协议）
 
+### 桌面安装器
+
+非技术用户可下载双击安装（无需手动装 Python/写配置），见 [docs/s2_installer.md](docs/s2_installer.md)：
+
+- 安装器捆绑嵌入式 Python + 本地 wheel，`pip install --no-index` 离线安装
+- 自动写入 MCP 客户端配置；Tapir 按 AC 版本从 GitHub 自动下载（[download_tapir.py](installer/download_tapir.py)）
+- AC 版本→Tapir 映射维护在 `src/archilinkai/data/tapir_versions.json`
+
 ### AC28 + AC29 双版本并存说明
 
 本项目支持同时连接多个 ArchiCAD 大版本实例。装的是 AC28 和 AC29 时需注意：

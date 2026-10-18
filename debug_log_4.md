@@ -280,3 +280,26 @@
 ### 验证
 - 553 单测全过（546+7）
 - 真机冒烟：错 token 401；对 token + MCP initialize 200；审计两条记录正确
+
+---
+
+## 2026-10-18 V0.42（S2）桌面安装器
+
+### 变更
+- installer/archilinkai.iss：Inno Setup 6 安装脚本（中/英双语、现代向导），
+  装嵌入式 Python + 本地 wheel（pip --no-index 离线）+ 写客户端配置
+- installer/build_installer.py：一键编译，自动从 __init__.py 读版本注入 ISCC
+- installer/download_tapir.py：按 AC 主版本从 GitHub release 下载对应 apx
+  （release_tag 可 latest/具体 tag，资产名含 ACxx 自动匹配）
+- src/archilinkai/data/tapir_versions.json：AC26–30 → Tapir release 映射（外置可维护）
+- docs/s2_installer.md：构建步骤 + payload 准备 + Tapir 处理手册
+- readme 加桌面安装器节；.gitignore 补 installer/payload/
+
+### 验证
+- 553 单测全过
+- build_installer.py：版本读取正常，缺 ISCC 时给明确下载提示（exit 2）
+- download_tapir.py / build_installer.py py_compile 通过
+
+### 备注
+- 未实际编译 iss（本机无 Inno Setup）；.iss 语法基于 Inno 6 文档核对，
+  真实编译需用户装 Inno Setup 后跑 build_installer.py
