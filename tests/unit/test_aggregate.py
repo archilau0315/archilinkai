@@ -653,9 +653,9 @@ def test_wall_core_volume_formula_none_skipped():
 
 
 def test_template_count_after_v027():
-    """V0.29 后模板总数应为 17（10+3+1 幕墙+1 栏杆+2 门窗面积）。"""
+    """V0.35 后模板总数应为 29（23+6 个扩充模板）。"""
     from aggregate_service import QUANTITY_TEMPLATES
-    assert len(QUANTITY_TEMPLATES) == 23
+    assert len(QUANTITY_TEMPLATES) == 29
 
 
 def test_template_door_window_area_registered():

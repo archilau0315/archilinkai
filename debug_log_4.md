@@ -88,3 +88,21 @@
 - 真机验证跳过（AC 未启动）
 
 ---
+
+## 2026-10-18 V0.35 算量模板扩充（23→29）
+
+### 变更
+- aggregate_service.py：QUANTITY_TEMPLATES +6 模板
+  - roof_waterproof_area（屋面防水，Roof 表面积，010902001）
+  - stair_concrete_volume（楼梯混凝土，Stair 净体积，010506001）
+  - column_concrete_volume（柱混凝土，含 3% 损耗，010502001）
+  - beam_concrete_volume（梁混凝土，含 3% 损耗，010505001）
+  - ceiling_area（天棚抹灰，板净底面，011301001）
+  - floor_finish_area（楼地面面层，板净顶面，011101001）
+- tests/unit/test_aggregate.py：模板计数断言 23→29
+
+### 备注
+- 单测 513 全过
+- 全部带 code_override（GB 50500 清单编码）
+
+---
