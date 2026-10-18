@@ -809,6 +809,7 @@ def register(mcp: FastMCP, safe) -> None:
         region: str | None = None,
         export_xlsx: bool = False,
         filename: str = "estimate",
+        custom_consumption: dict[str, dict[str, Any]] | None = None,
         instance: str | None = None,
     ) -> dict[str, Any]:
         """一键全链路：模板算量 → 成本细算 →（可选）导出概算 xlsx。
@@ -817,7 +818,8 @@ def register(mcp: FastMCP, safe) -> None:
         模板须带清单编码（with_code 自动启用）。同编码跨模板自动去重
         （按传入顺序保留第一个），避免双算。labor_price 工日单价；
         price_overrides 覆盖材料市场价；fee_overrides 覆盖费率；
-        export_xlsx=true 时导出 GB 50500 风格概算表并返回文件路径。
+        custom_consumption 自定义定额（编码→{labor_qty, materials, machines}），
+        与内置表合并且自定义优先；export_xlsx=true 导出 GB 50500 概算表。
         """
         def _run() -> dict[str, Any]:
             from archilinkai.cost_estimator import (
@@ -848,7 +850,7 @@ def register(mcp: FastMCP, safe) -> None:
                 all_rows.extend(kept)
             table = estimate_from_flat_rows(
                 all_rows, project_name, labor_price, price_overrides,
-                fee_overrides, region)
+                fee_overrides, region, custom_consumption=custom_consumption)
             table["notes"] = dedup_notes + table.get("notes", [])
             result: dict[str, Any] = {
                 "per_template": per_template,
@@ -868,6 +870,61 @@ def register(mcp: FastMCP, safe) -> None:
                 count=len(table["items"]), data=result,
             )
         return safe(instance, _run)
+
+    @mcp.tool()
+    def import_custom_quota(
+        custom: dict[str, dict[str, Any]],
+        preview: bool = True,
+    ) -> dict[str, Any]:
+        """校验并预览自定义定额，返回与内置表合并结果。
+
+        custom 格式：{编码: {"labor_qty": 工日,
+                "materials": [[材料名, 消耗量, 单位], ...],
+                "machines": [[机械名, 台班, 单位], ...]}}
+        自定义项覆盖同编码内置项。preview=true 仅预览不落盘。
+        返回：accepted（接收条目数）、invalid（非法条目及原因）、
+        overridden（被覆盖的内置编码）、total（合并后总数）、sample（前3条）。
+        """
+        from archilinkai.cost_estimator import CONSUMPTION, merge_custom_consumption
+
+        accepted: dict[str, dict[str, Any]] = {}
+        invalid: dict[str, str] = {}
+        for code, cons in (custom or {}).items():
+            if not isinstance(cons, dict):
+                invalid[str(code)] = "条目不是对象"
+                continue
+            if "labor_qty" not in cons:
+                invalid[str(code)] = "缺 labor_qty"
+                continue
+            try:
+                lq = float(cons["labor_qty"])
+            except (TypeError, ValueError):
+                invalid[str(code)] = "labor_qty 不是数字"
+                continue
+            entry = {
+                "labor_qty": lq,
+                "materials": [
+                    tuple(m) for m in cons.get("materials", [])
+                    if isinstance(m, (list, tuple)) and len(m) >= 2
+                ],
+                "machines": [
+                    tuple(m) for m in cons.get("machines", [])
+                    if isinstance(m, (list, tuple)) and len(m) >= 2
+                ],
+            }
+            accepted[str(code)] = entry
+
+        merged = merge_custom_consumption(accepted)
+        overridden = [c for c in accepted if c in CONSUMPTION]
+        sample = dict(list(accepted.items())[:3])
+        return {
+            "accepted_count": len(accepted),
+            "invalid": invalid,
+            "overridden_builtin": overridden,
+            "merged_total": len(merged),
+            "sample": sample,
+            "note": "直接把 accepted 传给 estimate_project 的 custom_consumption 即可生效。",
+        }
 
     @mcp.tool()
     def export_table(

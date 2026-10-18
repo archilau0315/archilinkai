@@ -264,6 +264,32 @@ def _fallback_consumption(name: str) -> dict[str, Any] | None:
     return None
 
 
+def merge_custom_consumption(
+    custom: dict[str, dict[str, Any]] | None,
+) -> dict[str, dict[str, Any]]:
+    """合并内置消耗量表与用户自定义定额（自定义优先，覆盖同编码内置项）。
+
+    自定义条目格式：
+        {"编码": {"labor_qty": float,
+                  "materials": [[名称, 消耗量, 单位], ...],
+                  "machines": [[名称, 台班, 单位], ...]}}
+    materials/machines 用 list 形式（JSON 无 tuple），合并时转 tuple。
+    """
+    merged = {k: dict(v) for k, v in CONSUMPTION.items()}
+    if not custom:
+        return merged
+    for code, cons in custom.items():
+        if not isinstance(cons, dict) or "labor_qty" not in cons:
+            continue
+        entry = {
+            "labor_qty": float(cons["labor_qty"]),
+            "materials": [tuple(m) for m in cons.get("materials", [])],
+            "machines": [tuple(m) for m in cons.get("machines", [])],
+        }
+        merged[str(code)] = entry
+    return merged
+
+
 class CostEstimator:
     """细算估算器：消耗量 × 市场价 → 人材机 → 取费 → 总价。"""
 
@@ -273,6 +299,7 @@ class CostEstimator:
         price_overrides: dict[str, float] | None = None,
         fee_overrides: dict[str, float] | None = None,
         region: str | None = None,
+        custom_consumption: dict[str, dict[str, Any]] | None = None,
     ):
         self.labor_price = labor_price
         self.prices = dict(PRICE_BOOK)
@@ -284,6 +311,8 @@ class CostEstimator:
             self.fees.update(fee_overrides)
         self.region = region
         self.notes: list[str] = []
+        # 消耗量表：内置 + 自定义合并（自定义优先）
+        self.consumption = merge_custom_consumption(custom_consumption)
 
     def estimate_item(self, item: dict[str, Any]) -> dict[str, Any]:
         """细算单条目，就地填人材机字段并标记 calc_mode。
@@ -294,8 +323,8 @@ class CostEstimator:
         code = item.get("code") or ""
         name = item.get("name") or ""
         qty = item.get("quantity") or 0.0
-        if code in CONSUMPTION:
-            cons, mode = CONSUMPTION[code], "detailed"
+        if code in self.consumption:
+            cons, mode = self.consumption[code], "detailed"
         else:
             cons = _fallback_consumption(name)
             mode = "fallback" if cons else "skipped"
@@ -401,12 +430,16 @@ def estimate_from_flat_rows(
     price_overrides: dict[str, float] | None = None,
     fee_overrides: dict[str, float] | None = None,
     region: str | None = None,
+    custom_consumption: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """flat_rows → 概算表全流程：转换 → 细算 → 汇总。"""
     from archilinkai.estimate_schema import aggregate_rows_to_estimate_items
 
     items = aggregate_rows_to_estimate_items(flat_rows)
-    est = CostEstimator(labor_price, price_overrides, fee_overrides, region)
+    est = CostEstimator(
+        labor_price, price_overrides, fee_overrides, region,
+        custom_consumption=custom_consumption,
+    )
     return est.estimate_table(items, project_name)
 
 

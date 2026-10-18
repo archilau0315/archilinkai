@@ -430,3 +430,28 @@
 - 单测 553 全过（模板数断言 29→40）
 - 注：本机 pip install -e 因 archilinkai.exe 被运行中 MCP 服务占用失败，
   但源码已加载（aggregate_service.__file__ 指向 src），重启 Trae 后正式生效
+
+---
+
+## 2026-10-18 V0.40 自定义定额库导入
+
+### 变更
+- cost_estimator.py：
+  - 新增 merge_custom_consumption(custom)：内置表与用户自定义定额合并，
+    自定义优先覆盖同编码；materials/machines 由 list 转 tuple
+  - CostEstimator.__init__ 加 custom_consumption 参数，存为 self.consumption
+  - estimate_item 用 self.consumption 替代模块级 CONSUMPTION
+  - estimate_from_flat_rows 加 custom_consumption 透传
+- read_tools.py：
+  - estimate_project 加 custom_consumption 参数（编码→{labor_qty,materials,machines}）
+  - 新增 import_custom_quota 工具：校验自定义定额条目，返回 accepted/invalid/
+    overridden/merged_total/sample 预览
+
+### 真机验证（AC28 测试文件，砖砌体 2.4m³）
+- import_custom_quota：接收 2 条、拒 2 条（非对象/缺 labor_qty）、
+  覆盖内置 010402001、合并后 25 条
+- estimate_project 传 custom_consumption 覆盖 010402001：
+  人工费 405.6→468.0、总价 1244.16→648.0，证明自定义消耗量生效
+
+### 验证
+- 单测 88 全过（cost_estimator + estimate_schema + aggregate）
