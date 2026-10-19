@@ -11,12 +11,15 @@ from typing import Any
 
 from archilinkai.code_review_common import DEFAULT_LIMITS  # noqa: F401 re-export
 from archilinkai.code_review_rules_a import (
+    check_beam_aspect_ratio,
+    check_beam_section_width,
     check_beam_span_ratio,
     check_bearing_wall_thickness,
     check_collisions,
     check_column_section,
     check_column_slenderness,
     check_evacuation_door_width,
+    check_fire_door_rating,
     check_headroom,
     check_openings,
     check_slab_thickness,
@@ -59,6 +62,7 @@ def run_review(
         "slab_thickness", "bearing_wall_thickness",
         "column_section", "beam_span_ratio", "column_slenderness",
         "wall_slenderness", "evacuation_door_width",
+        "beam_section_width", "beam_aspect_ratio", "fire_door_rating",
     ]
     rules = rules or all_rules
     results: dict[str, list[dict[str, Any]]] = {}
@@ -105,6 +109,14 @@ def run_review(
             results[r] = check_wall_slenderness(instance, limits)
         elif r == "evacuation_door_width":
             results[r] = check_evacuation_door_width(instance, limits)
+        elif r == "beam_section_width":
+            results[r] = check_beam_section_width(
+                instance, limits, structure_type=structure_type)
+        elif r == "beam_aspect_ratio":
+            results[r] = check_beam_aspect_ratio(
+                instance, limits, structure_type=structure_type)
+        elif r == "fire_door_rating":
+            results[r] = check_fire_door_rating(instance, limits)
     total = sum(len(v) for v in results.values())
     return {
         "rules_checked": rules,

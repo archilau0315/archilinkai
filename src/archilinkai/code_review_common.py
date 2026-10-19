@@ -70,6 +70,13 @@ DEFAULT_LIMITS: dict[str, float] = {
     # ---- V0.63 墙高厚比 ----
     # 墙高/墙厚 ≤ 限值（GB 50003 允许高厚比简化；未细分承重/砂浆，取宽松值降误报）
     "wall_slenderness_max": 30.0,
+    # ---- V0.64 梁截面 + 防火门 ----
+    # GB 50010 6.3.1：框架梁截面宽度不宜小于 200mm，截面高宽比不宜大于 4
+    # （钢结构 H 梁窄翼缘属正常，两条规则仅 concrete 生效）
+    "beam_section_min_width": 0.20,     # 梁截面最小宽度(m)
+    "beam_aspect_ratio_max": 4.0,       # 梁截面高宽比上限 h/b
+    "fake_beam_max_length": 0.5,        # 假梁长度阈值(m)：< 此值视为装饰段跳过
+    "fake_beam_min_height": 0.15,       # 假梁高度阈值(m)：< 此值视为装饰段跳过
 }
 
 

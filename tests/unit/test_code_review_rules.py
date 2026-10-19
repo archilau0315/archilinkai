@@ -517,3 +517,173 @@ def test_evacuation_door_non_evac_skipped(monkeypatch):
 def test_evacuation_door_no_doors(monkeypatch):
     _patch(monkeypatch, {}, {})
     assert rules_a.check_evacuation_door_width(None) == []
+
+
+# --- check_beam_section_width（V0.64 新增，仅混凝土） -----------------------
+
+def test_beam_section_width_violation(monkeypatch):
+    """梁宽 0.15m < 0.20m → 违规（默认 concrete）。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Width": 0.15, "General_Height": 0.5,
+                "General_3DLength": 4.2}},
+    )
+    out = rules_a.check_beam_section_width(None)
+    assert len(out) == 1
+    assert out[0]["guid"] == "B1"
+    assert out[0]["value"] == 0.15
+    assert out[0]["limit"] == 0.20
+    assert "梁截面宽度" in out[0]["rule"]
+
+
+def test_beam_section_width_ok(monkeypatch):
+    """梁宽 0.25m ≥ 0.20m → 达标。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Width": 0.25, "General_Height": 0.5,
+                "General_3DLength": 4.2}},
+    )
+    assert rules_a.check_beam_section_width(None) == []
+
+
+def test_beam_section_width_steel_skipped(monkeypatch):
+    """钢结构（steel/continuous/any）直接跳过，避免窄翼缘 H 梁误报。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Width": 0.15, "General_Height": 0.5,
+                "General_3DLength": 4.2}},
+    )
+    for st in ("steel", "continuous", "any"):
+        assert rules_a.check_beam_section_width(None, structure_type=st) == []
+
+
+def test_beam_section_width_fake_beam_skipped(monkeypatch):
+    """装饰段假梁（0.13 宽 × 0.06 高 × 0.17 长）被过滤，不误报。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Width": 0.13, "General_Height": 0.06,
+                "General_3DLength": 0.17}},
+    )
+    assert rules_a.check_beam_section_width(None) == []
+
+
+def test_beam_section_width_fake_beam_by_length_only(monkeypatch):
+    """高正常但长度 < 0.5m 的碎梁也跳过。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Width": 0.13, "General_Height": 0.5,
+                "General_3DLength": 0.3}},
+    )
+    assert rules_a.check_beam_section_width(None) == []
+
+
+def test_beam_section_width_missing_prop_skipped(monkeypatch):
+    _patch(monkeypatch, {"Beam": [_BEAM]}, {"B1": {}})
+    assert rules_a.check_beam_section_width(None) == []
+
+
+def test_beam_section_width_no_beams(monkeypatch):
+    _patch(monkeypatch, {}, {})
+    assert rules_a.check_beam_section_width(None) == []
+
+
+# --- check_beam_aspect_ratio（V0.64 新增，仅混凝土） ------------------------
+
+def test_beam_aspect_ratio_violation(monkeypatch):
+    """h/b = 0.9/0.2 = 4.5 > 4 → 违规。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Width": 0.2, "General_Height": 0.9,
+                "General_3DLength": 5.0}},
+    )
+    out = rules_a.check_beam_aspect_ratio(None)
+    assert len(out) == 1
+    assert out[0]["guid"] == "B1"
+    assert out[0]["value"] == 4.5
+    assert out[0]["limit"] == 4.0
+    assert "高宽比" in out[0]["rule"]
+
+
+def test_beam_aspect_ratio_ok(monkeypatch):
+    """h/b = 0.5/0.25 = 2 ≤ 4 → 达标。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Width": 0.25, "General_Height": 0.5,
+                "General_3DLength": 4.2}},
+    )
+    assert rules_a.check_beam_aspect_ratio(None) == []
+
+
+def test_beam_aspect_ratio_steel_skipped(monkeypatch):
+    """钢结构直接跳过。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Width": 0.2, "General_Height": 0.9,
+                "General_3DLength": 5.0}},
+    )
+    assert rules_a.check_beam_aspect_ratio(None, structure_type="steel") == []
+
+
+def test_beam_aspect_ratio_fake_beam_skipped(monkeypatch):
+    """假梁（0.13 宽 0.06 高 0.17 长）过滤。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Width": 0.13, "General_Height": 0.06,
+                "General_3DLength": 0.17}},
+    )
+    assert rules_a.check_beam_aspect_ratio(None) == []
+
+
+def test_beam_aspect_ratio_missing_prop_skipped(monkeypatch):
+    _patch(monkeypatch, {"Beam": [_BEAM]}, {"B1": {}})
+    assert rules_a.check_beam_aspect_ratio(None) == []
+
+
+# --- check_fire_door_rating（V0.64 新增） -----------------------------------
+
+def test_fire_door_rating_missing_violation(monkeypatch):
+    """名称含「防火」的门 FireRating 为 null → 违规。"""
+    _patch(
+        monkeypatch,
+        {"Door": [{"guid": "D1", "name": "FM-防火门-1", "story_index": 0}]},
+        {"D1": {"WindowDoor_FireRating": None}},
+    )
+    out = rules_a.check_fire_door_rating(None)
+    assert len(out) == 1
+    assert out[0]["guid"] == "D1"
+    assert "防火门" in out[0]["rule"]
+
+
+def test_fire_door_rating_empty_string_violation(monkeypatch):
+    """FireRating 为空字符串同样判违规。"""
+    _patch(
+        monkeypatch,
+        {"Door": [{"guid": "D1", "name": "防火门-2", "story_index": 0}]},
+        {"D1": {"WindowDoor_FireRating": "  "}},
+    )
+    assert len(rules_a.check_fire_door_rating(None)) == 1
+
+
+def test_fire_door_rating_ok(monkeypatch):
+    """已标耐火等级（甲级）→ 达标。"""
+    _patch(
+        monkeypatch,
+        {"Door": [{"guid": "D1", "name": "防火门-3", "story_index": 0}]},
+        {"D1": {"WindowDoor_FireRating": "甲级"}},
+    )
+    assert rules_a.check_fire_door_rating(None) == []
+
+
+def test_fire_door_rating_normal_door_skipped(monkeypatch):
+    """普通门（名称无防火关键词）不参与检查，避免误报。"""
+    _patch(
+        monkeypatch,
+        {"Door": [{"guid": "D1", "name": "M1022", "story_index": 0}]},
+        {"D1": {"WindowDoor_FireRating": None}},
+    )
+    assert rules_a.check_fire_door_rating(None) == []
+
+
+def test_fire_door_rating_no_doors(monkeypatch):
+    _patch(monkeypatch, {}, {})
+    assert rules_a.check_fire_door_rating(None) == []

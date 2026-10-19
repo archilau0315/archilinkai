@@ -128,3 +128,49 @@
 - 墙高厚比取宽松限值 30 以降低误报（未细分承重/砂浆）；疏散门按名称过滤，零误报
 - code_review_rules_a.py 仍 < 500 行，无需拆分
 
+
+---
+
+## 2026-10-19 V0.64 规范审查新增 3 规则（梁截面宽度/高宽比/防火门等级）
+
+### 真机属性侦察（AC28「1.1办公楼改造」）
+- Beam 的 `General_Width` ✅ = 截面宽（0.25/0.3/0.13 真实值）；假梁模式确认（0.13×0.06、L=0.17m 装饰段）
+- Door 的 `WindowDoor_FireRating` ✅ 存在，非防火门返回 "" 或 null
+- `General_CrossSectionWidth/Height` 不存在（静默跳过，不可用）
+- 墙肢长度规则放弃：改造项目砖墙/门窗垛多，"墙长<8×墙厚"会大量误报
+
+### 变更
+- code_review_common.py：`DEFAULT_LIMITS` 新增 4 键
+  - `beam_section_min_width: 0.20`（GB 50010 6.3.1 框架梁截面宽度不宜小于 200mm）
+  - `beam_aspect_ratio_max: 4.0`（同条，截面高宽比不宜大于 4）
+  - `fake_beam_max_length: 0.5` / `fake_beam_min_height: 0.15`（假梁过滤阈值）
+- code_review_rules_a.py：新增 3 条规则（19→22）
+  - 规则 20 `check_beam_section_width`：梁宽 < 0.20 判违规；**仅 concrete 生效**
+    （steel/continuous/any 返回空——钢结构窄翼缘 H 梁属正常，防误报）
+  - 规则 21 `check_beam_aspect_ratio`：h/b > 4 判违规；**仅 concrete 生效**
+  - 规则 22 `check_fire_door_rating`：名称含 防火/fire 的门 FireRating 为空判违规
+    （数据完整性检查，普通门不参与，零误报）
+  - 新增公共 helper `_is_fake_beam`（长度<0.5 或 高度<0.15 → 装饰段跳过）
+- code_review_service.py：import 3 规则、all_rules 追加、elif 分发
+  （两条梁规则传 structure_type）
+- i18n.json：新增 6 个 en 键（beam_section_width/beam_aspect_ratio/fire_door_rating 各 rule+msg）
+- code_review_tools.py：docstring 同步（规则 19→22，structure_type 说明补充）
+- tests/unit/test_code_review_rules.py：新增 17 用例
+  （梁宽 7 个：违规/达标/钢结构跳过/假梁×2/缺属性/无梁；
+    高宽比 5 个：违规/达标/钢结构跳过/假梁/缺属性；
+    防火门 5 个：null 违规/空串违规/已标达标/普通门跳过/无门）
+
+### 验证
+- 单测 664 → 681 全过（新增 17 用例）
+- AC28「1.1办公楼改造」真机验证：
+  - beam_section_width：67 条（KL 梁宽 0.08~0.14m，真实检出）
+  - beam_aspect_ratio：40 条（h=1.4~1.67m 薄梁，高宽比 14~17.5，真实检出）
+  - fire_door_rating：0 条（项目无防火门名称标记，零误报符合预期）
+  - 假梁过滤生效（0.13×0.06 装饰段未出现在违规列表）
+
+### 备注
+- 两条梁规则与既有 check_beam_span_ratio 共用 structure_type 框架，行为一致
+- 防火门规则属"数据完整性"类提示，value 为空串、limit 为"甲/乙/丙级"说明
+- code_review_rules_a.py 现 768 行，逼近 800 行拆分线；下次再新增规则前应先拆出 rules_c 子模块
+
+

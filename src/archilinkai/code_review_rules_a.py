@@ -684,3 +684,168 @@ def check_evacuation_door_width(
                     frame_w=f"{frame_w:.2f}", limit=f"{limit_w:.1f}"),
             })
     return violations
+
+
+# ---- 规则 20/21 公共：假梁过滤（V0.64） -----------------------------------
+
+def _is_fake_beam(
+    p: dict[str, Any], lim: dict[str, float],
+) -> bool:
+    """装饰段/碎梁过滤：长度 < fake_beam_max_length 或高度 < fake_beam_min_height。"""
+    length = _num(p.get("General_3DLength"))
+    height = _num(p.get("General_Height"))
+    if length is not None and length < lim["fake_beam_max_length"]:
+        return True
+    if height is not None and height < lim["fake_beam_min_height"]:
+        return True
+    return False
+
+
+# ---- 规则 20：梁截面宽度检查（V0.64 新增，仅混凝土） ------------------------
+
+def check_beam_section_width(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+    structure_type: str | None = None,
+) -> list[dict[str, Any]]:
+    """梁截面宽度 ≥ beam_section_min_width（默认 0.20m，GB 50010 6.3.1）。
+
+    仅 structure_type="concrete"（默认）生效；钢结构 H 梁窄翼缘属正常，
+    steel/continuous/any 直接返回空列表避免误报。
+    AC28 真机确证：Beam 的 General_Width = 截面宽度。
+    假梁（装饰段）按 _is_fake_beam 过滤。
+    """
+    st = (structure_type or "concrete").lower()
+    if st != "concrete":
+        return []
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    min_w = lim["beam_section_min_width"]
+    beams = _fetch_elements("Beam", instance)
+    if not beams:
+        return []
+    guids = [b["guid"] for b in beams]
+    props = _get_props(
+        guids, ["General_Width", "General_Height", "General_3DLength"],
+        instance)
+    violations: list[dict[str, Any]] = []
+    for b in beams:
+        p = props.get(b["guid"], {})
+        if _is_fake_beam(p, lim):
+            continue
+        w = _num(p.get("General_Width"))
+        if w is None:
+            continue
+        if w < min_w:
+            violations.append({
+                "guid": b["guid"],
+                "name": b.get("name", ""),
+                "story": b.get("story_index"),
+                "rule": i18n.t(
+                    "review.beam_section_width.rule", "梁截面宽度不足"),
+                "value": round(w, 3),
+                "limit": min_w,
+                "message": i18n.t(
+                    "review.beam_section_width.msg",
+                    f"梁截面宽 {w:.3f}m 小于最小限值 {min_w:.2f}m",
+                    w=f"{w:.3f}", limit=f"{min_w:.2f}"),
+            })
+    return violations
+
+
+# ---- 规则 21：梁截面高宽比检查（V0.64 新增，仅混凝土） ----------------------
+
+def check_beam_aspect_ratio(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+    structure_type: str | None = None,
+) -> list[dict[str, Any]]:
+    """梁截面高宽比 h/b ≤ beam_aspect_ratio_max（默认 4.0，GB 50010 6.3.1）。
+
+    仅 structure_type="concrete"（默认）生效。假梁按 _is_fake_beam 过滤。
+    """
+    st = (structure_type or "concrete").lower()
+    if st != "concrete":
+        return []
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    max_ratio = lim["beam_aspect_ratio_max"]
+    beams = _fetch_elements("Beam", instance)
+    if not beams:
+        return []
+    guids = [b["guid"] for b in beams]
+    props = _get_props(
+        guids, ["General_Width", "General_Height", "General_3DLength"],
+        instance)
+    violations: list[dict[str, Any]] = []
+    for b in beams:
+        p = props.get(b["guid"], {})
+        if _is_fake_beam(p, lim):
+            continue
+        w = _num(p.get("General_Width"))
+        h = _num(p.get("General_Height"))
+        if w is None or h is None or w <= 0 or h <= 0:
+            continue
+        ratio = h / w
+        if ratio > max_ratio:
+            violations.append({
+                "guid": b["guid"],
+                "name": b.get("name", ""),
+                "story": b.get("story_index"),
+                "rule": i18n.t(
+                    "review.beam_aspect_ratio.rule", "梁截面高宽比超限"),
+                "value": round(ratio, 2),
+                "limit": max_ratio,
+                "message": i18n.t(
+                    "review.beam_aspect_ratio.msg",
+                    f"梁截面高 {h:.3f}m / 宽 {w:.3f}m = {ratio:.1f} "
+                    f"大于限值 {max_ratio:.0f}",
+                    h=f"{h:.3f}", w=f"{w:.3f}",
+                    ratio=f"{ratio:.1f}", limit=f"{max_ratio:.0f}"),
+            })
+    return violations
+
+
+# ---- 规则 22：防火门耐火等级缺失检查（V0.64 新增） --------------------------
+
+# 防火门名称关键词（AC 无"防火门"类型标记，按名称过滤避免误判普通门）
+_FIRE_DOOR_KEYWORDS = ("防火", "fire")
+
+
+def check_fire_door_rating(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """防火门应标注耐火等级（甲级/乙级/丙级，GB 50016）。
+
+    仅对名称含 防火/fire 关键词的门检查：WindowDoor_FireRating
+    为空（None/空串）判违规。属数据完整性检查，名称不过滤的普通门不参与。
+    """
+    doors = _fetch_elements("Door", instance)
+    if not doors:
+        return []
+    targets = [d for d in doors
+               if any(k in str(d.get("name", "") or "").lower()
+                      for k in _FIRE_DOOR_KEYWORDS)]
+    if not targets:
+        return []
+    guids = [d["guid"] for d in targets]
+    props = _get_props(guids, ["WindowDoor_FireRating"], instance)
+    violations: list[dict[str, Any]] = []
+    for d in targets:
+        rating = props.get(d["guid"], {}).get("WindowDoor_FireRating")
+        if rating is not None and str(rating).strip() != "":
+            continue
+        name = str(d.get("name", "") or "")
+        violations.append({
+            "guid": d["guid"],
+            "name": name,
+            "story": d.get("story_index"),
+            "rule": i18n.t(
+                "review.fire_door_rating.rule", "防火门未标耐火等级"),
+            "value": "",
+            "limit": "甲/乙/丙级",
+            "message": i18n.t(
+                "review.fire_door_rating.msg",
+                f"防火门 {name} 未标注耐火等级（应为甲级/乙级/丙级）",
+                name=name),
+        })
+    return violations

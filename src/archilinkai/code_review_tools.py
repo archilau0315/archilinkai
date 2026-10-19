@@ -37,12 +37,15 @@ def register(mcp: FastMCP, safe) -> None:
         stair_riser_count（踏步级数）/ slab_thickness（楼板厚度）/
         bearing_wall_thickness（承重/外墙厚）/ column_section（柱截面）/
         beam_span_ratio（梁跨高比）/ column_slenderness（柱长细比）/
-        wall_slenderness（墙高厚比）/ evacuation_door_width（疏散门净宽），默认全部。
+        wall_slenderness（墙高厚比）/ evacuation_door_width（疏散门净宽）/
+        beam_section_width（梁截面宽度，仅混凝土）/
+        beam_aspect_ratio（梁截面高宽比，仅混凝土）/
+        fire_door_rating（防火门耐火等级缺失），默认全部。
         building_type: high/multi（影响防火分区面积限值）；
         high_rise: 是否高层（影响栏杆高度限值）；
         has_sprinkler: 是否有自动喷淋（影响疏散距离限值）；
-        structure_type: concrete/steel/continuous/any（影响梁跨高比限值，
-        钢结构请传 steel 以免大量误报）。
+        structure_type: concrete/steel/continuous/any（影响梁跨高比限值；
+        梁截面宽度/高宽比两条规则仅 concrete 生效，钢结构请传 steel 以免误报）。
         limits 覆盖规范限值（单位 m），常用键见 list_code_review_limits。
         返回：per_rule（各规则违规数）、violations（违规明细）、
         total_violations、passed。

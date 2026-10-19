@@ -195,6 +195,12 @@
     "review.wall_slenderness.msg": "Wall height {h} m / thickness {t} m = {ratio} > limit {limit}",
     "review.evacuation_door.rule": "Insufficient evacuation door clear width",
     "review.evacuation_door.msg": "Evacuation door clear width {clear_w} m (opening {rough_w} m - frame {frame_w} m) < {limit} m",
+    "review.beam_section_width.rule": "Insufficient beam section width",
+    "review.beam_section_width.msg": "Beam section width {w} m < minimum {limit} m",
+    "review.beam_aspect_ratio.rule": "Beam section aspect ratio exceeds limit",
+    "review.beam_aspect_ratio.msg": "Beam section height {h} m / width {w} m = {ratio} > limit {limit}",
+    "review.fire_door_rating.rule": "Fire door missing fire rating",
+    "review.fire_door_rating.msg": "Fire door {name} has no fire rating (should be Class A/B/C)",
 
     "error.INSTANCE_NOT_FOUND": "Instance '{instance}' not found. Available: {avail}",
     "error.INSTANCE_DISCONNECTED": "Instance '{instance}' disconnected; call refresh_instances to reconnect",

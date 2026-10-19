@@ -4,6 +4,10 @@
 
 > 早期版本号 V0.x 为研发迭代号；自 0.38.0 起进入包发布号（与 V0.38 对应）。
 
+## [研发迭代 V0.64] - 2026-10-19
+
+- V0.64 规范审查新增 3 规则（19→22）：**梁截面宽度**（`check_beam_section_width`，`General_Width < 0.20m` 判违规，GB 50010 6.3.1）+ **梁截面高宽比**（`check_beam_aspect_ratio`，`General_Height / General_Width > 4.0` 判违规）——两条仅 `structure_type=concrete` 生效，避免钢结构窄翼缘 H 梁误报；新增 `_is_fake_beam` 过滤装饰段/碎梁（长度 < 0.5m 或高度 < 0.15m 跳过）。**防火门耐火等级缺失**（`check_fire_door_rating`，名称含 防火/fire 关键词的门 `WindowDoor_FireRating` 为空判违规，数据完整性检查）。`DEFAULT_LIMITS` 增 4 键（beam_section_min_width / beam_aspect_ratio_max / fake_beam_max_length / fake_beam_min_height）；新增 6 个 i18n en 键；新增 17 个单测（664→681）。AC28「1.1办公楼改造」真机验证：梁宽不足 67 条（KL 梁 0.08~0.14m）、高宽比超限 40 条（h=1.4~1.67m 薄梁）、防火门 0 条（项目无防火门名称标记，零误报）
+
 ## [研发迭代 V0.63] - 2026-10-19
 
 - V0.63 规范审查新增 2 规则（17→19）：**墙高厚比**（`check_wall_slenderness`，`Wall_MaximumHeight / General_Thickness ≤ 30`，GB 50003 简化取宽松值以降低误报；属性缺失/零厚跳过）+ **疏散门净宽**（`check_evacuation_door_width`，按名称含 疏散/安全出口/逃生/exit/evac 关键词过滤，洞宽扣门框余量后 < 0.9m 判违规，复用既有 `door_exit_min_width` / `door_frame_allowance` 限值）；`DEFAULT_LIMITS` 增 `wall_slenderness_max`；`code_review_service` 注册两条规则并分发；新增 4 个 i18n en 键；`run_code_review` 说明同步；新增 9 个单测（655→664）
