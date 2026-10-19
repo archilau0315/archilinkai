@@ -32,7 +32,8 @@ def register(mcp: FastMCP, safe) -> None:
         headroom（净高）/ collisions（碰撞）/ fire_zone_area（防火分区面积）/
         stair_width（楼梯净宽）/ railing_height（栏杆高度）/
         stair_tread（踏步尺寸）/ window_floor_ratio（窗地比）/
-        evacuation_distance（疏散距离估算），默认全部。
+        evacuation_distance（疏散距离估算）/ floor_height（层高）/
+        stair_riser_count（踏步级数），默认全部。
         building_type: high/multi（影响防火分区面积限值）；
         high_rise: 是否高层（影响栏杆高度限值）；
         has_sprinkler: 是否有自动喷淋（影响疏散距离限值）。

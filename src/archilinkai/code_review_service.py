@@ -47,6 +47,10 @@ DEFAULT_LIMITS: dict[str, float] = {
     "evacuation_distance_office": 40.0,       # 办公建筑疏散距离限值(m)
     "evacuation_distance_office_sprinkler": 50.0,  # 有喷淋时
     "evacuation_distance_residential": 22.0,  # 住宅疏散距离限值(m)
+    # ---- V0.48 层高 + 踏步级数 ----
+    "floor_height_min_office": 3.0,      # 办公建筑最小层高(m)
+    "floor_height_min_residential": 2.8, # 住宅最小层高(m)
+    "stair_max_riser_count": 18,         # 楼梯最大踏步级数（超过需设平台）
 }
 
 
@@ -582,6 +586,99 @@ def check_evacuation_distance(
     return violations
 
 
+# ---- 规则 11：层高检查 --------------------------------------------------
+
+def check_floor_height(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+    building_type: str = "office",
+) -> list[dict[str, Any]]:
+    """各层层高 ≥ 限值（办公 3.0m / 住宅 2.8m）。
+
+    层高 = 相邻楼层标高差；顶层用本层最高楼板标高 - 楼层标高。
+    """
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    min_h = (lim["floor_height_min_office"]
+             if building_type in ("office", "multi", "high", "public")
+             else lim["floor_height_min_residential"])
+    conn = instance_manager.manager.get_conn(instance)
+    try:
+        stories = conn.commands.GetStories()
+    except Exception:
+        return []
+    story_elev: dict[int, float] = {}
+    for idx, s in enumerate(getattr(stories, "stories", stories) or []):
+        story_elev[idx] = float(getattr(s, "elevation", 0.0))
+    # 计算层高
+    heights: dict[int, float] = {}
+    for st, elev in story_elev.items():
+        next_elev = story_elev.get(st + 1)
+        if next_elev is not None:
+            heights[st] = next_elev - elev
+        else:
+            # 顶层：取本层最高楼板标高 - 楼层标高
+            slabs = _fetch_elements("Slab", instance)
+            slab_props = _get_props(
+                [s["guid"] for s in slabs],
+                ["Slab_Thickness", "General_Thickness"], instance)
+            max_top = elev
+            for s in slabs:
+                if s.get("story_index") != st:
+                    continue
+                t = _num(slab_props.get(s["guid"], {}).get("Slab_Thickness")) \
+                    or _num(slab_props.get(s["guid"], {}).get("General_Thickness"))
+                if t:
+                    max_top = max(max_top, elev + t)
+            heights[st] = max_top - elev
+
+    violations: list[dict[str, Any]] = []
+    for st, h in heights.items():
+        if h < min_h:
+            violations.append({
+                "story": st,
+                "rule": "层高不足",
+                "value": round(h, 3),
+                "limit": min_h,
+                "message": f"第 {st} 层层高 {h:.2f}m 小于 {min_h:.1f}m",
+            })
+    return violations
+
+
+# ---- 规则 12：踏步级数限制 ----------------------------------------------
+
+def check_stair_riser_count(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """楼梯踏步级数 ≤ 18 级（超过需设平台）。
+
+    注意：ArchiCAD 的 Stair_NumberOfRisers 属性不存在，
+    此规则当前无法生效，返回空列表。
+    """
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    max_count = int(lim.get("stair_max_riser_count", 18))
+    stairs = _fetch_elements("Stair", instance)
+    if not stairs:
+        return []
+    guids = [s["guid"] for s in stairs]
+    props = _get_props(
+        guids, ["Stair_NumberOfRisers"], instance)
+    violations: list[dict[str, Any]] = []
+    for s in stairs:
+        p = props.get(s["guid"], {})
+        count = _num(p.get("Stair_NumberOfRisers"))
+        if count is None:
+            continue
+        if count > max_count:
+            violations.append({
+                "guid": s["guid"], "name": s.get("name", ""),
+                "story": s.get("story_index"), "rule": "踏步级数超限",
+                "value": int(count), "limit": max_count,
+                "message": f"踏步级数 {int(count)} 超过 {max_count} 级（需设平台）",
+            })
+    return violations
+
+
 # ---- 汇总入口 -----------------------------------------------------------
 
 def run_review(
@@ -602,6 +699,7 @@ def run_review(
         "wall_thickness", "openings", "headroom", "collisions",
         "fire_zone_area", "stair_width", "railing_height",
         "stair_tread", "window_floor_ratio", "evacuation_distance",
+        "floor_height", "stair_riser_count",
     ]
     rules = rules or all_rules
     results: dict[str, list[dict[str, Any]]] = {}
@@ -628,6 +726,10 @@ def run_review(
         elif r == "evacuation_distance":
             results[r] = check_evacuation_distance(
                 instance, limits, building_type, has_sprinkler)
+        elif r == "floor_height":
+            results[r] = check_floor_height(instance, limits, building_type)
+        elif r == "stair_riser_count":
+            results[r] = check_stair_riser_count(instance, limits)
     total = sum(len(v) for v in results.values())
     return {
         "rules_checked": rules,
