@@ -9,9 +9,10 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 [![MCP](https://img.shields.io/badge/MCP-Protocol-black?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIweiIvPjwvc3ZnPg==)](https://modelcontextprotocol.io/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-server-green)](https://github.com/jlowin/fastmcp)
 [![Tapir](https://img.shields.io/badge/Tapir-Add--On-yellow)](https://github.com/ENZYME-APD/tapir-archicad-automation)
-[![Tests](https://img.shields.io/badge/tests-565%20pass-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-578%20pass-brightgreen)](tests/)
 [![Status](https://img.shields.io/badge/status-active-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)](#)
+[![Gitee 镜像](https://img.shields.io/badge/Gitee-镜像-red)](https://gitee.com/archilau/archilinkai)
 
 [核心特性](#核心特性) · [快速开始](#快速开始) · [工具一览](#工具一览) · [配置](#客户端配置) · [版本历史](#版本历史) · [参考文档](#参考文档)
 
@@ -662,6 +663,15 @@ MCP 传输层验证方式：`_probe_mcp_client.py`（mcp SDK 客户端，stdio �
 | MCP 协议规范 | https://modelcontextprotocol.io/ |
 | Tapir Add-On | https://github.com/ENZYME-APD/tapir-archicad-automation |
 | Tapir 命令文档 | https://enzyme-apd.github.io/tapir-archicad-automation/ |
+
+### 国内镜像（Gitee）
+
+| 资源 | 链接 |
+|---|---|
+| 本项目仓库镜像 | https://gitee.com/archilau/archilinkai |
+| Tapir Add-On 镜像 | https://gitee.com/archilau/tapir-archicad-automation |
+
+> GitHub 访问受限时，可通过 Gitee 镜像克隆本项目或下载 Tapir 安装包。
 
 ---
 
