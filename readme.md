@@ -46,7 +46,7 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 
 | 能力 | 说明 |
 |---|---|
-| 🛠 **71 个 MCP 工具** | 覆盖只读查询、安全写入、修改、删除、计划辅助、规范审查、材料统计、诊断运维 |
+| 🛠 **72 个 MCP 工具** | 覆盖只读查询、安全写入、修改、删除、计划辅助、规范审查、材料统计、诊断运维 |
 | 🏗 **15 类构件建模** | 墙、柱、梁、板、门、窗、楼梯、屋顶、变形体、家具、灯具、网面、洞口、房间区域、机电管线 |
 | 📊 **44 个算量模板** | 混凝土体积、墙体分层、幕墙、栏杆、门窗洞口面积、模板估算、外檐真石漆、砌体工程、机电保温/配管/电缆等 |
 | 📋 **GB 50500 清单** | 自动映射清单编码、出标准清单报表（xlsx + 标题/项目信息/合计行） |
@@ -66,7 +66,7 @@ flowchart TB
         C[Claude Desktop / Cursor / Kimi / Trae / Codex / WorkBuddy]
     end
     subgraph Server["ArchiCAD MCP Server"]
-        S[Python FastMCP<br/>71 工具]
+        S[Python FastMCP<br/>72 工具]
     end
     subgraph AC["ArchiCAD 实例"]
         A1[AC29 + Tapir]
@@ -185,6 +185,20 @@ archilinkai install generic   # 打印通用 MCP JSON 片段，任意客户端�
 ```
 
 支持的客户端矩阵见 `src/archilinkai/data/clients.json`（Claude/Cursor/Cline/Witsy/Cherry Studio/Codex 等，可随版本扩充）。
+
+### 多语言输出（zh / en）
+
+默认中文，可切英文：
+
+```bash
+archilinkai serve --lang en        # 启动时指定
+# 或环境变量：set ALAI_LANG=en
+```
+
+- 仅支持 `zh` / `en`，非法取值自动回落 `zh`
+- 随语言切换的内容：工具描述、构件类型名、清单项名、报表/概算/材料表表头、规范审查提示、错误信息
+- 英文文案外置于 `src/archilinkai/data/i18n.json`，未命中条目回退中文（默认 zh 输出与旧版逐字一致）
+- 启动后可用 `get_locale` 工具查看当前语言与英文条目数
 
 ### HTTP 远程模式（平台接入）
 
@@ -364,7 +378,7 @@ python regression.py                   # 一键回归（单测+集成+兼容+基
 
 | 测试类型 | 通过 | 跳过 | 失败 |
 |---|---|---|---|
-| 单元测试 | 565 | 0 | 0 |
+| 单元测试 | 578 | 0 | 0 |
 | 集成测试 | 25 | 2 | 0 |
 | 兼容性测试 | 12 | 1 | 0 |
 
@@ -385,12 +399,17 @@ python benchmark.py --instance ac29-1 --rounds 3
 ```
 src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳在仓库根）
 ├── server.py              # FastMCP 入口：异常包装 + 工具注册
-├── read_tools.py          # P0 只读工具注册（41 个，从 server.py 拆出）
+├── read_tools.py          # P0 只读工具聚合入口（委托 4 个子模块，共 41 个）
+├── read_tools_query.py    # 只读：元素查询/属性/搜索/碰撞/几何（6 个，V0.52）
+├── read_tools_meta.py     # 只读：实例/项目/楼层/属性字典/预览图（14 个，V0.52）
+├── read_tools_interop.py  # 只读：IFC/MEP/GDL/关联/子构件（11 个，V0.52）
+├── read_tools_quantity.py # 只读：算量/汇总/概算/导出（10 个，V0.52）
 ├── write_tools.py         # P1 安全写入工具注册（16 个，从 server.py 拆出）
 ├── modify_tools.py        # 构件修改工具注册（2 个，V0.4）
 ├── delete_tools.py        # 构件删除工具注册（2 个，V0.7）
 ├── plan_tools.py          # 计划辅助工具注册（1 个，V0.10）
-├── diagnostic_tools.py    # P2 诊断工具注册（5 个，从 server.py 拆出）
+├── diagnostic_tools.py    # P2 诊断工具注册（6 个，从 server.py 拆出）
+├── i18n.py                # 轻量多语言层：ALAI_LANG/--lang，英文目录外置（V0.52）
 ├── instance_manager.py    # ArchiCAD 实例发现/连接/重连/健康检查
 ├── tapir_adapter.py       # Tapir 命令统一封装
 ├── channel_base.py        # 建模通道抽象基类（可插拔通道）
@@ -425,6 +444,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 ├── gateway.py             # HTTP 网关：Bearer 鉴权 + 请求审计（S3）
 ├── download_tapir.py      # 按 AC 版本下载 Tapir 安装包（Win/Mac）
 ├── data/clients.json      # MCP 客户端配置矩阵（外置可维护）
+├── data/i18n.json         # 英文文案目录（外置，未命中回退中文，V0.52）
 ├── data/tapir_versions.json # AC 版本 → Tapir release 映射
 ├── benchmark.py           # 性能基准：命令耗时统计（avg/min/max）
 ├── regression.py          # 一键回归：单测+集成+兼容+基准，汇总报告
@@ -543,7 +563,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 | `generate_material_report` | 按构件类型汇总材料用量（砖砌体/涂料/保温/混凝土/钢筋/模板等） |
 | `export_material_excel` | 材料统计结果导出 Excel |
 
-### P2 诊断运维（5 个）
+### P2 诊断运维（6 个）
 
 | 工具 | 说明 |
 |---|---|
@@ -552,8 +572,9 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 | `get_operation_status` | 查操作状态 |
 | `get_operation_log` | 查操作日志 |
 | `list_property_aliases` | 查看属性别名候选/命中/回退（V0.50） |
+| `get_locale` | 查看当前语言设置与英文目录条目数（V0.52） |
 
-> 工具总数：**71 个**
+> 工具总数：**72 个**
 
 ### 已支持建模构件（15 类）
 
@@ -596,6 +617,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 
 | 版本 | 里程碑 |
 |---|---|
+| V0.52 | 多语言输出（zh/en，ALAI_LANG/--lang）、只读工具拆 4 子模块、工具描述双语 |
 | V0.39–V0.51（研发迭代） | 规范强条审查（12 规则）、材料统计、属性别名解析、算量模板 40→44、S0–S3 包化/环境自检/桌面安装器/HTTP 网关 |
 | 0.38 | 算量估价链路补强（warnings/覆盖率/概算 xlsx/一键 estimate_project） |
 | 0.37 | 成本估算细算引擎（消耗量×市场价→人材机→取费） |

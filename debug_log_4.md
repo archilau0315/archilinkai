@@ -767,3 +767,39 @@
 - 单测 564 → 565 全过
 - 解决 aggregate_service.py 超 800 行问题；模板数据与服务逻辑分离，单一模块只做一件事
 - 覆盖机电专业算量：管道/风管保温面积、配管/电缆长度
+
+
+---
+
+## 2026-10-19 V0.52 多语言支持（i18n）+ 只读工具拆分子模块（P1-3）
+
+### 变更
+- i18n.py（新建，100 行）：轻量多语言层
+  - 语言来源 ALAI_LANG（默认 zh），仅支持 zh/en，非法值回落 zh
+  - t(key, default_zh, **kw)：zh 直接返回中文默认（不 format）；en 命中 data/i18n.json 模板则 format，缺键/缺参回退
+  - type_name / code_name / template_desc / set_locale / get_locale / supported_locales / catalog_size
+- data/i18n.json（新建）：英文文案外置目录（type.* / code_name.* / material.* / review.* /
+  error.* / report.* / estimate.* / warn.* / template.custom 等）
+- 接线（9 模块）：aggregate_service、report_service、cost_estimator、material_report、
+  code_review_service（16 违规点）、read_tools_quantity、errors.py（18 条错误 message）、
+  diagnostic_tools
+  - cost_estimator 的 _EST_HEADERS 常量改为 _est_headers() 函数（随语言运行时求值）
+  - errors.py 的 to_error_dict 兜底文案一并接线
+- read_tools.py（1059 行 → 25 行聚合器）：拆为 4 子模块，对外仍只暴露 register(mcp, safe)
+  - read_tools_query.py（170 行，6 工具）、read_tools_meta.py（252 行，14 工具）、
+    read_tools_interop.py（204 行，11 工具）、read_tools_quantity.py（487 行，10 工具）
+- diagnostic_tools.py：新增 get_locale 工具（返回 locale/supported/catalog_size）；
+  诊断工具 5 → 6 个
+- cli.py：serve 子命令新增 --lang {zh,en}，导入 server 前写 os.environ["ALAI_LANG"]
+- 全部 72 个 MCP 工具 docstring 追加一行 `English: ...` 英文说明（11 个 *_tools.py）
+- tests/unit/test_i18n.py（新建，13 用例）：默认 zh、env 归一化、override、目录命中/缺键回退、
+  format 缺参不抛错、类型/清单/模板 helper、目录分组完整性
+
+### 验证
+- 单测 565 → 578 全过（新增 13 个 i18n 用例）
+- 默认 zh 输出与改造前逐字一致（保护既有断言：type_name=="墙"、ws.title=="成本概算表" 等）
+
+### 备注
+- 最小改动策略：中文文案保留在源码作默认，仅英文外置目录；默认 zh 路径零行为变化
+- 字典键（PRICE_BOOK / MATERIAL_FACTORS / 材料名等）绝不改名，仅输出层做显示映射
+- 解决 read_tools.py 超 800 行问题，4 子模块均 ≤500 行

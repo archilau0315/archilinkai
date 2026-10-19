@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from archilinkai import i18n
+
 
 class ErrorCode(str, Enum):
     """统一错误码。str 枚举便于序列化与日志检索。"""
@@ -112,7 +114,10 @@ class InstanceNotFoundError(InstanceError):
         avail = ", ".join(available) if available else "无"
         super().__init__(
             code=ErrorCode.INSTANCE_NOT_FOUND,
-            message=f"没有找到实例 {instance or '<空>'}，当前可用：{avail}",
+            message=i18n.t(
+                "error.INSTANCE_NOT_FOUND",
+                f"没有找到实例 {instance or '<空>'}，当前可用：{avail}",
+                instance=instance or "<空>", avail=avail),
             instance=instance,
             retryable=True,
             details={"available": available or []},
@@ -123,7 +128,10 @@ class InstanceDisconnectedError(InstanceError):
     def __init__(self, instance: str):
         super().__init__(
             code=ErrorCode.INSTANCE_DISCONNECTED,
-            message=f"实例 {instance} 已断开连接，请先 refresh_instances 重连",
+            message=i18n.t(
+                "error.INSTANCE_DISCONNECTED",
+                f"实例 {instance} 已断开连接，请先 refresh_instances 重连",
+                instance=instance),
             instance=instance,
             retryable=True,
         )
@@ -133,7 +141,10 @@ class MultipleInstancesError(InstanceError):
     def __init__(self, instances: list[str]):
         super().__init__(
             code=ErrorCode.MULTIPLE_INSTANCES,
-            message=f"检测到多个实例 {instances}，请通过 instance 参数指定",
+            message=i18n.t(
+                "error.MULTIPLE_INSTANCES",
+                f"检测到多个实例 {instances}，请通过 instance 参数指定",
+                instances=instances),
             retryable=False,
             details={"instances": instances},
         )
@@ -143,9 +154,10 @@ class NoInstanceAvailableError(InstanceError):
     def __init__(self):
         super().__init__(
             code=ErrorCode.NO_INSTANCE_AVAILABLE,
-            message=(
+            message=i18n.t(
+                "error.NO_INSTANCE_AVAILABLE",
                 "未发现任何 ArchiCAD 实例。请确认：1) ArchiCAD 已启动并打开项目；"
-                "2) 工作环境-连接端口已启用；3) Tapir Add-On 已按版本安装。"
+                "2) 工作环境-连接端口已启用；3) Tapir Add-On 已按版本安装。",
             ),
             retryable=True,
         )
@@ -159,9 +171,11 @@ class TapirNotLoadedError(TapirError):
     def __init__(self, instance: str | None, command: str = ""):
         super().__init__(
             code=ErrorCode.TAPIR_NOT_LOADED,
-            message=(
+            message=i18n.t(
+                "error.TAPIR_NOT_LOADED",
                 f"Tapir Add-On 未加载，无法执行命令 {command or '<unknown>'}。"
-                "请通过 选项 → Add-On 管理器 加载对应版本 Tapir。"
+                "请通过 选项 → Add-On 管理器 加载对应版本 Tapir。",
+                command=command or "<unknown>",
             ),
             instance=instance,
             retryable=False,
@@ -173,7 +187,10 @@ class TapirCommandFailedError(TapirError):
     def __init__(self, instance: str | None, command: str, reason: str = ""):
         super().__init__(
             code=ErrorCode.TAPIR_COMMAND_FAILED,
-            message=f"Tapir 命令 {command} 执行失败{': ' + reason if reason else ''}",
+            message=i18n.t(
+                "error.TAPIR_COMMAND_FAILED",
+                f"Tapir 命令 {command} 执行失败{': ' + reason if reason else ''}",
+                command=command, reason=(": " + reason) if reason else ""),
             instance=instance,
             retryable=False,
             details={"command": command, "reason": reason},
@@ -186,9 +203,16 @@ class PropertyError(ArchicadMCPError):
 
 class PropertyNotFoundError(PropertyError):
     def __init__(self, name, instance=None, suggestions=None):
-        msg = f"未找到属性 {name}，请确认属性名拼写与当前项目一致"
+        suffix = ""
         if suggestions:
-            msg += f"。你是不是想用：{'、'.join(suggestions)}？"
+            if i18n.get_locale() == "zh":
+                suffix = f"。你是不是想用：{'、'.join(suggestions)}？"
+            else:
+                suffix = f". Did you mean: {', '.join(suggestions)}?"
+        msg = i18n.t(
+            "error.PROPERTY_NOT_FOUND",
+            f"未找到属性 {name}，请确认属性名拼写与当前项目一致{suffix}",
+            name=name, suggestions=suffix)
         super().__init__(
             code=ErrorCode.PROPERTY_NOT_FOUND,
             message=msg,
@@ -203,7 +227,10 @@ class PropertyTypeMismatchError(PropertyError):
     def __init__(self, name: str, expected: str, got: str, instance: str | None = None):
         super().__init__(
             code=ErrorCode.PROPERTY_TYPE_MISMATCH,
-            message=f"属性 {name} 期望类型 {expected}，实际传入 {got}",
+            message=i18n.t(
+                "error.PROPERTY_TYPE_MISMATCH",
+                f"属性 {name} 期望类型 {expected}，实际传入 {got}",
+                name=name, expected=expected, got=got),
             instance=instance,
             retryable=False,
             details={"property_name": name, "expected": expected, "got": got},
@@ -214,7 +241,10 @@ class PropertyTypeUnknownError(PropertyError):
     def __init__(self, name: str, instance: str | None = None):
         super().__init__(
             code=ErrorCode.PROPERTY_TYPE_UNKNOWN,
-            message=f"属性 {name} 类型无法确定，拒绝执行以避免错误转换",
+            message=i18n.t(
+                "error.PROPERTY_TYPE_UNKNOWN",
+                f"属性 {name} 类型无法确定，拒绝执行以避免错误转换",
+                name=name),
             instance=instance,
             retryable=False,
             details={"property_name": name},
@@ -225,7 +255,8 @@ class ElementNotFoundError(ArchicadMCPError):
     def __init__(self, guids: list[str], instance: str | None = None):
         super().__init__(
             code=ErrorCode.ELEMENT_NOT_FOUND,
-            message=f"未找到元素 {guids}",
+            message=i18n.t("error.ELEMENT_NOT_FOUND", f"未找到元素 {guids}",
+                           guids=guids),
             instance=instance,
             retryable=False,
             details={"guids": guids},
@@ -239,7 +270,10 @@ class ClassificationNotFoundError(ArchicadMCPError):
                  instance: str | None = None):
         super().__init__(
             code=ErrorCode.CLASSIFICATION_NOT_FOUND,
-            message=f"未找到{kind} {name}，请确认名称与当前项目一致",
+            message=i18n.t(
+                "error.CLASSIFICATION_NOT_FOUND",
+                f"未找到{kind} {name}，请确认名称与当前项目一致",
+                kind=kind, name=name),
             instance=instance,
             retryable=False,
             details={"name": name, "kind": kind},
@@ -252,7 +286,10 @@ class ConfirmRequiredError(ArchicadMCPError):
     def __init__(self, tool: str, instance: str | None = None):
         super().__init__(
             code=ErrorCode.CONFIRM_REQUIRED,
-            message=f"操作未执行：{tool} 需要将 confirm 设为 true 以确认写入",
+            message=i18n.t(
+                "error.CONFIRM_REQUIRED",
+                f"操作未执行：{tool} 需要将 confirm 设为 true 以确认写入",
+                tool=tool),
             instance=instance,
             retryable=False,
             details={"tool": tool},
@@ -265,10 +302,12 @@ class ProjectIdentityChangedError(ArchicadMCPError):
     def __init__(self, instance: str, baseline: Any, current: Any):
         super().__init__(
             code=ErrorCode.PROJECT_IDENTITY_CHANGED,
-            message=(
+            message=i18n.t(
+                "error.PROJECT_IDENTITY_CHANGED",
                 f"实例 {instance} 的项目已变化（可能被关闭、另存为或切换）。"
                 "为避免写错项目，操作已拦截；如确认要在当前项目继续，"
-                "请先调用 refresh_instances 再重试。"
+                "请先调用 refresh_instances 再重试。",
+                instance=instance,
             ),
             instance=instance,
             retryable=True,
@@ -286,9 +325,12 @@ class VerifyFailedError(ArchicadMCPError):
     ):
         super().__init__(
             code=ErrorCode.VERIFY_FAILED,
-            message=(
+            message=i18n.t(
+                "error.VERIFY_FAILED",
                 f"操作 {operation_id} 验证失败：请求 {requested}，"
-                f"实际验证通过 {verified}，请检查未通过元素"
+                f"实际验证通过 {verified}，请检查未通过元素",
+                operation_id=operation_id, requested=requested,
+                verified=verified,
             ),
             instance=instance,
             retryable=True,
@@ -304,7 +346,8 @@ class PaginationInvalidError(ArchicadMCPError):
     def __init__(self, reason: str):
         super().__init__(
             code=ErrorCode.PAGINATION_INVALID,
-            message=f"分页参数无效：{reason}",
+            message=i18n.t("error.PAGINATION_INVALID",
+                           f"分页参数无效：{reason}", reason=reason),
             retryable=False,
         )
 
@@ -313,7 +356,11 @@ class InvalidArgumentError(ArchicadMCPError):
     def __init__(self, name: str, value: Any, reason: str = ""):
         super().__init__(
             code=ErrorCode.INVALID_ARGUMENT,
-            message=f"参数 {name} 无效：{value}{': ' + reason if reason else ''}",
+            message=i18n.t(
+                "error.INVALID_ARGUMENT",
+                f"参数 {name} 无效：{value}{': ' + reason if reason else ''}",
+                name=name, value=value,
+                reason=(": " + reason) if reason else ""),
             retryable=False,
             details={"name": name, "value": str(value)},
         )
@@ -326,9 +373,12 @@ class ChannelCapabilityError(ArchicadMCPError):
                  instance: str | None = None):
         super().__init__(
             code=ErrorCode.CHANNEL_CAPABILITY_UNSUPPORTED,
-            message=(
+            message=i18n.t(
+                "error.CHANNEL_CAPABILITY_UNSUPPORTED",
                 f"当前{channel}通道不支持创建 {element_type}"
-                f"{': ' + hint if hint else ''}。未创建任何元素。"
+                f"{': ' + hint if hint else ''}。未创建任何元素。",
+                channel=channel, element_type=element_type,
+                hint=(": " + hint) if hint else "",
             ),
             instance=instance,
             retryable=False,
@@ -347,7 +397,8 @@ def to_error_dict(exc: Exception, instance: str | None = None) -> dict[str, Any]
     return {
         "status": "error",
         "error_code": ErrorCode.INTERNAL_ERROR.value,
-        "message": f"未预期的错误：{exc}",
+        "message": i18n.t("error.INTERNAL_ERROR",
+                          f"未预期的错误：{exc}", exc=exc),
         "instance": instance,
         "retryable": False,
     }

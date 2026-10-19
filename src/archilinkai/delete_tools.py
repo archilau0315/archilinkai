@@ -22,6 +22,8 @@ def register(mcp, safe) -> None:
         """预览构件删除：读回每个构件的类型/编号，列出将删除清单。不写入。
 
         plan 形如：{"guids": ["GUID1", "GUID2"]}
+
+        English: Preview element deletion: read type/number of each element, list what will be deleted. No write.
         """
         return safe(instance, service.preview, plan, instance)
 
@@ -33,5 +35,7 @@ def register(mcp, safe) -> None:
 
         必须 confirm=true 才真正执行；执行后自动读回确认每个构件已消失，
         返回 deleted/failed 明细和验证结果。删错可在 ArchiCAD 里 Ctrl+Z。
+
+        English: Delete existing elements per a deletion plan.
         """
         return safe(instance, service.execute, plan, confirm, instance)

@@ -31,6 +31,8 @@ def register(mcp: FastMCP, safe) -> None:
         """预览属性修改：当前值、目标值、不可改元素、风险。
 
         类型未知或不符时直接报错，不进入执行。
+
+        English: Preview a property change: current value, target value, uneditable elements, risks.
         """
         def _run() -> dict[str, Any]:
             preview = operation_service.operations.preview_property_change(
@@ -56,6 +58,8 @@ def register(mcp: FastMCP, safe) -> None:
 
         confirm=true 时才执行；Tapir 写入内部已含撤销单元，Ctrl+Z 可撤销。
         完成后自动 Verify 并返回 operation_id。
+
+        English: Batch-set element property values (via Tapir).
         """
         def _run() -> dict[str, Any]:
             return operation_service.operations.execute_property_change(
@@ -74,6 +78,8 @@ def register(mcp: FastMCP, safe) -> None:
         """批量修改 GDL 对象参数（L1）。
 
         confirm=true 时才执行；Tapir 写入可撤销。
+
+        English: Batch-modify GDL object parameters (L1).
         """
         def _run() -> dict[str, Any]:
             return gdl_service.service.set_parameters(
@@ -88,7 +94,10 @@ def register(mcp: FastMCP, safe) -> None:
         system_name: str | None = None,
         instance: str | None = None,
     ) -> dict[str, Any]:
-        """预览分类挂接：目标分类、各元素当前分类、风险。不写入。"""
+        """预览分类挂接：目标分类、各元素当前分类、风险。不写入。
+
+        English: Preview attaching a classification: target item, current classification per element, risks. No write.
+        """
         def _run() -> dict[str, Any]:
             preview = operation_service.operations.preview_classification_change(
                 element_guids, item_name, system_name, instance
@@ -114,6 +123,8 @@ def register(mcp: FastMCP, safe) -> None:
         item_name 为分类树里的项名称（精确匹配，可挂子项）；
         system_name 为分类系统名，项目只有一个系统时可省略。
         confirm=false 只读校验不入库；confirm=true 执行并自动验证（Ctrl+Z 可撤销）。
+
+        English: Batch-attach a classification item to elements (e.g. tag walls as "standard wall").
         """
         def _run() -> dict[str, Any]:
             return operation_service.operations.execute_classification_change(
@@ -125,7 +136,10 @@ def register(mcp: FastMCP, safe) -> None:
     def highlight_elements(
         element_guids: list[str], instance: str | None = None
     ) -> dict[str, Any]:
-        """高亮指定元素（经 Tapir HighlightElements）。"""
+        """高亮指定元素（经 Tapir HighlightElements）。
+
+        English: Highlight the specified elements (via Tapir HighlightElements).
+        """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
             n = len(element_guids)
@@ -158,6 +172,8 @@ def register(mcp: FastMCP, safe) -> None:
 
         layer_data 每项至少含 name，可选 isHidden/isLocked/isWireframe/intersectionGroupNr。
         confirm=true 时才执行；overwrite_existing=true 时同名图层会被覆盖。
+
+        English: Create or overwrite layers (via Tapir CreateLayers).
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
@@ -186,6 +202,8 @@ def register(mcp: FastMCP, safe) -> None:
 
         attributes_to_delete 每项含 attributeType + attributeId。
         confirm=true 时才执行。
+
+        English: Delete attributes (via Tapir DeleteAttributes).
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
@@ -218,6 +236,8 @@ def register(mcp: FastMCP, safe) -> None:
 
         favorites_to_apply 每项含 elementId + favorite（收藏夹名称）。
         只改设置类参数，不改几何。confirm=true 时才执行。
+
+        English: Apply favorites to existing elements (via Tapir ApplyFavoritesToElements).
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
@@ -248,6 +268,8 @@ def register(mcp: FastMCP, safe) -> None:
 
         elements_with_details 每项含 elementId + details（floorIndex/layerIndex/drawIndex）。
         confirm=true 时才执行。
+
+        English: Change element story/layer/drawing order, etc. (via Tapir SetDetailsOfElements).
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
@@ -274,7 +296,10 @@ def register(mcp: FastMCP, safe) -> None:
         confirm: bool = False,
         instance: str | None = None,
     ) -> dict[str, Any]:
-        """重算全部 Zone 的几何/标签/关联元素（经 Tapir UpdateZones）。confirm=true 时才执行。"""
+        """重算全部 Zone 的几何/标签/关联元素（经 Tapir UpdateZones）。confirm=true 时才执行。
+
+        English: Recompute geometry/labels/related elements for all Zones (via Tapir UpdateZones).
+        """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
             if not confirm:
@@ -307,6 +332,8 @@ def register(mcp: FastMCP, safe) -> None:
 
         dx/dy/dz 为移动向量（米）；copy=true 时移动副本（原元素保留）。
         confirm=true 时才执行。
+
+        English: Batch-move elements by a vector (via Tapir MoveElements).
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
@@ -346,6 +373,8 @@ def register(mcp: FastMCP, safe) -> None:
 
         origin 为旋转中心，begin_point→end_point 定义旋转弧（均含 x/y）。
         copy=true 时旋转副本。confirm=true 时才执行。
+
+        English: Batch-rotate elements around a reference point (via Tapir RotateElements).
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
@@ -384,6 +413,8 @@ def register(mcp: FastMCP, safe) -> None:
         layer_combination_data 每项含 name + layers；layers 每项含
         attributeId（图层 guid）+ isHidden/isLocked/isWireframe/intersectionGroupNr。
         confirm=true 时才执行；overwrite_existing=true 时同名组合会被覆盖。
+
+        English: Create or overwrite layer combinations (via Tapir CreateLayerCombinations).
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
@@ -440,6 +471,8 @@ def register(mcp: FastMCP, safe) -> None:
         楼梯总高 3m 梯宽 1.2m；屋顶底标高 0 厚 0.3m；
         变形体默认 1m 方块。均可覆盖。
         通道不支持某构件时（如旧版 Tapir）此步即拦截。
+
+        English: Preview a modeling plan: which elements, counts, total wall length, per-element details. No creation.
         """
         return safe(
             instance,
@@ -456,6 +489,8 @@ def register(mcp: FastMCP, safe) -> None:
 
         计划格式同 preview_model_plan。创建走可撤销命令，AC 中 Ctrl+Z 可撤销。
         返回 operation_id、已创建构件（含 GUID）、失败项和验证结果。
+
+        English: Create elements from a modeling plan: confirm=false does nothing; true creates and reads back to verify.
         """
         return safe(
             instance,

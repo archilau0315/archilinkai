@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from archilinkai import i18n
+
 # ---- 材料市场价库（元/单位，2026 参考价，可覆盖） -----------------------
 
 PRICE_BOOK: dict[str, float] = {
@@ -506,7 +508,9 @@ class CostEstimator:
             cons = _fallback_consumption(name)
             mode = "fallback" if cons else "skipped"
         if cons is None:
-            self.notes.append(f"{code} {name}：无消耗量参考，未定价")
+            self.notes.append(i18n.t(
+                "estimate.note_no_consumption",
+                f"{code} {name}：无消耗量参考，未定价", code=code, name=name))
             item["calc_mode"] = "skipped"
             return item
 
@@ -520,7 +524,10 @@ class CostEstimator:
         for mname, per_unit, munit in cons["materials"]:
             price = self.prices.get(mname)
             if price is None:
-                self.notes.append(f"{code} {name}：缺市场价「{mname}」")
+                self.notes.append(i18n.t(
+                    "estimate.note_missing_price",
+                    f"{code} {name}：缺市场价「{mname}」",
+                    code=code, name=name, mname=mname))
                 continue
             mq = per_unit * qty
             mc = round(mq * price, 2)
@@ -622,8 +629,18 @@ def estimate_from_flat_rows(
 
 # ---- 概算表 xlsx 导出（GB 50500 风格排版） ------------------------------
 
-_EST_HEADERS = ["序号", "项目编码", "项目名称", "计量单位", "工程量",
-                "单价(元)", "合价(元)", "人工费(元)", "材料费(元)", "机械费(元)"]
+def _est_headers() -> list[str]:
+    """概算表列头（随语言变化，故用函数而非模块常量）。"""
+    return [
+        i18n.t("estimate.h_seq", "序号"), i18n.t("estimate.h_code", "项目编码"),
+        i18n.t("estimate.h_name", "项目名称"), i18n.t("estimate.h_unit", "计量单位"),
+        i18n.t("estimate.h_qty", "工程量"),
+        i18n.t("estimate.h_unit_price", "单价(元)"),
+        i18n.t("estimate.h_total_price", "合价(元)"),
+        i18n.t("estimate.h_labor", "人工费(元)"),
+        i18n.t("estimate.h_material", "材料费(元)"),
+        i18n.t("estimate.h_machine", "机械费(元)"),
+    ]
 
 
 def build_estimate_report(
@@ -643,9 +660,10 @@ def build_estimate_report(
 
     items = table.get("items") or []
     if not items:
-        raise ValueError("概算表 items 为空，无法生成报表")
+        raise ValueError(i18n.t("estimate.err_empty", "概算表 items 为空，无法生成报表"))
     s = table.get("summary", {})
-    ncol = len(_EST_HEADERS)
+    headers = _est_headers()
+    ncol = len(headers)
 
     if out_dir is None:
         out_dir = os.path.join(
@@ -666,7 +684,7 @@ def build_estimate_report(
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "成本概算表"
+    ws.title = i18n.t("estimate.sheet", "成本概算表")
 
     def _put(row, col, val, font=None, align=center, border_=border):
         c = ws.cell(row, col, val)
@@ -678,13 +696,20 @@ def build_estimate_report(
 
     # 标题 + 项目信息
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=ncol)
-    c = ws.cell(1, 1, "工程成本概算表")
+    c = ws.cell(1, 1, i18n.t("estimate.title", "工程成本概算表"))
     c.font = title_font
     c.alignment = center
     ws.row_dimensions[1].height = 28
-    info = (f"工程名称：{table.get('project_name') or '未命名工程'}    "
-            f"编制时间：{table.get('date', time.strftime('%Y-%m-%d'))}    "
-            f"工日单价：{table.get('labor_price', '-')} 元")
+    _date = table.get('date', time.strftime('%Y-%m-%d'))
+    _price = table.get('labor_price', '-')
+    info = i18n.t(
+        "estimate.info",
+        f"工程名称：{table.get('project_name') or '未命名工程'}    "
+        f"编制时间：{_date}    "
+        f"工日单价：{_price} 元",
+        name=table.get('project_name')
+        or i18n.t("estimate.unnamed_project", "未命名工程"),
+        date=_date, price=_price)
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=ncol)
     c = ws.cell(2, 1, info)
     c.font = bold
@@ -692,7 +717,7 @@ def build_estimate_report(
     ws.row_dimensions[2].height = 22
 
     # 表头
-    for i, h in enumerate(_EST_HEADERS, 1):
+    for i, h in enumerate(headers, 1):
         _put(3, i, h, bold)
     ws.row_dimensions[3].height = 22
 
@@ -718,7 +743,7 @@ def build_estimate_report(
     if len(units) == 1:
         ws.merge_cells(start_row=row_idx, start_column=1,
                        end_row=row_idx, end_column=6)
-        _put(row_idx, 1, "直接费合计", bold)
+        _put(row_idx, 1, i18n.t("estimate.direct_cost", "直接费合计"), bold)
         _put(row_idx, 7, s.get("direct_cost", 0), bold, right)
         for j in (8, 9, 10):
             _put(row_idx, j, "", bold)
@@ -727,9 +752,9 @@ def build_estimate_report(
 
     # 取费块
     fee_rows = [
-        ("企业管理费", s.get("management_fee", 0)),
-        ("利 润", s.get("profit", 0)),
-        ("税 金", s.get("tax", 0)),
+        (i18n.t("estimate.management_fee", "企业管理费"), s.get("management_fee", 0)),
+        (i18n.t("estimate.profit", "利 润"), s.get("profit", 0)),
+        (i18n.t("estimate.tax", "税 金"), s.get("tax", 0)),
     ]
     for label, val in fee_rows:
         ws.merge_cells(start_row=row_idx, start_column=1,
@@ -742,7 +767,7 @@ def build_estimate_report(
         row_idx += 1
     ws.merge_cells(start_row=row_idx, start_column=1,
                    end_row=row_idx, end_column=6)
-    _put(row_idx, 1, "含税总价", bold)
+    _put(row_idx, 1, i18n.t("estimate.total", "含税总价"), bold)
     _put(row_idx, 7, s.get("total", 0), bold, right)
     for j in (8, 9, 10):
         _put(row_idx, j, "", bold)
@@ -757,17 +782,16 @@ def build_estimate_report(
         machine = s.get("machine_cost", 0)
         if labor + material + machine > 0:
             pie = PieChart()
-            pie.title = "人材机占比"
-            labels = ["人工费", "材料费", "机械费"]
+            pie.title = i18n.t("estimate.chart_lmr", "人材机占比")
             data = [labor, material, machine]
             pie.add_data(Reference(ws, min_col=1, min_row=row_idx, max_row=row_idx + 2, max_col=2), titles_from_data=True)
             pie.set_categories(Reference(ws, min_col=1, min_row=row_idx, max_row=row_idx + 2))
             # 写数据到隐藏区域
-            ws.cell(row_idx, 1, "人工费")
+            ws.cell(row_idx, 1, i18n.t("estimate.labor", "人工费"))
             ws.cell(row_idx, 2, labor)
-            ws.cell(row_idx + 1, 1, "材料费")
+            ws.cell(row_idx + 1, 1, i18n.t("estimate.material", "材料费"))
             ws.cell(row_idx + 1, 2, material)
-            ws.cell(row_idx + 2, 1, "机械费")
+            ws.cell(row_idx + 2, 1, i18n.t("estimate.machine", "机械费"))
             ws.cell(row_idx + 2, 2, machine)
             ws.add_chart(pie, f"H{row_idx}")
             row_idx += 4
@@ -778,17 +802,17 @@ def build_estimate_report(
         tax = s.get("tax", 0)
         if mgmt + profit + tax > 0:
             bar = BarChart()
-            bar.title = "取费构成"
-            bar.y_axis.title = "金额(元)"
-            bar.x_axis.title = "费用项"
+            bar.title = i18n.t("estimate.chart_fee", "取费构成")
+            bar.y_axis.title = i18n.t("estimate.axis_amount", "金额(元)")
+            bar.x_axis.title = i18n.t("estimate.axis_item", "费用项")
             data = [mgmt, profit, tax]
             bar.add_data(Reference(ws, min_col=1, min_row=row_idx, max_row=row_idx + 2, max_col=2), titles_from_data=True)
             bar.set_categories(Reference(ws, min_col=1, min_row=row_idx, max_row=row_idx + 2))
-            ws.cell(row_idx, 1, "企业管理费")
+            ws.cell(row_idx, 1, i18n.t("estimate.management_fee", "企业管理费"))
             ws.cell(row_idx, 2, mgmt)
-            ws.cell(row_idx + 1, 1, "利润")
+            ws.cell(row_idx + 1, 1, i18n.t("estimate.profit", "利润"))
             ws.cell(row_idx + 1, 2, profit)
-            ws.cell(row_idx + 2, 1, "税金")
+            ws.cell(row_idx + 2, 1, i18n.t("estimate.tax", "税金"))
             ws.cell(row_idx + 2, 2, tax)
             ws.add_chart(bar, f"H{row_idx}")
             row_idx += 4
@@ -796,9 +820,13 @@ def build_estimate_report(
     # 覆盖率 + 备注
     cov = table.get("coverage", {})
     if cov:
-        cov_text = (f"细算覆盖率：{cov.get('coverage_pct', '-')}%  "
-                    f"(精确 {cov.get('detailed', 0)} / 兜底 "
-                    f"{cov.get('fallback', 0)} / 未覆盖 {cov.get('skipped', 0)})")
+        cov_text = i18n.t(
+            "estimate.coverage",
+            f"细算覆盖率：{cov.get('coverage_pct', '-')}%  "
+            f"(精确 {cov.get('detailed', 0)} / 兜底 "
+            f"{cov.get('fallback', 0)} / 未覆盖 {cov.get('skipped', 0)})",
+            pct=cov.get('coverage_pct', '-'), detailed=cov.get('detailed', 0),
+            fallback=cov.get('fallback', 0), skipped=cov.get('skipped', 0))
         ws.merge_cells(start_row=row_idx, start_column=1,
                        end_row=row_idx, end_column=ncol)
         c = ws.cell(row_idx, 1, cov_text)
@@ -807,7 +835,7 @@ def build_estimate_report(
     for note in table.get("notes") or []:
         ws.merge_cells(start_row=row_idx, start_column=1,
                        end_row=row_idx, end_column=ncol)
-        c = ws.cell(row_idx, 1, f"备注：{note}")
+        c = ws.cell(row_idx, 1, i18n.t("estimate.note_prefix", f"备注：{note}", note=note))
         c.alignment = left
         row_idx += 1
 

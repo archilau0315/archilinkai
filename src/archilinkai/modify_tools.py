@@ -29,6 +29,8 @@ def register(mcp, safe) -> None:
         能改：墙（端点/高/厚）、柱（平移/高/截面）、门和窗（洞口/窗台）、
         板（标高/厚/开洞 holes）、屋顶（厚/檐出）。
         注意：屋顶开洞仅支持单坡屋顶创建时；多平面屋顶和既有屋顶暂不支持开洞。
+
+        English: Preview element modifications: read current values, list old->new per field. No write.
         """
         return safe(instance, service.preview, plan, instance)
 
@@ -40,5 +42,7 @@ def register(mcp, safe) -> None:
 
         必须 confirm=true 才真正执行；执行后自动读回逐字段验证，
         返回 modified/failed 明细和验证结果。改错了可在 ArchiCAD 里 Ctrl+Z。
+
+        English: Adjust existing elements per a modification plan.
         """
         return safe(instance, service.execute, plan, confirm, instance)

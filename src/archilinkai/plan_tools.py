@@ -24,6 +24,8 @@ def register(mcp: FastMCP, safe) -> None:
         返回 ok=True + 构件统计（各类数量）；失败返回结构化错误
         （error_code/message 指出具体字段问题），修正后再调本工具。
         通道能力（如旧版 Tapir 不支持门窗）在 preview_create_plan 时才校验。
+
+        English: Offline-validate a modeling plan without connecting to ArchiCAD; run it to self-check a generated plan.
         """
         def _run() -> dict[str, Any]:
             model = ModelPlan.from_dict(plan)

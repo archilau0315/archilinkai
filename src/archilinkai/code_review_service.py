@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from archilinkai import i18n
 from archilinkai import instance_manager
 from archilinkai import property_service
 from archilinkai.query_engine import QueryRequest, engine
@@ -124,10 +125,13 @@ def check_wall_thickness(
                 "guid": w["guid"],
                 "name": w.get("name", ""),
                 "story": w.get("story_index"),
-                "rule": "墙厚不足",
+                "rule": i18n.t("review.wall_thickness.rule", "墙厚不足"),
                 "value": round(t, 3),
                 "limit": lim["wall_min_thickness"],
-                "message": f"墙厚 {t:.3f}m 小于最小限值 {lim['wall_min_thickness']:.2f}m",
+                "message": i18n.t(
+                    "review.wall_thickness.msg",
+                    f"墙厚 {t:.3f}m 小于最小限值 {lim['wall_min_thickness']:.2f}m",
+                    t=f"{t:.3f}", limit=f"{lim['wall_min_thickness']:.2f}"),
             })
     return violations
 
@@ -164,22 +168,34 @@ def check_openings(
                 if clear_h < lim["door_min_height"]:
                     violations.append({
                         "guid": d["guid"], "name": d.get("name", ""),
-                        "story": d.get("story_index"), "rule": "门洞净高不足",
+                        "story": d.get("story_index"),
+                        "rule": i18n.t("review.door_headroom.rule", "门洞净高不足"),
                         "value": round(clear_h, 3), "limit": lim["door_min_height"],
-                        "message": (f"门洞净高 {clear_h:.2f}m（洞口 {rough_h:.2f}m "
-                                    f"- 上框 {head_h:.2f}m）小于 "
-                                    f"{lim['door_min_height']:.1f}m"),
+                        "message": i18n.t(
+                            "review.door_headroom.msg",
+                            f"门洞净高 {clear_h:.2f}m（洞口 {rough_h:.2f}m "
+                            f"- 上框 {head_h:.2f}m）小于 "
+                            f"{lim['door_min_height']:.1f}m",
+                            clear_h=f"{clear_h:.2f}", rough_h=f"{rough_h:.2f}",
+                            head_h=f"{head_h:.2f}",
+                            limit=f"{lim['door_min_height']:.1f}"),
                     })
             if rough_w is not None:
                 clear_w = rough_w - frame_w
                 if clear_w < lim["door_min_width"]:
                     violations.append({
                         "guid": d["guid"], "name": d.get("name", ""),
-                        "story": d.get("story_index"), "rule": "门洞净宽不足",
+                        "story": d.get("story_index"),
+                        "rule": i18n.t("review.door_width.rule", "门洞净宽不足"),
                         "value": round(clear_w, 3), "limit": lim["door_min_width"],
-                        "message": (f"门洞净宽 {clear_w:.2f}m（洞口 {rough_w:.2f}m "
-                                    f"- 门框 {frame_w:.2f}m）小于 "
-                                    f"{lim['door_min_width']:.1f}m"),
+                        "message": i18n.t(
+                            "review.door_width.msg",
+                            f"门洞净宽 {clear_w:.2f}m（洞口 {rough_w:.2f}m "
+                            f"- 门框 {frame_w:.2f}m）小于 "
+                            f"{lim['door_min_width']:.1f}m",
+                            clear_w=f"{clear_w:.2f}", rough_w=f"{rough_w:.2f}",
+                            frame_w=f"{frame_w:.2f}",
+                            limit=f"{lim['door_min_width']:.1f}"),
                     })
 
     # 窗（窗台高度）
@@ -195,9 +211,14 @@ def check_openings(
             if sill is not None and sill < lim["window_sill_min"]:
                 violations.append({
                     "guid": w["guid"], "name": w.get("name", ""),
-                    "story": w.get("story_index"), "rule": "窗台高度不足",
+                    "story": w.get("story_index"),
+                    "rule": i18n.t("review.sill_height.rule", "窗台高度不足"),
                     "value": round(sill, 3), "limit": lim["window_sill_min"],
-                    "message": f"窗台高 {sill:.2f}m 小于 {lim['window_sill_min']:.1f}m",
+                    "message": i18n.t(
+                        "review.sill_height.msg",
+                        f"窗台高 {sill:.2f}m 小于 {lim['window_sill_min']:.1f}m",
+                        sill=f"{sill:.2f}",
+                        limit=f"{lim['window_sill_min']:.1f}"),
                 })
     return violations
 
@@ -276,12 +297,15 @@ def check_headroom(
         if headroom < lim["headroom_room"]:
             violations.append({
                 "story": st,
-                "rule": "净高不足",
+                "rule": i18n.t("review.headroom.rule", "净高不足"),
                 "value": round(headroom, 3),
                 "limit": lim["headroom_room"],
-                "message": (
+                "message": i18n.t(
+                    "review.headroom.msg",
                     f"第 {st} 层净高 {headroom:.2f}m 小于 "
-                    f"{lim['headroom_room']:.1f}m"),
+                    f"{lim['headroom_room']:.1f}m",
+                    st=st, headroom=f"{headroom:.2f}",
+                    limit=f"{lim['headroom_room']:.1f}"),
             })
     return violations
 
@@ -335,13 +359,15 @@ def check_collisions(
                 continue
             seen.add(key)
             violations.append({
-                "rule": "构件碰撞",
+                "rule": i18n.t("review.collision.rule", "构件碰撞"),
                 "pair": f"{t1} vs {t2}",
                 "guid1": g1,
                 "guid2": g2,
                 "body_collision": c.get("hasBodyCollision"),
                 "clearance_collision": c.get("hasClearenceCollision"),
-                "message": f"{t1} 与 {t2} 发生碰撞",
+                "message": i18n.t(
+                    "review.collision.msg",
+                    f"{t1} 与 {t2} 发生碰撞", t1=t1, t2=t2),
             })
 
     # 分组统计
@@ -353,15 +379,17 @@ def check_collisions(
     # 详细碰撞只保留前 100 条，其余用统计汇总
     detailed = violations[:100]
     detailed.append({
-        "rule": "碰撞统计",
+        "rule": i18n.t("review.collision_summary.rule", "碰撞统计"),
         "pair": "SUMMARY",
         "stats": by_pair,
         "total": len(violations),
         "detailed_shown": min(100, len(violations)),
-        "message": (
+        "message": i18n.t(
+            "review.collision_summary.msg",
             f"碰撞总数 {len(violations)}，按类型：{by_pair}。"
-            f"详细列出前 {min(100, len(violations))} 条"
-        ),
+            f"详细列出前 {min(100, len(violations))} 条",
+            total=len(violations), stats=by_pair,
+            shown=min(100, len(violations))),
     })
     return detailed
 
@@ -397,10 +425,13 @@ def check_fire_zone_area(
         if area > max_area:
             violations.append({
                 "guid": z["guid"], "name": z.get("name", ""),
-                "story": z.get("story_index"), "rule": "防火分区面积超限",
+                "story": z.get("story_index"),
+                "rule": i18n.t("review.fire_zone_area.rule", "防火分区面积超限"),
                 "value": round(area, 2), "limit": max_area,
-                "message": (f"防火分区面积 {area:.1f}㎡ 超过限值 "
-                            f"{max_area:.0f}㎡"),
+                "message": i18n.t(
+                    "review.fire_zone_area.msg",
+                    f"防火分区面积 {area:.1f}㎡ 超过限值 {max_area:.0f}㎡",
+                    area=f"{area:.1f}", limit=f"{max_area:.0f}"),
             })
     return violations
 
@@ -436,11 +467,17 @@ def check_stair_width(
         if clear_w < lim["stair_min_width"]:
             violations.append({
                 "guid": s["guid"], "name": s.get("name", ""),
-                "story": s.get("story_index"), "rule": "楼梯净宽不足",
+                "story": s.get("story_index"),
+                "rule": i18n.t("review.stair_width.rule", "楼梯净宽不足"),
                 "value": round(clear_w, 3), "limit": lim["stair_min_width"],
-                "message": (f"楼梯净宽 {clear_w:.2f}m（构造宽 {structural_w:.2f}m "
-                            f"- 扶手 {deduct:.2f}m）小于 "
-                            f"{lim['stair_min_width']:.1f}m"),
+                "message": i18n.t(
+                    "review.stair_width.msg",
+                    f"楼梯净宽 {clear_w:.2f}m（构造宽 {structural_w:.2f}m "
+                    f"- 扶手 {deduct:.2f}m）小于 "
+                    f"{lim['stair_min_width']:.1f}m",
+                    clear_w=f"{clear_w:.2f}", structural_w=f"{structural_w:.2f}",
+                    deduct=f"{deduct:.2f}",
+                    limit=f"{lim['stair_min_width']:.1f}"),
             })
     return violations
 
@@ -470,9 +507,13 @@ def check_railing_height(
         if h < min_h:
             violations.append({
                 "guid": r["guid"], "name": r.get("name", ""),
-                "story": r.get("story_index"), "rule": "栏杆高度不足",
+                "story": r.get("story_index"),
+                "rule": i18n.t("review.railing_height.rule", "栏杆高度不足"),
                 "value": round(h, 3), "limit": min_h,
-                "message": f"栏杆高 {h:.2f}m 小于 {min_h:.2f}m",
+                "message": i18n.t(
+                    "review.railing_height.msg",
+                    f"栏杆高 {h:.2f}m 小于 {min_h:.2f}m",
+                    h=f"{h:.2f}", limit=f"{min_h:.2f}"),
             })
     return violations
 
@@ -510,16 +551,24 @@ def check_stair_tread(
         if riser is not None and riser > riser_max:
             violations.append({
                 "guid": s["guid"], "name": s.get("name", ""),
-                "story": s.get("story_index"), "rule": "踏步高度超限",
+                "story": s.get("story_index"),
+                "rule": i18n.t("review.stair_riser.rule", "踏步高度超限"),
                 "value": round(riser, 3), "limit": riser_max,
-                "message": f"踏步高 {riser:.3f}m 超过 {riser_max:.3f}m",
+                "message": i18n.t(
+                    "review.stair_riser.msg",
+                    f"踏步高 {riser:.3f}m 超过 {riser_max:.3f}m",
+                    riser=f"{riser:.3f}", limit=f"{riser_max:.3f}"),
             })
         if tread is not None and tread < tread_min:
             violations.append({
                 "guid": s["guid"], "name": s.get("name", ""),
-                "story": s.get("story_index"), "rule": "踏步深度不足",
+                "story": s.get("story_index"),
+                "rule": i18n.t("review.stair_tread.rule", "踏步深度不足"),
                 "value": round(tread, 3), "limit": tread_min,
-                "message": f"踏步深 {tread:.3f}m 小于 {tread_min:.3f}m",
+                "message": i18n.t(
+                    "review.stair_tread.msg",
+                    f"踏步深 {tread:.3f}m 小于 {tread_min:.3f}m",
+                    tread=f"{tread:.3f}", limit=f"{tread_min:.3f}"),
             })
     return violations
 
@@ -587,12 +636,16 @@ def check_window_floor_ratio(
         if ratio < ratio_min:
             violations.append({
                 "story": st,
-                "rule": "窗地比不足",
+                "rule": i18n.t("review.window_floor_ratio.rule", "窗地比不足"),
                 "value": round(ratio, 4),
                 "limit": ratio_min,
-                "message": (f"第 {st} 层窗地比 {ratio:.3f} "
-                            f"小于 {ratio_min:.3f}"
-                            f"（窗 {win_area:.1f}㎡ / 地面 {floor_area:.1f}㎡）"),
+                "message": i18n.t(
+                    "review.window_floor_ratio.msg",
+                    f"第 {st} 层窗地比 {ratio:.3f} "
+                    f"小于 {ratio_min:.3f}"
+                    f"（窗 {win_area:.1f}㎡ / 地面 {floor_area:.1f}㎡）",
+                    st=st, ratio=f"{ratio:.3f}", limit=f"{ratio_min:.3f}",
+                    win_area=f"{win_area:.1f}", floor_area=f"{floor_area:.1f}"),
             })
     return violations
 
@@ -640,11 +693,16 @@ def check_evacuation_distance(
         if est_dist > max_dist:
             violations.append({
                 "guid": z["guid"], "name": z.get("name", ""),
-                "story": z.get("story_index"), "rule": "疏散距离超限(估算)",
+                "story": z.get("story_index"),
+                "rule": i18n.t("review.evacuation_distance.rule", "疏散距离超限(估算)"),
                 "value": round(est_dist, 2), "limit": max_dist,
-                "message": (f"Zone 面积 {area:.1f}㎡，估算疏散距离 "
-                            f"{est_dist:.1f}m 超过限值 {max_dist:.0f}m"
-                            f"（估算值，精确计算需 Zone 边界几何）"),
+                "message": i18n.t(
+                    "review.evacuation_distance.msg",
+                    f"Zone 面积 {area:.1f}㎡，估算疏散距离 "
+                    f"{est_dist:.1f}m 超过限值 {max_dist:.0f}m"
+                    f"（估算值，精确计算需 Zone 边界几何）",
+                    area=f"{area:.1f}", est=f"{est_dist:.1f}",
+                    limit=f"{max_dist:.0f}"),
             })
     return violations
 
@@ -699,10 +757,13 @@ def check_floor_height(
         if h < min_h:
             violations.append({
                 "story": st,
-                "rule": "层高不足",
+                "rule": i18n.t("review.floor_height.rule", "层高不足"),
                 "value": round(h, 3),
                 "limit": min_h,
-                "message": f"第 {st} 层层高 {h:.2f}m 小于 {min_h:.1f}m",
+                "message": i18n.t(
+                    "review.floor_height.msg",
+                    f"第 {st} 层层高 {h:.2f}m 小于 {min_h:.1f}m",
+                    st=st, h=f"{h:.2f}", limit=f"{min_h:.1f}"),
             })
     return violations
 
@@ -735,9 +796,13 @@ def check_stair_riser_count(
         if count > max_count:
             violations.append({
                 "guid": s["guid"], "name": s.get("name", ""),
-                "story": s.get("story_index"), "rule": "踏步级数超限",
+                "story": s.get("story_index"),
+                "rule": i18n.t("review.stair_riser_count.rule", "踏步级数超限"),
                 "value": int(count), "limit": max_count,
-                "message": f"踏步级数 {int(count)} 超过 {max_count} 级（需设平台）",
+                "message": i18n.t(
+                    "review.stair_riser_count.msg",
+                    f"踏步级数 {int(count)} 超过 {max_count} 级（需设平台）",
+                    count=int(count), limit=max_count),
             })
     return violations
 

@@ -37,6 +37,8 @@ def register(mcp: FastMCP, safe) -> None:
 
         element_types 可选：Wall/Beam/Column/Slab/Stair/Roof，默认全部。
         返回材料汇总、按构件类型统计、明细列表。
+
+        English: Generate a material takeoff report.
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
@@ -61,6 +63,8 @@ def register(mcp: FastMCP, safe) -> None:
         element_types 可选：Wall/Beam/Column/Slab/Stair/Roof，默认全部。
         filename 输出文件名，默认自动生成。
         返回 Excel 文件路径。
+
+        English: Generate a material takeoff report and export it to Excel.
         """
         def _run() -> str:
             report = material_report.generate_material_report(

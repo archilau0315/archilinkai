@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any
 from collections import defaultdict
 
+from archilinkai import i18n
 from archilinkai import property_service
 from archilinkai.query_engine import QueryRequest, engine
 
@@ -155,24 +156,30 @@ def export_material_excel(
         from openpyxl import Workbook
         from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
     except ImportError:
-        return "错误：未安装 openpyxl，请 pip install openpyxl"
+        return i18n.t(
+            "material.err_no_openpyxl",
+            "错误：未安装 openpyxl，请 pip install openpyxl")
 
     wb = Workbook()
     # 汇总页
     ws = wb.active
-    ws.title = "材料汇总"
-    ws.append(["材料名称", "总用量"])
+    ws.title = i18n.t("material.sheet_summary", "材料汇总")
+    ws.append([i18n.t("material.h_name", "材料名称"), i18n.t("material.h_total", "总用量")])
     for mat, qty in report["summary"].items():
-        ws.append([mat, round(qty, 3)])
+        ws.append([i18n.t(f"material.{mat}", mat), round(qty, 3)])
     # 按构件类型
     for etype, mats in report["by_type"].items():
         ws2 = wb.create_sheet(title=etype)
-        ws2.append(["材料名称", "用量"])
+        ws2.append([i18n.t("material.h_name", "材料名称"), i18n.t("material.h_qty", "用量")])
         for mat, qty in mats.items():
-            ws2.append([mat, round(qty, 3)])
+            ws2.append([i18n.t(f"material.{mat}", mat), round(qty, 3)])
     # 明细页
-    ws3 = wb.create_sheet(title="明细")
-    ws3.append(["GUID", "类型", "名称", "楼层", "数量", "材料明细"])
+    ws3 = wb.create_sheet(title=i18n.t("material.sheet_detail", "明细"))
+    ws3.append([
+        i18n.t("material.h_guid", "GUID"), i18n.t("material.h_type", "类型"),
+        i18n.t("material.h_elem_name", "名称"), i18n.t("material.h_story", "楼层"),
+        i18n.t("material.h_count", "数量"), i18n.t("material.h_detail", "材料明细"),
+    ])
     for d in report["details"]:
         ws3.append([
             d["guid"],

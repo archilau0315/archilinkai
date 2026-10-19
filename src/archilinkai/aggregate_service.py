@@ -12,6 +12,7 @@ from typing import Any
 
 from archilinkai import code_table
 from archilinkai import formula_eval
+from archilinkai import i18n
 from archilinkai import instance_manager
 from archilinkai import property_service
 from archilinkai.aggregate_templates import (
@@ -285,8 +286,9 @@ class AggregateService:
                 g["group"]["story_name"] = story_map.get(
                     g["group"]["story"], str(g["group"]["story"]))
             if "type" in g["group"]:
-                g["group"]["type_name"] = _TYPE_CN.get(
-                    g["group"]["type"], g["group"]["type"])
+                g["group"]["type_name"] = i18n.type_name(
+                    g["group"]["type"],
+                    _TYPE_CN.get(g["group"]["type"], g["group"]["type"]))
                 if with_code:
                     if code_override:
                         info = code_override
@@ -294,7 +296,7 @@ class AggregateService:
                         info = code_table.lookup(g["group"]["type"])
                     if info:
                         g["group"]["code"] = info["code"]
-                        g["group"]["code_name"] = info["name"]
+                        g["group"]["code_name"] = i18n.code_name(info["name"])
                         # formula 模式用 formula_unit，否则用 code_table 清单单位
                         g["group"]["code_unit"] = (
                             formula_unit if use_formula else info["unit"])
@@ -313,9 +315,11 @@ class AggregateService:
             n_missing = sum(1 for r in rows if r.get(q) is None)
             if n_missing and rows:
                 pct = round(n_missing / len(rows) * 100, 1)
-                warnings.append(
+                warnings.append(i18n.t(
+                    "warn.missing_quantity",
                     f"量值「{q}」缺失 {n_missing}/{len(rows)} 个元素"
-                    f"（{pct}%），求和按 0 计")
+                    f"（{pct}%），求和按 0 计",
+                    q=q, n_missing=n_missing, total=len(rows), pct=pct))
         return {
             "unit" if not is_multi else "units": units,
             "rows": groups,
@@ -412,7 +416,7 @@ class AggregateService:
             "rows": rows,
             "flat_rows": _flatten(rows, quantity),
             "template": template_name,
-            "description": tpl["description"],
+            "description": i18n.template_desc(template_name, tpl["description"]),
             "warnings": template_warnings,
         }
 
@@ -500,7 +504,9 @@ class AggregateService:
             "rows": rows,
             "flat_rows": _flatten(rows, quantity),
             "template": template.get("description", "custom"),
-            "description": template.get("description", "自定义模板"),
+            "description": i18n.t("template.custom", "自定义模板")
+            if "description" not in template
+            else template.get("description"),
             "warnings": template_warnings,
         }
 

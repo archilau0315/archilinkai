@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from archilinkai import audit_log
+from archilinkai import i18n
 from archilinkai import instance_manager
 from mcp.server.fastmcp import FastMCP
 
@@ -20,7 +21,10 @@ def register(mcp: FastMCP, safe) -> None:
 
     @mcp.tool()
     def refresh_instances() -> dict[str, Any]:
-        """重新扫描端口，刷新实例注册表。"""
+        """重新扫描端口，刷新实例注册表。
+
+        English: Re-scan ports and refresh the instance registry.
+        """
         def _run() -> dict[str, Any]:
             infos = instance_manager.manager.refresh_instances()
             return success_result(
@@ -31,7 +35,10 @@ def register(mcp: FastMCP, safe) -> None:
 
     @mcp.tool()
     def validate_instance(instance: str | None = None) -> dict[str, Any]:
-        """验证实例仍有效（重新执行 GetProductInfo 核对版本/构建号）。"""
+        """验证实例仍有效（重新执行 GetProductInfo 核对版本/构建号）。
+
+        English: Validate that an instance is still live (re-run GetProductInfo to check version/build).
+        """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.validate_instance(instance)
             return success_result(
@@ -42,7 +49,10 @@ def register(mcp: FastMCP, safe) -> None:
 
     @mcp.tool()
     def get_operation_status(operation_id: str) -> dict[str, Any]:
-        """查询某次写操作的状态（execute_status / verify_status）。"""
+        """查询某次写操作的状态（execute_status / verify_status）。
+
+        English: Get the status of a write operation (execute_status / verify_status).
+        """
         op = audit_log.logger.get(operation_id)
         if op is None:
             return {
@@ -55,7 +65,10 @@ def register(mcp: FastMCP, safe) -> None:
 
     @mcp.tool()
     def get_operation_log(limit: int = 20) -> dict[str, Any]:
-        """返回最近 N 条操作日志。"""
+        """返回最近 N 条操作日志。
+
+        English: Return the most recent N operation log entries.
+        """
         recent = audit_log.logger.list_recent(limit)
         return success_result(
             count=len(recent), items=[op.to_dict() for op in recent],
@@ -71,6 +84,8 @@ def register(mcp: FastMCP, safe) -> None:
         展示每个语义键的候选属性名、当前项目实际命中的属性名、
         是否使用了回退候选。用于排查换项目后属性名不一致导致的读取失败。
         names 传语义键（如 wall_thickness / stair_flight_width），默认全部。
+
+        English: List property alias resolution results (V0.50).
         """
         from archilinkai.property_alias import PROPERTY_ALIASES, resolver
 
@@ -83,3 +98,18 @@ def register(mcp: FastMCP, safe) -> None:
                 data={"aliases": report, "keys": list(PROPERTY_ALIASES.keys())},
             )
         return safe(instance, _run)
+
+    @mcp.tool()
+    def get_locale() -> dict[str, Any]:
+        """查看当前语言设置（V0.52）。
+
+        返回 locale（zh/en）、支持的语言列表和英文目录条目数。
+        语言由环境变量 ALAI_LANG 或 CLI 启动参数 --lang 决定，默认 zh。
+
+        English: Show the current language setting (V0.52).
+        """
+        return success_result(
+            locale=i18n.get_locale(),
+            supported=i18n.supported_locales(),
+            data={"catalog_size": i18n.catalog_size()},
+        )

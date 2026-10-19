@@ -40,6 +40,8 @@ def register(mcp: FastMCP, safe) -> None:
         limits 覆盖规范限值（单位 m），常用键见 list_code_review_limits。
         返回：per_rule（各规则违规数）、violations（违规明细）、
         total_violations、passed。
+
+        English: Building code mandatory-rule review; returns a violation list.
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
@@ -55,5 +57,8 @@ def register(mcp: FastMCP, safe) -> None:
 
     @mcp.tool()
     def list_code_review_limits() -> dict[str, Any]:
-        """返回规范审查默认限值（可用于 run_code_review 的 limits 参数）。"""
+        """返回规范审查默认限值（可用于 run_code_review 的 limits 参数）。
+
+        English: Return the default code review limit values (usable as run_code_review's limits).
+        """
         return {"limits": dict(DEFAULT_LIMITS)}

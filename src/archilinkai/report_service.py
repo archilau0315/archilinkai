@@ -17,6 +17,8 @@ import os
 import time
 from typing import Any
 
+from archilinkai import i18n
+
 
 def _pick_value_column(row: dict[str, Any], hint: str | None) -> str | None:
     """从 row 找量值列名。优先 hint，再按约定顺序探测。"""
@@ -35,7 +37,8 @@ def _aggregate_by_code(
     bucket: dict[str, dict[str, Any]] = {}
     order: list[str] = []
     for r in rows:
-        code = r.get("code") or r.get("code_name") or "未分类"
+        code = r.get("code") or r.get("code_name") or i18n.t(
+            "report.uncategorized", "未分类")
         if code not in bucket:
             bucket[code] = {
                 "code": r.get("code", ""),
@@ -77,12 +80,13 @@ def build_report(
     from openpyxl.utils import get_column_letter
 
     if not rows:
-        raise ValueError("rows 为空，无法生成报表")
+        raise ValueError(i18n.t("report.err_empty", "rows 为空，无法生成报表"))
     value_col = _pick_value_column(rows[0], value_column)
     if not value_col:
-        raise ValueError(
-            f"rows 中未找到量值列（sum/sum_*/formula_result），"
-            f"请显式传 value_column 参数")
+        raise ValueError(i18n.t(
+            "report.err_no_value",
+            "rows 中未找到量值列（sum/sum_*/formula_result），"
+            "请显式传 value_column 参数"))
 
     if out_dir is None:
         out_dir = os.path.join(
@@ -98,8 +102,12 @@ def build_report(
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "工程量清单"
-    headers = ["序号", "项目编码", "项目名称", "计量单位", "工程量"]
+    ws.title = i18n.t("report.title", "工程量清单")
+    headers = [
+        i18n.t("report.h_seq", "序号"), i18n.t("report.h_code", "项目编码"),
+        i18n.t("report.h_name", "项目名称"), i18n.t("report.h_unit", "计量单位"),
+        i18n.t("report.h_qty", "工程量"),
+    ]
     ncol = len(headers)
 
     # 样式
@@ -112,13 +120,18 @@ def build_report(
 
     # 行1：标题
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=ncol)
-    c = ws.cell(1, 1, "工程量清单")
+    c = ws.cell(1, 1, i18n.t("report.title", "工程量清单"))
     c.font = title_font
     c.alignment = center
     ws.row_dimensions[1].height = 28
 
     # 行2：项目信息
-    info = f"工程名称：{project_name or '未命名工程'}    编制时间：{time.strftime('%Y-%m-%d')}"
+    date_str = time.strftime("%Y-%m-%d")
+    info = i18n.t(
+        "report.info",
+        f"工程名称：{project_name or '未命名工程'}    编制时间：{date_str}",
+        name=project_name or i18n.t("report.unnamed_project", "未命名工程"),
+        date=date_str)
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=ncol)
     c = ws.cell(2, 1, info)
     c.font = bold
@@ -151,7 +164,7 @@ def build_report(
         total = round(sum(it["value"] for it in aggregated), 4)
         ws.merge_cells(start_row=row_idx, start_column=1,
                        end_row=row_idx, end_column=4)
-        c = ws.cell(row_idx, 1, "合 计")
+        c = ws.cell(row_idx, 1, i18n.t("report.total", "合 计"))
         c.font = bold
         c.alignment = center
         c.border = border

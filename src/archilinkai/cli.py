@@ -83,6 +83,9 @@ def cmd_install(args) -> int:
 
 
 def cmd_serve(args) -> int:
+    lang = getattr(args, "lang", None)
+    if lang:
+        os.environ["ALAI_LANG"] = lang
     if getattr(args, "http", False):
         from archilinkai import gateway
         gateway.run_http(args.host, args.port, args.token)
@@ -127,6 +130,8 @@ def main() -> int:
     p_serve.add_argument("--port", type=int, default=8000)
     p_serve.add_argument("--token", default=None,
                          help="Bearer token；缺省读环境变量 ALAI_TOKEN")
+    p_serve.add_argument("--lang", choices=["zh", "en"], default=None,
+                         help="输出语言，默认 zh（也可用环境变量 ALAI_LANG）")
     args = parser.parse_args()
     if args.cmd == "doctor":
         return cmd_doctor(args)
