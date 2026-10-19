@@ -612,6 +612,8 @@
 ### 真机验证（办公楼改造项目）
 - stair_width 12 条违规：构造宽 1.00m - 扶手 0.12m = 净宽 0.88m < 1.1m
 - stair_tread 18 条违规：踏步深 0.26-0.27m < 0.28m（公共建筑限值）
+
+### 验证
 - 单测 553 全过
 
 ---
@@ -636,3 +638,70 @@
 ### 真机验证（办公楼改造项目）
 - evacuation_distance：0 违规（Zone 面积最大 168㎡，估算 ≈19.4m < 40m）
 - 单测 553 全过
+
+---
+
+## 2026-10-19 V0.48 层高检查 + 楼梯踏步级数限制
+
+### 新增规则
+- floor_height：层高 ≥ 办公 3.0m / 住宅 2.8m
+  - 层高 = 相邻楼层标高差；顶层用本层最高楼板标高 - 楼层标高
+- stair_riser_count：踏步级数 ≤ 18 级（超过需设平台）
+  - 注意：ArchiCAD 的 Stair_NumberOfRisers 属性不存在，此规则当前无法生效
+
+### 变更
+- code_review_service.py：DEFAULT_LIMITS +3 项（floor_height/stair_riser_count）
+- code_review_service.py：新增 check_floor_height / check_stair_riser_count
+- code_review_service.py：run_review all_rules 扩到 12 条
+- code_review_tools.py：更新工具描述
+
+### 真机验证（办公楼改造项目）
+- floor_height：0 违规（层高满足要求）
+- stair_riser_count：0 违规（属性不存在，返回空）
+- 单测 553 全过
+
+### 备注
+- 规则总数 10 → 12 条
+- stair_riser_count 待后续找到正确属性名后生效
+
+---
+
+## 2026-10-19 待完善项（用户确认后续做）
+
+1. **精确疏散距离** — 需要 Zone 边界多边形 + Door 坐标 + 多边形内最短路径算法（图论/计算几何）
+2. **疏散门数量检查** — 需要 Zone-Door 空间关联（判断门在哪个 Zone 内）
+3. **拆除/新建分别算量** — ArchiCAD 的 Renovation Status 不直接暴露，需 IFC 导出或 C++ 插件
+
+---
+
+## 2026-10-19 V0.49 P0 优化（碰撞过滤 + 材料统计 + 报告导出）
+
+### 碰撞检查优化
+- 去重：同一对元素的碰撞只报一次
+- 实体碰撞过滤：hasBodyCollision=True 才报（当前 Tapir 无碰撞体积字段）
+- 统计汇总：详细碰撞只保留前 100 条，其余用统计汇总
+- 结果：4205 条碰撞 → 去重后 4205 条（所有碰撞都是实体碰撞），详细列出前 100 条
+
+### 材料统计模块（新建）
+- material_report.py：按构件类型汇总材料用量
+  - Wall → 砖砌体/涂料/保温/防水
+  - Beam/Column/Slab/Stair → 混凝土/钢筋/模板
+  - Roof → 防水卷材/保温板/混凝土
+- material_report_tools.py：generate_material_report / export_material_excel 工具
+- 真机验证：砖砌体 1496m³、内墙涂料 15463㎡、混凝土 93m³
+
+### 估价报告导出优化
+- 增加人材机占比饼图
+- 增加取费构成柱状图
+- build_estimate_report 加 with_chart 参数
+
+### 变更文件
+- code_review_service.py：check_collisions 优化
+- material_report.py（新建）：材料统计服务
+- material_report_tools.py（新建）：材料统计工具注册
+- server.py：注册 material_report_tools
+- cost_estimator.py：build_estimate_report 增加图表
+
+### 验证
+- 单测 553 全过
+- 材料统计真机验证通过

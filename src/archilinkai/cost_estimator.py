@@ -630,14 +630,16 @@ def build_estimate_report(
     table: dict[str, Any],
     filename: str = "estimate",
     out_dir: str | None = None,
+    with_chart: bool = True,
 ) -> str:
-    """概算表 → xlsx（标题/项目信息/人材机明细/合计/取费/备注），返回路径。"""
+    """概算表 → xlsx（标题/项目信息/人材机明细/合计/取费/图表/备注），返回路径。"""
     import os
     import time
 
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Border, Font, Side
     from openpyxl.utils import get_column_letter
+    from openpyxl.chart import PieChart, BarChart, Reference
 
     items = table.get("items") or []
     if not items:
@@ -746,6 +748,50 @@ def build_estimate_report(
         _put(row_idx, j, "", bold)
     ws.row_dimensions[row_idx].height = 22
     row_idx += 2
+
+    # 图表
+    if with_chart:
+        # 人材机占比饼图
+        labor = s.get("labor_cost", 0)
+        material = s.get("material_cost", 0)
+        machine = s.get("machine_cost", 0)
+        if labor + material + machine > 0:
+            pie = PieChart()
+            pie.title = "人材机占比"
+            labels = ["人工费", "材料费", "机械费"]
+            data = [labor, material, machine]
+            pie.add_data(Reference(ws, min_col=1, min_row=row_idx, max_row=row_idx + 2, max_col=2), titles_from_data=True)
+            pie.set_categories(Reference(ws, min_col=1, min_row=row_idx, max_row=row_idx + 2))
+            # 写数据到隐藏区域
+            ws.cell(row_idx, 1, "人工费")
+            ws.cell(row_idx, 2, labor)
+            ws.cell(row_idx + 1, 1, "材料费")
+            ws.cell(row_idx + 1, 2, material)
+            ws.cell(row_idx + 2, 1, "机械费")
+            ws.cell(row_idx + 2, 2, machine)
+            ws.add_chart(pie, f"H{row_idx}")
+            row_idx += 4
+
+        # 取费构成柱状图
+        mgmt = s.get("management_fee", 0)
+        profit = s.get("profit", 0)
+        tax = s.get("tax", 0)
+        if mgmt + profit + tax > 0:
+            bar = BarChart()
+            bar.title = "取费构成"
+            bar.y_axis.title = "金额(元)"
+            bar.x_axis.title = "费用项"
+            data = [mgmt, profit, tax]
+            bar.add_data(Reference(ws, min_col=1, min_row=row_idx, max_row=row_idx + 2, max_col=2), titles_from_data=True)
+            bar.set_categories(Reference(ws, min_col=1, min_row=row_idx, max_row=row_idx + 2))
+            ws.cell(row_idx, 1, "企业管理费")
+            ws.cell(row_idx, 2, mgmt)
+            ws.cell(row_idx + 1, 1, "利润")
+            ws.cell(row_idx + 1, 2, profit)
+            ws.cell(row_idx + 2, 1, "税金")
+            ws.cell(row_idx + 2, 2, tax)
+            ws.add_chart(bar, f"H{row_idx}")
+            row_idx += 4
 
     # 覆盖率 + 备注
     cov = table.get("coverage", {})

@@ -51,6 +51,9 @@ DEFAULT_LIMITS: dict[str, float] = {
     "floor_height_min_office": 3.0,      # 办公建筑最小层高(m)
     "floor_height_min_residential": 2.8, # 住宅最小层高(m)
     "stair_max_riser_count": 18,         # 楼梯最大踏步级数（超过需设平台）
+    # ---- V0.49 碰撞过滤 ----
+    "collision_min_volume": 0.001,      # 最小碰撞体积(m³)，当前 Tapir 无此字段，保留备用
+    "collision_body_only": True,        # 只报实体碰撞(hasBodyCollision)，忽略间隙碰撞
 }
 
 
@@ -267,19 +270,27 @@ def check_headroom(
 def check_collisions(
     instance: str | None,
     pairs: list[tuple[str, str]] | None = None,
+    limits: dict[str, float] | None = None,
 ) -> list[dict[str, Any]]:
-    """结构与机电/装饰构件碰撞检查。
+    """结构与机电构件碰撞检查。
 
-    pairs：元素类型对列表，默认检查 结构(柱梁墙板) vs 机电(MEPRoutingElement)。
+    只报实体碰撞(hasBodyCollision=True)，忽略间隙碰撞。
+    同一对元素的碰撞只报一次（去重）。
     """
     from archilinkai.tapir_adapter import adapter
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    body_only = lim.get("collision_body_only", True)
+
+    # 保持精简：4 结构 × 1 机电汇总类型
     pairs = pairs or [
         ("Column", "MEPRoutingElement"),
         ("Beam", "MEPRoutingElement"),
         ("Wall", "MEPRoutingElement"),
         ("Slab", "MEPRoutingElement"),
     ]
+
     violations: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
     for t1, t2 in pairs:
         e1 = _fetch_elements(t1, instance)
         e2 = _fetch_elements(t2, instance)
@@ -293,14 +304,45 @@ def check_collisions(
             continue
         colls = data.get("collisions", []) if isinstance(data, dict) else []
         for c in colls:
+            # 只报实体碰撞
+            if body_only and not c.get("hasBodyCollision"):
+                continue
+            g1 = (c.get("elementId1") or {}).get("guid", "")
+            g2 = (c.get("elementId2") or {}).get("guid", "")
+            key = tuple(sorted([g1, g2]))
+            if key in seen:
+                continue
+            seen.add(key)
             violations.append({
                 "rule": "构件碰撞",
                 "pair": f"{t1} vs {t2}",
-                "guid1": (c.get("elementId1") or {}).get("guid"),
-                "guid2": (c.get("elementId2") or {}).get("guid"),
+                "guid1": g1,
+                "guid2": g2,
+                "body_collision": c.get("hasBodyCollision"),
+                "clearance_collision": c.get("hasClearenceCollision"),
                 "message": f"{t1} 与 {t2} 发生碰撞",
             })
-    return violations
+
+    # 分组统计
+    by_pair: dict[str, int] = {}
+    for v in violations:
+        key = v["pair"]
+        by_pair[key] = by_pair.get(key, 0) + 1
+
+    # 详细碰撞只保留前 100 条，其余用统计汇总
+    detailed = violations[:100]
+    detailed.append({
+        "rule": "碰撞统计",
+        "pair": "SUMMARY",
+        "stats": by_pair,
+        "total": len(violations),
+        "detailed_shown": min(100, len(violations)),
+        "message": (
+            f"碰撞总数 {len(violations)}，按类型：{by_pair}。"
+            f"详细列出前 {min(100, len(violations))} 条"
+        ),
+    })
+    return detailed
 
 
 # ---- 规则 5：防火分区面积检查 ------------------------------------------
@@ -711,7 +753,7 @@ def run_review(
         elif r == "headroom":
             results[r] = check_headroom(instance, limits)
         elif r == "collisions":
-            results[r] = check_collisions(instance)
+            results[r] = check_collisions(instance, limits=limits)
         elif r == "fire_zone_area":
             results[r] = check_fire_zone_area(instance, limits, building_type)
         elif r == "stair_width":

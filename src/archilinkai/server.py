@@ -25,6 +25,7 @@ from archilinkai import __version__
 from archilinkai import code_review_tools
 from archilinkai import diagnostic_tools
 from archilinkai import instance_manager
+from archilinkai import material_report_tools
 from archilinkai import modify_tools
 from archilinkai import delete_tools
 from archilinkai import plan_tools
@@ -56,6 +57,7 @@ delete_tools.register(mcp, _safe)
 plan_tools.register(mcp, _safe)
 diagnostic_tools.register(mcp, _safe)
 code_review_tools.register(mcp, _safe)
+material_report_tools.register(mcp, _safe)
 
 
 # 启动时尝试发现实例；失败不阻塞启动（无真机时仍可启动 server）
