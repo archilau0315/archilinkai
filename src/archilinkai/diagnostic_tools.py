@@ -60,3 +60,26 @@ def register(mcp: FastMCP, safe) -> None:
         return success_result(
             count=len(recent), items=[op.to_dict() for op in recent],
         )
+
+    @mcp.tool()
+    def list_property_aliases(
+        names: list[str] | None = None,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """列出属性别名解析结果（V0.50）。
+
+        展示每个语义键的候选属性名、当前项目实际命中的属性名、
+        是否使用了回退候选。用于排查换项目后属性名不一致导致的读取失败。
+        names 传语义键（如 wall_thickness / stair_flight_width），默认全部。
+        """
+        from archilinkai.property_alias import PROPERTY_ALIASES, resolver
+
+        def _run() -> dict[str, Any]:
+            info = instance_manager.manager.get_info(instance)
+            report = resolver.describe(names, instance)
+            return success_result(
+                instance=info.instance_id, project=info.project_name,
+                count=len(report),
+                data={"aliases": report, "keys": list(PROPERTY_ALIASES.keys())},
+            )
+        return safe(instance, _run)

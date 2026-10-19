@@ -705,3 +705,35 @@
 ### 验证
 - 单测 553 全过
 - 材料统计真机验证通过
+
+---
+
+## 2026-10-19 V0.50 属性映射自动化（P1-1）
+
+### 问题
+各模块硬编码 ArchiCAD 属性名（如 General_Thickness），换项目/换版本后
+属性名不存在，读取静默返回 None，规则/算量结果为空。
+
+### 方案
+- 新建 property_alias.py：语义键 → 候选属性名列表 + AliasResolver
+  - resolver.resolve(key) 按顺序取第一个真实存在的属性名，带缓存
+  - candidates_for(name)：传入候选名也能返回所属键的候选（原名提前）
+  - describe()：输出每个键的候选/命中/是否回退
+- code_review_service._get_props 改为走 resolver：请求名不存在时自动
+  尝试别名候选，仍以原请求名返回，调用方无感
+- diagnostic_tools 新增 list_property_aliases 工具
+
+### 真机验证（办公楼改造项目）
+- wall_thickness→General_Thickness，beam_height→General_Height(回退)，
+  slab_thickness→General_Thickness(回退)，zone_area→General_Area(回退)
+- 未命中：sill_height（窗台高）、stair_riser_count（踏步级数）
+- 审查规则无回归：openings 53 / stair_width 12 / stair_tread 18
+
+### 变更文件
+- property_alias.py（新建）
+- code_review_service.py：_get_props 走别名解析
+- diagnostic_tools.py：+list_property_aliases
+- tests/unit/test_property_alias.py（新建，11 用例）
+
+### 验证
+- 单测 564 全过（553+11）

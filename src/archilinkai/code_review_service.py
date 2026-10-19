@@ -66,9 +66,30 @@ def _fetch_elements(element_type: str, instance: str | None) -> list[dict[str, A
 def _get_props(
     guids: list[str], names: list[str], instance: str | None,
 ) -> dict[str, dict[str, Any]]:
+    """按请求名读取属性；请求名不存在时自动尝试别名候选（V0.50）。
+
+    返回 {guid: {请求名: 值}}，调用方仍用原请求名索引，别名解析透明。
+    """
     if not guids:
         return {}
-    return property_service.service.get_values(guids, names, instance)
+    from archilinkai.property_alias import resolver
+    # 请求名 → 实际命中的真实属性名
+    actual_map: dict[str, str] = {}
+    for n in names:
+        actual = resolver.resolve(n, instance)
+        if actual:
+            actual_map[n] = actual
+    if not actual_map:
+        return {g: {} for g in guids}
+    raw = property_service.service.get_values(
+        guids, list(actual_map.values()), instance)
+    out: dict[str, dict[str, Any]] = {g: {} for g in guids}
+    for g in guids:
+        row = raw.get(g, {})
+        for requested, actual in actual_map.items():
+            if actual in row:
+                out[g][requested] = row[actual]
+    return out
 
 
 def _num(v: Any) -> float | None:
