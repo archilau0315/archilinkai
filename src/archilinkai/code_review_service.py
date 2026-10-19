@@ -43,6 +43,10 @@ DEFAULT_LIMITS: dict[str, float] = {
     # ---- V0.46 楼梯扶手扣除 ----
     "stair_handrail_deduction_per_side": 0.06,  # 单侧扶手扣除宽度(m)
     "stair_handrail_count": 2,        # 默认扶手数量（双侧）
+    # ---- V0.47 疏散距离 ----
+    "evacuation_distance_office": 40.0,       # 办公建筑疏散距离限值(m)
+    "evacuation_distance_office_sprinkler": 50.0,  # 有喷淋时
+    "evacuation_distance_residential": 22.0,  # 住宅疏散距离限值(m)
 }
 
 
@@ -526,6 +530,58 @@ def check_window_floor_ratio(
     return violations
 
 
+# ---- 规则 10：疏散距离估算检查 ------------------------------------------
+
+def check_evacuation_distance(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+    building_type: str = "office",
+    has_sprinkler: bool = False,
+) -> list[dict[str, Any]]:
+    """疏散距离估算：用 Zone 面积估算最大疏散距离。
+
+    简化算法（无精确几何时）：
+    - 最大疏散距离 ≈ sqrt(Zone_Area) × 1.5（保守系数）
+    - 限值：办公 40m（有喷淋 50m）、住宅 22m
+
+    注意：这是估算值，精确计算需要 Zone 边界几何和疏散门位置，
+    当前 Tapir 的 GetZoneBoundaries 参数格式不支持。
+    """
+    import math
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    if building_type == "residential":
+        max_dist = lim["evacuation_distance_residential"]
+    elif has_sprinkler:
+        max_dist = lim["evacuation_distance_office_sprinkler"]
+    else:
+        max_dist = lim["evacuation_distance_office"]
+
+    zones = _fetch_elements("Zone", instance)
+    if not zones:
+        return []
+    guids = [z["guid"] for z in zones]
+    props = _get_props(
+        guids, ["General_Area", "Zone_CalculatedArea"], instance)
+    violations: list[dict[str, Any]] = []
+    for z in zones:
+        p = props.get(z["guid"], {})
+        area = _num(p.get("General_Area")) or _num(p.get("Zone_CalculatedArea"))
+        if area is None or area <= 0:
+            continue
+        # 估算最大疏散距离：sqrt(面积) × 1.5（保守）
+        est_dist = math.sqrt(area) * 1.5
+        if est_dist > max_dist:
+            violations.append({
+                "guid": z["guid"], "name": z.get("name", ""),
+                "story": z.get("story_index"), "rule": "疏散距离超限(估算)",
+                "value": round(est_dist, 2), "limit": max_dist,
+                "message": (f"Zone 面积 {area:.1f}㎡，估算疏散距离 "
+                            f"{est_dist:.1f}m 超过限值 {max_dist:.0f}m"
+                            f"（估算值，精确计算需 Zone 边界几何）"),
+            })
+    return violations
+
+
 # ---- 汇总入口 -----------------------------------------------------------
 
 def run_review(
@@ -534,16 +590,18 @@ def run_review(
     instance: str | None = None,
     building_type: str = "multi",
     high_rise: bool = False,
+    has_sprinkler: bool = False,
 ) -> dict[str, Any]:
     """执行规范审查，返回各规则违规清单与汇总。
 
     building_type: high/multi（影响防火分区面积限值）；
-    high_rise: 是否高层（影响栏杆高度限值）。
+    high_rise: 是否高层（影响栏杆高度限值）；
+    has_sprinkler: 是否有自动喷淋（影响疏散距离限值）。
     """
     all_rules = [
         "wall_thickness", "openings", "headroom", "collisions",
         "fire_zone_area", "stair_width", "railing_height",
-        "stair_tread", "window_floor_ratio",
+        "stair_tread", "window_floor_ratio", "evacuation_distance",
     ]
     rules = rules or all_rules
     results: dict[str, list[dict[str, Any]]] = {}
@@ -567,6 +625,9 @@ def run_review(
         elif r == "window_floor_ratio":
             results[r] = check_window_floor_ratio(
                 instance, limits, building_type)
+        elif r == "evacuation_distance":
+            results[r] = check_evacuation_distance(
+                instance, limits, building_type, has_sprinkler)
     total = sum(len(v) for v in results.values())
     return {
         "rules_checked": rules,

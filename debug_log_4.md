@@ -613,3 +613,26 @@
 - stair_width 12 条违规：构造宽 1.00m - 扶手 0.12m = 净宽 0.88m < 1.1m
 - stair_tread 18 条违规：踏步深 0.26-0.27m < 0.28m（公共建筑限值）
 - 单测 553 全过
+
+---
+
+## 2026-10-19 V0.47 疏散距离估算检查
+
+### 新增规则
+- evacuation_distance：疏散距离估算
+  - 用 Zone 面积估算最大疏散距离：sqrt(面积) × 1.5（保守系数）
+  - 限值：办公 40m（有喷淋 50m）、住宅 22m
+  - 参数：has_sprinkler（是否有自动喷淋）
+  - 说明：精确计算需 Zone 边界几何 + 疏散门位置，当前 Tapir
+    GetZoneBoundaries 参数格式不支持，先用估算方案
+
+### 变更
+- code_review_service.py：
+  - DEFAULT_LIMITS +3 项疏散距离限值
+  - check_evacuation_distance()：用 Zone 面积估算
+  - run_review：all_rules 扩到 10 条，加 has_sprinkler 参数
+- code_review_tools.py：run_code_review 加 has_sprinkler 参数
+
+### 真机验证（办公楼改造项目）
+- evacuation_distance：0 违规（Zone 面积最大 168㎡，估算 ≈19.4m < 40m）
+- 单测 553 全过

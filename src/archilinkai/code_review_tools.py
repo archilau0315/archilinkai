@@ -23,16 +23,19 @@ def register(mcp: FastMCP, safe) -> None:
         limits: dict[str, float] | None = None,
         building_type: str = "multi",
         high_rise: bool = False,
+        has_sprinkler: bool = False,
         instance: str | None = None,
     ) -> dict[str, Any]:
         """建筑规范强条审查，返回违规清单。
 
         rules 可选子集：wall_thickness（墙厚）/ openings（门窗洞口）/
         headroom（净高）/ collisions（碰撞）/ fire_zone_area（防火分区面积）/
-        stair_width（楼梯宽度）/ railing_height（栏杆高度）/
-        stair_tread（踏步尺寸）/ window_floor_ratio（窗地比），默认全部。
+        stair_width（楼梯净宽）/ railing_height（栏杆高度）/
+        stair_tread（踏步尺寸）/ window_floor_ratio（窗地比）/
+        evacuation_distance（疏散距离估算），默认全部。
         building_type: high/multi（影响防火分区面积限值）；
-        high_rise: 是否高层（影响栏杆高度限值）。
+        high_rise: 是否高层（影响栏杆高度限值）；
+        has_sprinkler: 是否有自动喷淋（影响疏散距离限值）。
         limits 覆盖规范限值（单位 m），常用键见 list_code_review_limits。
         返回：per_rule（各规则违规数）、violations（违规明细）、
         total_violations、passed。
@@ -41,7 +44,8 @@ def register(mcp: FastMCP, safe) -> None:
             info = instance_manager.manager.get_info(instance)
             result = run_review(
                 rules, limits, instance,
-                building_type=building_type, high_rise=high_rise)
+                building_type=building_type, high_rise=high_rise,
+                has_sprinkler=has_sprinkler)
             return success_result(
                 instance=info.instance_id, project=info.project_name,
                 count=result["total_violations"], data=result,
