@@ -9,7 +9,7 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 [![MCP](https://img.shields.io/badge/MCP-Protocol-black?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIweiIvPjwvc3ZnPg==)](https://modelcontextprotocol.io/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-server-green)](https://github.com/jlowin/fastmcp)
 [![Tapir](https://img.shields.io/badge/Tapir-Add--On-yellow)](https://github.com/ENZYME-APD/tapir-archicad-automation)
-[![Tests](https://img.shields.io/badge/tests-537%20pass-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-565%20pass-brightgreen)](tests/)
 [![Status](https://img.shields.io/badge/status-active-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)](#)
 
@@ -46,13 +46,14 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 
 | 能力 | 说明 |
 |---|---|
-| 🛠 **66 个 MCP 工具** | 覆盖只读查询、安全写入、修改、删除、计划辅助、诊断运维 |
+| 🛠 **71 个 MCP 工具** | 覆盖只读查询、安全写入、修改、删除、计划辅助、规范审查、材料统计、诊断运维 |
 | 🏗 **15 类构件建模** | 墙、柱、梁、板、门、窗、楼梯、屋顶、变形体、家具、灯具、网面、洞口、房间区域、机电管线 |
-| 📊 **29 个算量模板** | 混凝土体积、墙体分层、幕墙、栏杆、门窗洞口面积、模板估算、外檐真石漆、砌体工程等 |
+| 📊 **44 个算量模板** | 混凝土体积、墙体分层、幕墙、栏杆、门窗洞口面积、模板估算、外檐真石漆、砌体工程、机电保温/配管/电缆等 |
 | 📋 **GB 50500 清单** | 自动映射清单编码、出标准清单报表（xlsx + 标题/项目信息/合计行） |
+| 🔍 **规范强条审查** | 12 条建筑强条自动检查（墙厚/洞口/净高/碰撞/防火分区/楼梯/栏杆/疏散/层高等） |
 | 🔒 **四阶段写入** | Preview → Confirm → Execute → Verify，支持 Ctrl+Z 撤销 |
 | 🆔 **项目身份强校验** | 写入前核对项目路径 + 元素 GUID，防止项目被切换导致误写 |
-| 🧪 **537 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
+| 🧪 **565 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
 | 🖥 **多版本多实例** | 同一套代码兼容 AC26–29，支持双实例并存（ac29-1 / ac28-1） |
 
 ---
@@ -65,7 +66,7 @@ flowchart TB
         C[Claude Desktop / Cursor / Kimi / Trae / Codex / WorkBuddy]
     end
     subgraph Server["ArchiCAD MCP Server"]
-        S[Python FastMCP<br/>66 工具]
+        S[Python FastMCP<br/>71 工具]
     end
     subgraph AC["ArchiCAD 实例"]
         A1[AC29 + Tapir]
@@ -363,7 +364,7 @@ python regression.py                   # 一键回归（单测+集成+兼容+基
 
 | 测试类型 | 通过 | 跳过 | 失败 |
 |---|---|---|---|
-| 单元测试 | 537 | 0 | 0 |
+| 单元测试 | 565 | 0 | 0 |
 | 集成测试 | 25 | 2 | 0 |
 | 兼容性测试 | 12 | 1 | 0 |
 
@@ -382,14 +383,14 @@ python benchmark.py --instance ac29-1 --rounds 3
 ## 项目结构
 
 ```
-archilinkai/
-├── server.py              # FastMCP 入口：异常包装 + 四层工具注册
-├── read_tools.py          # P0 只读工具注册（35 个，从 server.py 拆出）
+src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳在仓库根）
+├── server.py              # FastMCP 入口：异常包装 + 工具注册
+├── read_tools.py          # P0 只读工具注册（41 个，从 server.py 拆出）
 ├── write_tools.py         # P1 安全写入工具注册（16 个，从 server.py 拆出）
 ├── modify_tools.py        # 构件修改工具注册（2 个，V0.4）
 ├── delete_tools.py        # 构件删除工具注册（2 个，V0.7）
 ├── plan_tools.py          # 计划辅助工具注册（1 个，V0.10）
-├── diagnostic_tools.py    # P2 诊断工具注册（4 个，从 server.py 拆出）
+├── diagnostic_tools.py    # P2 诊断工具注册（5 个，从 server.py 拆出）
 ├── instance_manager.py    # ArchiCAD 实例发现/连接/重连/健康检查
 ├── tapir_adapter.py       # Tapir 命令统一封装
 ├── channel_base.py        # 建模通道抽象基类（可插拔通道）
@@ -407,11 +408,24 @@ archilinkai/
 ├── delete_service.py      # 删除调度：预检/删除/details 读回确认（V0.7）
 ├── query_engine.py        # BIM 条件查询引擎（含分页）
 ├── property_service.py    # Property 读取/写入与类型校验
+├── property_alias.py      # 属性别名解析：语义键→候选属性名，带缓存（V0.50）
 ├── aggregate_service.py   # 工程量分组汇总（V0.16）
+├── aggregate_templates.py # 算量模板与类型映射（V0.51 从 aggregate_service 拆出）
 ├── code_table.py          # GB 50500 构件类型→清单编码映射（V0.26）
 ├── report_service.py      # 工程量清单报表排版（V0.26）
 ├── formula_eval.py        # 算量规则公式安全求值（V0.25）
+├── cost_estimator.py      # 成本估算细算：消耗量×市场价→人材机→取费（V0.37）
+├── code_review_service.py # 规范强条审查：12 条规则（V0.42）
+├── code_review_tools.py   # 规范审查工具注册（2 个，V0.42）
+├── material_report.py     # 材料统计：按构件类型汇总材料用量（V0.49）
+├── material_report_tools.py # 材料统计工具注册（2 个，V0.49）
 ├── geometry_service.py    # 几何规整：长度/起止点/高程/包围盒
+├── cli.py                 # 命令行入口 serve/doctor/install/download-tapir（S1 起）
+├── doctor.py              # 环境自检：Python/依赖/实例/Tapir 四项（S1）
+├── gateway.py             # HTTP 网关：Bearer 鉴权 + 请求审计（S3）
+├── download_tapir.py      # 按 AC 版本下载 Tapir 安装包（Win/Mac）
+├── data/clients.json      # MCP 客户端配置矩阵（外置可维护）
+├── data/tapir_versions.json # AC 版本 → Tapir release 映射
 ├── benchmark.py           # 性能基准：命令耗时统计（avg/min/max）
 ├── regression.py          # 一键回归：单测+集成+兼容+基准，汇总报告
 ├── gdl_service.py         # GDL 参数读写（从 server.py 拆出）
@@ -420,9 +434,11 @@ archilinkai/
 ├── schemas.py             # 输入/输出数据结构
 ├── errors.py              # 统一异常与错误码
 ├── requirements.txt
+├── CHANGELOG.md           # 版本发布日志
 ├── debug_log.md           # 变更日志（已满，续记见下）
 ├── debug_log_2.md         # 变更日志续篇（已满，2026-09-24 起）
 ├── debug_log_3.md         # 变更日志续篇三（2026-09-27 起）
+├── debug_log_4.md         # 变更日志续篇四（2026-10-13 起）
 ├── benchmark_results.md   # 性能基准结果（跑 benchmark 自动生成）
 ├── benchmark_results.json
 └── tests/
@@ -435,7 +451,7 @@ archilinkai/
 
 ## 工具一览
 
-### P0 只读工具（35 个）
+### P0 只读工具（41 个）
 
 | 工具 | 说明 |
 |---|---|
@@ -452,7 +468,7 @@ archilinkai/
 | `get_element_quantities` | 工程量读取（毛/净体积、表面积、长度等，带单位） |
 | `aggregate_quantities` | 按 type/story/属性分组汇总（count/sum/avg，支持分类过滤和 formula 公式） |
 | `get_property_definition` | 属性类型/单位/枚举可选项（报错带相近名建议） |
-| `list_quantity_templates` | 列出 23 个预设算量模板 |
+| `list_quantity_templates` | 列出 44 个预设算量模板 |
 | `aggregate_by_template` | 按模板名一键算量（含 with_code 时附 GB 50500 清单编码） |
 | `aggregate_by_custom_template` | 传 JSON 自定义模板（支持 formula 公式和 with_code） |
 | `list_attributes` | 按类型列项目属性（Layer/Pen/BuildingMaterial/Composite 等，Tapir GetAttributes） |
@@ -471,6 +487,7 @@ archilinkai/
 | `get_layer_combination_details` | 读图层组合详情（每层显隐/锁定/线框/交叉组） |
 | `list_stories` | 列楼层：索引、标高、楼层名 |
 | `get_gdl_parameters` | 读元素 GDL 参数（配合写入前读值） |
+| `import_custom_quota` | 校验/保存/清除自定义定额条目（V0.40，可持久化） |
 | `list_mep_elements` | 列全部 MEP 元素（可选类型/专业过滤） |
 | `get_mep_routing_elements` | 读 MEP 管线详情（普通接口看不到的用这个） |
 | `get_mep_ports` | 读 MEP 元素端口（位置/形状/尺寸/连接，AC28+） |
@@ -512,7 +529,21 @@ archilinkai/
 | `delete_from_plan` | 执行删除（V0.7） |
 | `lint_model_plan` | 离线校验建模计划（V0.10，不连 ArchiCAD） |
 
-### P2 诊断运维（4 个）
+### 规范审查（2 个，V0.42）
+
+| 工具 | 说明 |
+|---|---|
+| `run_code_review` | 运行 12 条建筑强条审查规则（可按规则子集/建筑类型/是否喷淋调用） |
+| `list_code_review_limits` | 列出审查规则默认限值（可覆盖） |
+
+### 材料统计（2 个，V0.49）
+
+| 工具 | 说明 |
+|---|---|
+| `generate_material_report` | 按构件类型汇总材料用量（砖砌体/涂料/保温/混凝土/钢筋/模板等） |
+| `export_material_excel` | 材料统计结果导出 Excel |
+
+### P2 诊断运维（5 个）
 
 | 工具 | 说明 |
 |---|---|
@@ -520,8 +551,9 @@ archilinkai/
 | `validate_instance` | 校验实例连接 |
 | `get_operation_status` | 查操作状态 |
 | `get_operation_log` | 查操作日志 |
+| `list_property_aliases` | 查看属性别名候选/命中/回退（V0.50） |
 
-> 工具总数：**66 个**
+> 工具总数：**71 个**
 
 ### 已支持建模构件（15 类）
 
@@ -564,6 +596,7 @@ archilinkai/
 
 | 版本 | 里程碑 |
 |---|---|
+| V0.39–V0.51（研发迭代） | 规范强条审查（12 规则）、材料统计、属性别名解析、算量模板 40→44、S0–S3 包化/环境自检/桌面安装器/HTTP 网关 |
 | 0.38 | 算量估价链路补强（warnings/覆盖率/概算 xlsx/一键 estimate_project） |
 | 0.37 | 成本估算细算引擎（消耗量×市场价→人材机→取费） |
 | 0.30-0.36 | Tapir 命令补全收官（属性/库部件/碰撞/IFC/图层组合/MEP/导航树） |

@@ -737,3 +737,33 @@
 
 ### 验证
 - 单测 564 全过（553+11）
+
+
+---
+
+## 2026-10-19 V0.51 机电算量模板扩充 + aggregate_service 拆分（P1-2）
+
+### 变更
+- aggregate_templates.py（新建）：从 aggregate_service.py（863 行，超 800 行）拆出模板数据与类型映射
+  - _TYPE_CN（构件类型英→中）
+  - QUANTITY_TEMPLATES（44 个模板 = 40 旧 + 4 新机电）
+  - get_template() / validate_template()
+- aggregate_templates.py 新增 4 个机电模板（均带 GB 50500 清单编码）
+  - pipe_insulation_area（管道保温，General_SurfaceArea，031208001）
+  - duct_insulation_area（通风管道保温，General_SurfaceArea，030703001）
+  - conduit_length（配管，General_3DLength，030411001）
+  - cable_length（电缆敷设，General_3DLength，030408001）
+- aggregate_service.py（重写）：删除内联模板块，改为从 aggregate_templates 导入，
+  保留服务逻辑（_fetch_story_names/_fetch_all/_classification_guids/_group/_flatten/
+  AggregateService/service）；QUANTITY_TEMPLATES/get_template/validate_template
+  仍可经 aggregate_service 访问（向后兼容，read_tools 与测试无需改动）
+- tests/unit/test_aggregate.py：模板数断言 40→44，新增 test_mep_templates_registered_v051
+
+### 真机验证（AC28）
+- 模板总数 44；4 个机电模板 code_override 正确
+- MEP 元素 General_SurfaceArea / General_3DLength 可读（surface=193.06 ㎡ / len=39.53 m）
+
+### 备注
+- 单测 564 → 565 全过
+- 解决 aggregate_service.py 超 800 行问题；模板数据与服务逻辑分离，单一模块只做一件事
+- 覆盖机电专业算量：管道/风管保温面积、配管/电缆长度

@@ -693,9 +693,18 @@ def test_wall_core_volume_formula_none_skipped():
 
 
 def test_template_count_after_v027():
-    """V0.39 后模板总数应为 40（29+11 个扩充模板）。"""
+    """V0.51 后模板总数应为 44（40+4 个机电扩充模板）。"""
     from archilinkai.aggregate_service import QUANTITY_TEMPLATES
-    assert len(QUANTITY_TEMPLATES) == 40
+    assert len(QUANTITY_TEMPLATES) == 44
+
+
+def test_mep_templates_registered_v051():
+    """V0.51 新增机电模板已注册。"""
+    from archilinkai.aggregate_service import QUANTITY_TEMPLATES
+    for name in ("pipe_insulation_area", "duct_insulation_area",
+                 "conduit_length", "cable_length"):
+        assert name in QUANTITY_TEMPLATES
+        assert QUANTITY_TEMPLATES[name]["element_types"] == ["MEPRoutingElement"]
 
 
 def test_template_door_window_area_registered():
