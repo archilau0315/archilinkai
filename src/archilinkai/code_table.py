@@ -13,10 +13,10 @@ from __future__ import annotations
 
 #: 构件类型 → 清单项（编码/名称/单位）
 CODE_TABLE: dict[str, dict[str, str]] = {
-    "Wall":             {"code": "010502001", "name": "现浇混凝土墙",   "unit": "m³"},
-    "Column":           {"code": "010503001", "name": "现浇混凝土柱",   "unit": "m³"},
-    "Beam":             {"code": "010504001", "name": "现浇混凝土梁",   "unit": "m³"},
-    "Slab":             {"code": "010505001", "name": "现浇混凝土板",   "unit": "m³"},
+    "Wall":             {"code": "010504001", "name": "现浇混凝土直形墙", "unit": "m³"},
+    "Column":           {"code": "010502001", "name": "现浇混凝土矩形柱", "unit": "m³"},
+    "Beam":             {"code": "010503002", "name": "现浇混凝土矩形梁", "unit": "m³"},
+    "Slab":             {"code": "010505003", "name": "现浇混凝土板",   "unit": "m³"},
     "Stair":            {"code": "010506001", "name": "现浇混凝土楼梯", "unit": "m²"},
     "Roof":             {"code": "010901001", "name": "瓦屋面",         "unit": "m²"},
     "Door":             {"code": "010801001", "name": "木质门",         "unit": "樘"},

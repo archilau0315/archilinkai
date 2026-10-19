@@ -153,7 +153,7 @@ def test_aggregate_by_template_merges_types(svc):
     assert by_type["Wall"]["sum"] == 2.0
     assert by_type["Slab"]["sum"] == 5.0
     # 每行都带清单编码（GB 50500）
-    assert by_type["Wall"]["group"]["code"] == "010502001"
+    assert by_type["Wall"]["group"]["code"] == "010504001"
     assert by_type["Slab"]["group"]["code_name"] == "现浇混凝土板"
 
 
@@ -470,7 +470,7 @@ def test_validate_template_accepts_formula():
 def test_code_table_lookup():
     """code_table 提供 GB 50500 清单编码。"""
     from archilinkai import code_table
-    assert code_table.lookup("Wall")["code"] == "010502001"
+    assert code_table.lookup("Wall")["code"] == "010504001"
     assert code_table.lookup("Wall")["unit"] == "m³"
     assert code_table.lookup("NotAType") is None
     assert code_table.lookup(None) is None
@@ -486,8 +486,8 @@ def test_aggregate_with_code_adds_type_dim(svc):
     )
     g = out["rows"][0]
     assert "type" in g["group"]  # 自动加 type 维度
-    assert g["group"]["code"] == "010502001"
-    assert g["group"]["code_name"] == "现浇混凝土墙"
+    assert g["group"]["code"] == "010504001"
+    assert g["group"]["code_name"] == "现浇混凝土直形墙"
     assert g["group"]["code_unit"] == "m³"
 
 
@@ -499,7 +499,7 @@ def test_aggregate_with_code_no_type_dim_if_already_present(svc):
         element_type="Wall",
         with_code=True,
     )
-    assert out["rows"][0]["group"]["code"] == "010502001"
+    assert out["rows"][0]["group"]["code"] == "010504001"
 
 
 def test_template_concrete_volume_has_code(svc):
@@ -525,8 +525,8 @@ def test_custom_template_with_code(svc):
     for g in out["rows"]:
         key = (g["group"]["story"], g["group"]["type"])
         by_st[key] = g
-    assert by_st[(1, "Wall")]["group"]["code"] == "010502001"
-    assert by_st[(1, "Slab")]["group"]["code"] == "010505001"
+    assert by_st[(1, "Wall")]["group"]["code"] == "010504001"
+    assert by_st[(1, "Slab")]["group"]["code"] == "010505003"
 
 
 def test_report_service_build(tmp_path):

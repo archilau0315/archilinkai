@@ -234,7 +234,7 @@ QUANTITY_TEMPLATES: dict[str, dict[str, Any]] = {
         "element_types": ["Beam"],
         "waste_factor": 0.03,
         "with_code": True,
-        "code_override": {"code": "010505001", "name": "现浇混凝土梁", "unit": "m³"},
+        "code_override": {"code": "010503002", "name": "现浇混凝土矩形梁", "unit": "m³"},
     },
     "ceiling_area": {
         "description": "天棚抹灰面积：按楼层汇总板净底面面积（V0.35）",
