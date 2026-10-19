@@ -4,6 +4,10 @@
 
 > 早期版本号 V0.x 为研发迭代号；自 0.38.0 起进入包发布号（与 V0.38 对应）。
 
+## [研发迭代 V0.63] - 2026-10-19
+
+- V0.63 规范审查新增 2 规则（17→19）：**墙高厚比**（`check_wall_slenderness`，`Wall_MaximumHeight / General_Thickness ≤ 30`，GB 50003 简化取宽松值以降低误报；属性缺失/零厚跳过）+ **疏散门净宽**（`check_evacuation_door_width`，按名称含 疏散/安全出口/逃生/exit/evac 关键词过滤，洞宽扣门框余量后 < 0.9m 判违规，复用既有 `door_exit_min_width` / `door_frame_allowance` 限值）；`DEFAULT_LIMITS` 增 `wall_slenderness_max`；`code_review_service` 注册两条规则并分发；新增 4 个 i18n en 键；`run_code_review` 说明同步；新增 9 个单测（655→664）
+
 ## [研发迭代 V0.62] - 2026-10-19
 
 - V0.62 材料统计增强：新增 `MATERIAL_UNITS` 单位标注（修正不同单位混算）；`generate_material_report` 增 `split_by_renovation` 输出按翻新状态分组；`export_material_excel` 重写为多表（汇总/按类型/按翻新/明细）加样式与冻结；新增 `MATERIAL_PRICE` 复用 `cost_data.PRICE_BOOK` 实现材料费联动（量×参考单价，未覆盖单价的不计价）；两个 MCP 工具增 `split_by_renovation` 参数

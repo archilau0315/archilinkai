@@ -16,9 +16,11 @@ from archilinkai.code_review_rules_a import (
     check_collisions,
     check_column_section,
     check_column_slenderness,
+    check_evacuation_door_width,
     check_headroom,
     check_openings,
     check_slab_thickness,
+    check_wall_slenderness,
     check_wall_thickness,
 )
 from archilinkai.code_review_rules_b import (
@@ -56,6 +58,7 @@ def run_review(
         "floor_height", "stair_riser_count",
         "slab_thickness", "bearing_wall_thickness",
         "column_section", "beam_span_ratio", "column_slenderness",
+        "wall_slenderness", "evacuation_door_width",
     ]
     rules = rules or all_rules
     results: dict[str, list[dict[str, Any]]] = {}
@@ -98,6 +101,10 @@ def run_review(
         elif r == "column_slenderness":
             results[r] = check_column_slenderness(
                 instance, limits, structure_type=structure_type)
+        elif r == "wall_slenderness":
+            results[r] = check_wall_slenderness(instance, limits)
+        elif r == "evacuation_door_width":
+            results[r] = check_evacuation_door_width(instance, limits)
     total = sum(len(v) for v in results.values())
     return {
         "rules_checked": rules,

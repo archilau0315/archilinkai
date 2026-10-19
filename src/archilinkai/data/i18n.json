@@ -191,6 +191,10 @@
     "review.beam_span_h_ratio.msg": "Beam span {span} m / depth {h} m = {ratio} > limit {limit} ({st})",
     "review.column_slenderness.rule": "Column slenderness ratio exceeds limit",
     "review.column_slenderness.msg": "Column height {h} m / section width {w} m = {ratio} > limit {lim}",
+    "review.wall_slenderness.rule": "Wall height-thickness ratio exceeds limit",
+    "review.wall_slenderness.msg": "Wall height {h} m / thickness {t} m = {ratio} > limit {limit}",
+    "review.evacuation_door.rule": "Insufficient evacuation door clear width",
+    "review.evacuation_door.msg": "Evacuation door clear width {clear_w} m (opening {rough_w} m - frame {frame_w} m) < {limit} m",
 
     "error.INSTANCE_NOT_FOUND": "Instance '{instance}' not found. Available: {avail}",
     "error.INSTANCE_DISCONNECTED": "Instance '{instance}' disconnected; call refresh_instances to reconnect",

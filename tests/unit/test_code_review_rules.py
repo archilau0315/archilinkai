@@ -424,3 +424,96 @@ def test_column_slenderness_default_is_concrete(monkeypatch):
     )
     out = rules_a.check_column_slenderness(None)
     assert len(out) == 1 and out[0]["limit"] == 20.0
+
+
+# --- check_wall_slenderness（V0.63 新增） ---------------------------------
+
+def test_wall_slenderness_violation(monkeypatch):
+    """墙高 6.0m / 墙厚 0.15m = 40 > 30 → 违规。"""
+    _patch(
+        monkeypatch,
+        {"Wall": [{"guid": "W1", "name": "Q1", "story_index": 0}]},
+        {"W1": {"Wall_MaximumHeight": 6.0, "General_Thickness": 0.15}},
+    )
+    out = rules_a.check_wall_slenderness(None)
+    assert len(out) == 1
+    assert out[0]["guid"] == "W1"
+    assert out[0]["value"] == 40.0
+    assert out[0]["limit"] == 30.0
+    assert "墙高厚比" in out[0]["rule"]
+
+
+def test_wall_slenderness_ok(monkeypatch):
+    """墙高 3.0m / 墙厚 0.2m = 15 ≤ 30 → 达标。"""
+    _patch(
+        monkeypatch,
+        {"Wall": [{"guid": "W1", "name": "Q1", "story_index": 0}]},
+        {"W1": {"Wall_MaximumHeight": 3.0, "General_Thickness": 0.2}},
+    )
+    assert rules_a.check_wall_slenderness(None) == []
+
+
+def test_wall_slenderness_missing_prop_skipped(monkeypatch):
+    """缺墙高（属性不可用）→ 跳过，不误报。"""
+    _patch(
+        monkeypatch,
+        {"Wall": [{"guid": "W1", "name": "Q1", "story_index": 0}]},
+        {"W1": {"General_Thickness": 0.15}},
+    )
+    assert rules_a.check_wall_slenderness(None) == []
+
+
+def test_wall_slenderness_zero_thickness_skipped(monkeypatch):
+    _patch(
+        monkeypatch,
+        {"Wall": [{"guid": "W1", "name": "Q1", "story_index": 0}]},
+        {"W1": {"Wall_MaximumHeight": 6.0, "General_Thickness": 0.0}},
+    )
+    assert rules_a.check_wall_slenderness(None) == []
+
+
+def test_wall_slenderness_no_walls(monkeypatch):
+    _patch(monkeypatch, {}, {})
+    assert rules_a.check_wall_slenderness(None) == []
+
+
+# --- check_evacuation_door_width（V0.63 新增） ----------------------------
+
+def test_evacuation_door_width_violation(monkeypatch):
+    """疏散门洞口 0.9m → 净宽 0.8m < 0.9m → 违规。"""
+    _patch(
+        monkeypatch,
+        {"Door": [{"guid": "D1", "name": "疏散门-1", "story_index": 0}]},
+        {"D1": {"General_Width": 0.9}},
+    )
+    out = rules_a.check_evacuation_door_width(None)
+    assert len(out) == 1
+    assert out[0]["guid"] == "D1"
+    assert out[0]["value"] == 0.8
+    assert out[0]["limit"] == 0.9
+    assert "疏散门" in out[0]["rule"]
+
+
+def test_evacuation_door_width_ok(monkeypatch):
+    """疏散门洞口 1.1m → 净宽 1.0m ≥ 0.9m → 达标。"""
+    _patch(
+        monkeypatch,
+        {"Door": [{"guid": "D1", "name": "安全出口", "story_index": 0}]},
+        {"D1": {"General_Width": 1.1}},
+    )
+    assert rules_a.check_evacuation_door_width(None) == []
+
+
+def test_evacuation_door_non_evac_skipped(monkeypatch):
+    """普通房门（名称无疏散关键词）不参与检查，避免误报。"""
+    _patch(
+        monkeypatch,
+        {"Door": [{"guid": "D1", "name": "卫生间门", "story_index": 0}]},
+        {"D1": {"General_Width": 0.7}},
+    )
+    assert rules_a.check_evacuation_door_width(None) == []
+
+
+def test_evacuation_door_no_doors(monkeypatch):
+    _patch(monkeypatch, {}, {})
+    assert rules_a.check_evacuation_door_width(None) == []

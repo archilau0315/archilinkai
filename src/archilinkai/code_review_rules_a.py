@@ -587,3 +587,100 @@ def check_column_slenderness(
                     lim=f"{max_ratio:.0f}"),
             })
     return violations
+
+
+# ---- 规则 18：墙高厚比检查（V0.63 新增） ----------------------------------
+
+def check_wall_slenderness(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """墙高厚比 = 墙高 / 墙厚 ≤ wall_slenderness_max（默认 30，GB 50003 简化）。
+
+    墙高取 Wall_MaximumHeight（只读长度属性），墙厚取 General_Thickness。
+    简化版：未按承重/非承重、砂浆等级细分允许高厚比，默认限值取宽松值
+    以降低误报；可用 limits 参数覆盖 wall_slenderness_max。
+    """
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    max_ratio = lim["wall_slenderness_max"]
+    walls = _fetch_elements("Wall", instance)
+    if not walls:
+        return []
+    guids = [w["guid"] for w in walls]
+    props = _get_props(
+        guids, ["Wall_MaximumHeight", "General_Thickness"], instance)
+    violations: list[dict[str, Any]] = []
+    for w in walls:
+        p = props.get(w["guid"], {})
+        h = _num(p.get("Wall_MaximumHeight"))
+        t = _num(p.get("General_Thickness"))
+        if h is None or t is None or h <= 0 or t <= 0:
+            continue
+        ratio = h / t
+        if ratio > max_ratio:
+            violations.append({
+                "guid": w["guid"],
+                "name": w.get("name", ""),
+                "story": w.get("story_index"),
+                "rule": i18n.t("review.wall_slenderness.rule", "墙高厚比超限"),
+                "value": round(ratio, 2),
+                "limit": max_ratio,
+                "message": i18n.t(
+                    "review.wall_slenderness.msg",
+                    f"墙高 {h:.2f}m / 墙厚 {t:.3f}m = {ratio:.1f} "
+                    f"大于限值 {max_ratio:.0f}",
+                    h=f"{h:.2f}", t=f"{t:.3f}",
+                    ratio=f"{ratio:.1f}", limit=f"{max_ratio:.0f}"),
+            })
+    return violations
+
+
+# ---- 规则 19：疏散门净宽检查（V0.63 新增） --------------------------------
+
+# 疏散门名称关键词（AC 无"疏散门"类型标记，按名称过滤避免误判普通房门）
+_EVAC_DOOR_KEYWORDS = ("疏散", "安全出口", "逃生", "exit", "evac")
+
+
+def check_evacuation_door_width(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """疏散门净宽 ≥ door_exit_min_width（默认 0.9m）。
+
+    仅对名称含疏散/安全出口等关键词的门检查（普通门不参与，避免误报）。
+    净宽 = 洞口宽 - door_frame_allowance（默认 0.10m）。
+    """
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    frame_w = lim["door_frame_allowance"]
+    limit_w = lim["door_exit_min_width"]
+    doors = _fetch_elements("Door", instance)
+    if not doors:
+        return []
+    guids = [d["guid"] for d in doors]
+    props = _get_props(guids, ["General_Width"], instance)
+    violations: list[dict[str, Any]] = []
+    for d in doors:
+        name = str(d.get("name", "") or "")
+        if not any(k in name for k in _EVAC_DOOR_KEYWORDS):
+            continue
+        rough_w = _num(props.get(d["guid"], {}).get("General_Width"))
+        if rough_w is None:
+            continue
+        clear_w = rough_w - frame_w
+        if clear_w < limit_w:
+            violations.append({
+                "guid": d["guid"],
+                "name": name,
+                "story": d.get("story_index"),
+                "rule": i18n.t(
+                    "review.evacuation_door.rule", "疏散门净宽不足"),
+                "value": round(clear_w, 3),
+                "limit": limit_w,
+                "message": i18n.t(
+                    "review.evacuation_door.msg",
+                    f"疏散门净宽 {clear_w:.2f}m（洞口 {rough_w:.2f}m "
+                    f"- 门框 {frame_w:.2f}m）小于 {limit_w:.1f}m",
+                    clear_w=f"{clear_w:.2f}", rough_w=f"{rough_w:.2f}",
+                    frame_w=f"{frame_w:.2f}", limit=f"{limit_w:.1f}"),
+            })
+    return violations

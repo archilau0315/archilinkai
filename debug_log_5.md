@@ -93,3 +93,38 @@
 ### 备注
 - material_report.py 325 行 < 500，无需拆分
 - `summary`/`by_type` 结构未变（向后兼容），仅新增 units/price/by_renovation 字段
+
+
+---
+
+## 2026-10-19 V0.63 规范审查新增 2 规则（墙高厚比 / 疏散门净宽）
+
+### 变更
+- code_review_common.py：`DEFAULT_LIMITS` 新增 `wall_slenderness_max: 30.0`
+  （`door_exit_min_width: 0.9` / `door_frame_allowance: 0.10` 早已存在、原未被启用，本轮复用）
+- code_review_rules_a.py：新增两条规则——
+  - 规则 18 `check_wall_slenderness`：`Wall_MaximumHeight / General_Thickness > 30` 判违规；
+    属性缺失或值≤0 跳过（不误报）
+  - 规则 19 `check_evacuation_door_width`：`_EVAC_DOOR_KEYWORDS = ("疏散","安全出口","逃生","exit","evac")`
+    名称过滤；`净宽 = General_Width - door_frame_allowance`，`< door_exit_min_width(0.9)` 判违规
+- code_review_service.py：import 两条规则、`all_rules` 追加、分发循环追加两个 `elif`（规则数 17→19）
+- i18n.json：新增 4 个 en 键（wall_slenderness.rule/msg、evacuation_door.rule/msg）
+- code_review_tools.py：`run_code_review` docstring 补两条规则说明
+- tests/unit/test_code_review_rules.py：新增 9 用例
+  （墙高厚比 5 个：违规/达标/缺属性/零厚/无墙；疏散门 4 个：违规/达标/非疏散跳过/无门）
+
+### 范围决策（证据驱动，避免死规则与误报）
+- 原设想多数不可行：窗台高度/门洞净宽/净高已在 check_openings 实现；
+  栏杆净距/走廊净宽/坡道坡度在 Tapir 无可用属性（不支持栏杆/坡道）
+- 无在线 ArchiCAD 实例无法真机验证属性可用性 → 经 Grep 仓库实证确证
+  `Wall_MaximumHeight`（Wall 只读 length）/`WindowDoor_FireRating`（Door/Window string）
+  为真实属性，最终只落地两条低误报规则
+
+### 验证
+- 单测 655 → 664 全过（新增 9 用例）
+- 真机验证因无在线 ArchiCAD 实例跳过
+
+### 备注
+- 墙高厚比取宽松限值 30 以降低误报（未细分承重/砂浆）；疏散门按名称过滤，零误报
+- code_review_rules_a.py 仍 < 500 行，无需拆分
+

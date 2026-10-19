@@ -9,7 +9,7 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 [![MCP](https://img.shields.io/badge/MCP-Protocol-black?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIweiIvPjwvc3ZnPg==)](https://modelcontextprotocol.io/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-server-green)](https://github.com/jlowin/fastmcp)
 [![Tapir](https://img.shields.io/badge/Tapir-Add--On-yellow)](https://github.com/ENZYME-APD/tapir-archicad-automation)
-[![Tests](https://img.shields.io/badge/tests-655%20pass-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-664%20pass-brightgreen)](tests/)
 [![Status](https://img.shields.io/badge/status-active-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)](#)
 [![Gitee 镜像](https://img.shields.io/badge/Gitee-镜像-red)](https://gitee.com/archilau/archilinkai)
@@ -52,10 +52,10 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 | 📊 **44 个算量模板** | 混凝土体积、墙体分层、幕墙、栏杆、门窗洞口面积、模板估算、外檐真石漆、砌体工程、机电保温/配管/电缆等 |
 | 📋 **GB 50500 清单** | 自动映射清单编码、出标准清单报表（xlsx + 标题/项目信息/合计行） |
 | ♻️ **拆除/新建分算与估算** | 基于 AC 翻新状态（`Category_RenovationStatus`）过滤与分组，改造项目可分别统计拆除 / 新建 / 已建工程量，并一次估算出「新建 / 拆除 / 合计」三组造价（拆除走内置拆除定额，V0.59） |
-| 🔍 **规范强条审查** | 17 条建筑强条自动检查（墙厚/板厚/承重墙/门窗洞口/净高/碰撞/防火分区/楼梯/栏杆/柱截面/柱长细比/梁跨高比/疏散/层高等），混凝土与钢结构分型限值，斜梁按水平投影跨度计算 |
+| 🔍 **规范强条审查** | 19 条建筑强条自动检查（墙厚/板厚/承重墙/门窗洞口/净高/碰撞/防火分区/楼梯/栏杆/柱截面/柱长细比/梁跨高比/墙高厚比/疏散门净宽/疏散/层高等），混凝土与钢结构分型限值，斜梁按水平投影跨度计算 |
 | 🔒 **四阶段写入** | Preview → Confirm → Execute → Verify，支持 Ctrl+Z 撤销 |
 | 🆔 **项目身份强校验** | 写入前核对项目路径 + 元素 GUID，防止项目被切换导致误写 |
-| 🧪 **655 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
+| 🧪 **664 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
 | 🖥 **多版本多实例** | 同一套代码兼容 AC26–29，支持双实例并存（ac29-1 / ac28-1） |
 
 ---
@@ -441,9 +441,9 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 ├── cost_engine.py         # 成本计算层：CostEstimator 细算（人材机→取费→总价，V0.56 拆出）
 ├── cost_report.py         # 成本报表层：概算表 xlsx 排版/图表/分状态配色与占比（V0.56 拆出，V0.61 美化）
 ├── code_review_common.py  # 规范审查公共层：限值表+取数 helper（V0.53 拆出）
-├── code_review_rules_a.py # 审查规则 A：墙厚/洞口/净高/碰撞/板厚/承重墙厚/柱截面/柱长细比/梁跨高比（V0.55）
+├── code_review_rules_a.py # 审查规则 A：墙厚/洞口/净高/碰撞/板厚/承重墙厚/柱截面/柱长细比/梁跨高比/墙高厚比/疏散门净宽（V0.63）
 ├── code_review_rules_b.py # 审查规则 B：防火分区/楼梯/栏杆/窗地比/疏散/层高（V0.53 拆出）
-├── code_review_service.py # 规范强条审查：17 条规则汇总入口（V0.55 钢结构适配）
+├── code_review_service.py # 规范强条审查：19 条规则汇总入口（V0.63 墙高厚比/疏散门净宽）
 ├── code_review_tools.py   # 规范审查工具注册（2 个，V0.42）
 ├── material_report.py     # 材料统计：按构件类型汇总 + 单位标注/翻新分组/材料费（V0.49/V0.62）
 ├── material_report_tools.py # 材料统计工具注册（2 个，V0.49）
@@ -565,7 +565,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 
 | 工具 | 说明 |
 |---|---|
-| `run_code_review` | 运行 17 条建筑强条审查规则（可按规则子集/建筑类型/结构类型/是否喷淋调用） |
+| `run_code_review` | 运行 19 条建筑强条审查规则（可按规则子集/建筑类型/结构类型/是否喷淋调用） |
 | `list_code_review_limits` | 列出审查规则默认限值（可覆盖） |
 
 ### 材料统计（2 个，V0.49）
@@ -629,6 +629,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 
 | 版本 | 里程碑 |
 |---|---|
+| V0.63 | 规范审查新增 2 规则：墙高厚比（`Wall_MaximumHeight`/`General_Thickness` ≤ 30，GB 50003 简化取宽松值降误报）、疏散门净宽（名称含疏散/安全出口/逃生等关键词的门，洞宽扣门框后 < 0.9m 判违规） |
 | V0.62 | 材料统计增强：单位标注（修正不同单位混算）、按翻新状态分组、材料费联动（复用 PRICE_BOOK）、导出多表带样式 |
 | V0.61 | 概算报表分状态美化：新建/拆除/合计三表表头配色（绿/红/蓝灰），合计表加「占比」列，冻结表头 + 横向按页宽缩放打印 |
 | V0.60 | 工程量清单报表按翻新状态分表：`export_table(fmt=report)` 增 `group_by_renovation`，同一 xlsx 出「新建/拆除/已建」多 sheet；修复多模板混排时量值列静默归零缺陷（`_pick_value_column` 改为要求所有行都具备该列） |

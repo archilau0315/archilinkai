@@ -36,7 +36,8 @@ def register(mcp: FastMCP, safe) -> None:
         evacuation_distance（疏散距离估算）/ floor_height（层高）/
         stair_riser_count（踏步级数）/ slab_thickness（楼板厚度）/
         bearing_wall_thickness（承重/外墙厚）/ column_section（柱截面）/
-        beam_span_ratio（梁跨高比）/ column_slenderness（柱长细比），默认全部。
+        beam_span_ratio（梁跨高比）/ column_slenderness（柱长细比）/
+        wall_slenderness（墙高厚比）/ evacuation_door_width（疏散门净宽），默认全部。
         building_type: high/multi（影响防火分区面积限值）；
         high_rise: 是否高层（影响栏杆高度限值）；
         has_sprinkler: 是否有自动喷淋（影响疏散距离限值）；

@@ -67,6 +67,9 @@ DEFAULT_LIMITS: dict[str, float] = {
     # GB 50017 受压构件 λ≤150，λ=L0/i，H 型钢 i≈0.289W → H/W≤43
     "column_slenderness_max_steel": 43.0,
     "fake_column_max_height": 0.5,        # 假柱高度阈值(m)：< 此值视为锚栓标记跳过
+    # ---- V0.63 墙高厚比 ----
+    # 墙高/墙厚 ≤ 限值（GB 50003 允许高厚比简化；未细分承重/砂浆，取宽松值降误报）
+    "wall_slenderness_max": 30.0,
 }
 
 
