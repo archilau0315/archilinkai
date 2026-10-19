@@ -69,6 +69,7 @@
 
     "report.title": "Bill of Quantities",
     "report.uncategorized": "Uncategorized",
+    "report.unknown_state": "Unspecified",
     "report.unnamed_project": "Unnamed Project",
     "report.total": "Total",
     "report.info": "Project: {name}    Date: {date}",

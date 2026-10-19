@@ -4,6 +4,10 @@
 
 > 早期版本号 V0.x 为研发迭代号；自 0.38.0 起进入包发布号（与 V0.38 对应）。
 
+## [研发迭代 V0.60] - 2026-10-19
+
+- V0.60 工程量清单报表按翻新状态分表：`report_service` 抽出 `_fill_sheet` 并新增 `split_rows_by_renovation`（按 新建→拆除→已建 排序，label 优先取 `renovation_label`）；`build_report` 增 `group_by_renovation`，同一 workbook 输出多 sheet（标题 = `工程量清单 · {label}`）；`export_table` 增 `group_by_renovation` 参数；**修复**多模板混排时量值列静默归零——原 `_pick_value_column(row, hint)` 只看首行，若该列在其他行缺失（如 floor_finish_area 无 `sum_with_waste`）则整体按 0 计入，改为「要求所有行都具备该列」的自适应探测
+
 ## [研发迭代 V0.52–V0.59] - 2026-10-19
 
 - V0.59 新建+拆除双估算：新增模块 `cost_demolition_data`（拆除参考定额 `DEMOLITION_CONSUMPTION` 覆盖 38 个清单编码）；`CostEstimator`/`estimate_from_flat_rows` 支持 `consumption_table` 选表（建造/拆除）；新增纯函数 `split_rows_by_renovation` / `combine_estimate_tables`；`estimate_project` 增 `renovation_status` + `split_by_renovation`，一次输出「新建 / 拆除 / 合计」三组并按 3 sheet 导出 xlsx；**修复** `estimate_project` 历史遗留量值缺陷——原按行用清单编码去重，把同编码的多楼层行全部丢弃，导致概算严重少算（实测新建量仅剩 ~4%），改为模板级「编码整块认领」去重；**修正**清单编码错位——code_table 中墙/柱/梁编码与名称及定额条目互不对应（Wall 010502001 却名「墙」、同码定额为「矩形柱」），按 GB 50854 校正为 Wall→010504001 / Column→010502001 / Beam→010503002 / Slab→010505003，并补齐 010503002 消耗量

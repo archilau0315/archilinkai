@@ -143,7 +143,7 @@ def match_aggregate_to_quota(
 
     if not rows:
         return []
-    value_col = _pick_value_column(rows[0], value_column)
+    value_col = _pick_value_column(rows, value_column)
     if not value_col:
         raise ValueError(f"rows 中未找到量值列")
 

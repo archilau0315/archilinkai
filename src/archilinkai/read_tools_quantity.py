@@ -525,6 +525,7 @@ def register(mcp: FastMCP, safe) -> None:
         fmt: str = "csv",
         value_column: str | None = None,
         project_name: str | None = None,
+        group_by_renovation: bool = False,
         instance: str | None = None,
     ) -> dict[str, Any]:
         """把算量结果导出为文件，返回路径。
@@ -536,7 +537,10 @@ def register(mcp: FastMCP, safe) -> None:
           /表头/数据行/合计），rows 须含 code/code_name/code_unit 列
           （由模板 with_code=true 触发 aggregate 自动附加）；
           value_column 指定量值列名（缺省自动探测 sum/sum_xxx/formula_result）；
-          project_name 写到报表项目信息行。
+          project_name 写到报表项目信息行；
+          group_by_renovation=true 时按翻新状态分表（新建 / 拆除 / 已建 各一张
+          工作表），要求 rows 含 renovation/renovation_label 列（由 aggregate
+          的 split_by_renovation=true 产生）。
         filename 不含扩展名，存到项目同级 output 目录。
 
         English: Export takeoff results to a file and return its path.
@@ -582,15 +586,18 @@ def register(mcp: FastMCP, safe) -> None:
                 path = report_service.build_report(
                     source_rows, value_column=value_column,
                     project_name=project_name, filename=safe_name,
-                    out_dir=out_dir)
+                    out_dir=out_dir, group_by_renovation=group_by_renovation)
                 total_rows = len(source_rows)
                 columns = ["序号", "项目编码", "项目名称", "计量单位", "工程量"]
+                n_sheets = (len({r.get("renovation")
+                                 for r in source_rows})
+                            if group_by_renovation else 1)
                 return success_result(
                     instance=instance,
                     count=total_rows,
                     data={"file_path": path, "rows": total_rows,
                           "format": "report", "columns": columns,
-                          "sheets": 1},
+                          "sheets": n_sheets},
                 )
             if fmt == "xlsx":
                 from openpyxl import Workbook

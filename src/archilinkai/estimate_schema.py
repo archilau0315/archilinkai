@@ -120,7 +120,7 @@ def aggregate_rows_to_estimate_items(
 
     if not rows:
         return []
-    value_col = _pick_value_column(rows[0], value_column)
+    value_col = _pick_value_column(rows, value_column)
     if not value_col:
         raise ValueError(f"rows 中未找到量值列（sum/sum_*/formula_result）")
 

@@ -792,3 +792,94 @@ def test_aggregate_by_template_renovation_filter(svc, monkeypatch):
     # Wall 只剩 g1(story 0)
     assert len(out["rows"]) == 1
     assert out["rows"][0]["group"]["story"] == 0
+
+
+# --- 报表按翻新状态分表（V0.60）--------------------------------------
+
+def test_report_service_split_rows_by_renovation():
+    """split_rows_by_renovation 按 新建→拆除→已建 排序并取显示名。"""
+    from archilinkai import report_service
+
+    rows = [
+        {"code": "A", "sum": 1.0, "renovation": "Existing",
+         "renovation_label": "已建"},
+        {"code": "A", "sum": 2.0, "renovation": "New",
+         "renovation_label": "新建"},
+        {"code": "A", "sum": 3.0, "renovation": "ToBeDemolished",
+         "renovation_label": "拆除"},
+        {"code": "B", "sum": 4.0, "renovation": "New",
+         "renovation_label": "新建"},
+    ]
+    groups = report_service.split_rows_by_renovation(rows)
+    assert [g[1] for g in groups] == ["新建", "拆除", "已建"]
+    assert [len(g[2]) for g in groups] == [2, 1, 1]
+
+
+def test_report_service_group_by_renovation(tmp_path):
+    """group_by_renovation=True：每个翻新状态一张工作表，各自合计。"""
+    import os
+    from archilinkai import report_service
+    from openpyxl import load_workbook
+
+    rows = [
+        {"code": "010504001", "code_name": "现浇混凝土直形墙", "code_unit": "m³",
+         "sum": 10.0, "renovation": "New", "renovation_label": "新建"},
+        {"code": "010504001", "code_name": "现浇混凝土直形墙", "code_unit": "m³",
+         "sum": 4.0, "renovation": "New", "renovation_label": "新建"},
+        {"code": "010504001", "code_name": "现浇混凝土直形墙", "code_unit": "m³",
+         "sum": 7.0, "renovation": "ToBeDemolished",
+         "renovation_label": "拆除"},
+        {"code": "010504001", "code_name": "现浇混凝土直形墙", "code_unit": "m³",
+         "sum": 9.0, "renovation": "Existing", "renovation_label": "已建"},
+    ]
+    path = report_service.build_report(
+        rows, value_column="sum", project_name="改造工程",
+        filename="split_report", out_dir=str(tmp_path),
+        group_by_renovation=True)
+    assert os.path.exists(path)
+
+    wb = load_workbook(path)
+    assert wb.sheetnames == [
+        "工程量清单 · 新建", "工程量清单 · 拆除", "工程量清单 · 已建"]
+    new_ws = wb["工程量清单 · 新建"]
+    assert new_ws.cell(1, 1).value == "工程量清单 · 新建"
+    # 新建：同 code 两行合并 = 10 + 4 = 14.0
+    assert new_ws.cell(4, 2).value == "010504001"
+    assert new_ws.cell(4, 5).value == 14.0
+    assert wb["工程量清单 · 拆除"].cell(4, 5).value == 7.0
+    assert wb["工程量清单 · 已建"].cell(4, 5).value == 9.0
+
+
+def test_report_service_auto_value_column_requires_all_rows(tmp_path):
+    """自动探测量值列时要求所有行都存在该列（避免混合时静默按 0 计入）。"""
+    from archilinkai import report_service
+    from openpyxl import load_workbook
+
+    rows = [
+        {"code": "010504001", "code_name": "墙", "code_unit": "m³",
+         "sum": 2.0, "sum_with_waste": 2.2},
+        {"code": "011101001", "code_name": "楼地面", "code_unit": "m²",
+         "sum": 5.0},  # 无 sum_with_waste
+    ]
+    # 自动探测：sum 存在于所有行 → 选 sum，两行各有值
+    path = report_service.build_report(
+        rows, filename="auto_col", out_dir=str(tmp_path))
+    ws = load_workbook(path).active
+    assert ws.cell(4, 5).value == 2.0
+    assert ws.cell(5, 5).value == 5.0
+
+
+def test_report_service_group_fallback_single_sheet(tmp_path):
+    """group_by_renovation=True 但数据无 renovation 列时，回退为单表。"""
+    import os
+    from archilinkai import report_service
+    from openpyxl import load_workbook
+
+    rows = [{"code": "A", "code_name": "x", "code_unit": "m²", "sum": 1.0}]
+    path = report_service.build_report(
+        rows, value_column="sum", out_dir=str(tmp_path),
+        group_by_renovation=True)
+    assert os.path.exists(path)
+    wb = load_workbook(path)
+    assert len(wb.sheetnames) == 1
+    assert wb.sheetnames[0] == "工程量清单 · 未指定"
