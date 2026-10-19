@@ -164,6 +164,10 @@
     "review.slab_thickness.msg": "Slab thickness {t} m < minimum {limit} m",
     "review.bearing_wall.rule": "Insufficient bearing/external wall thickness",
     "review.bearing_wall.msg": "Bearing/external wall thickness {t} m < minimum {limit} m",
+    "review.column_section.rule": "Insufficient column section",
+    "review.column_section.msg": "Column section side {side} m < minimum {limit} m",
+    "review.beam_span_ratio.rule": "Insufficient beam depth-to-span ratio",
+    "review.beam_span_ratio.msg": "Beam depth {h} m < span {span} m / {divisor} (min {min_h} m)",
 
     "error.INSTANCE_NOT_FOUND": "Instance '{instance}' not found. Available: {avail}",
     "error.INSTANCE_DISCONNECTED": "Instance '{instance}' disconnected; call refresh_instances to reconnect",

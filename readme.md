@@ -9,7 +9,7 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 [![MCP](https://img.shields.io/badge/MCP-Protocol-black?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIweiIvPjwvc3ZnPg==)](https://modelcontextprotocol.io/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-server-green)](https://github.com/jlowin/fastmcp)
 [![Tapir](https://img.shields.io/badge/Tapir-Add--On-yellow)](https://github.com/ENZYME-APD/tapir-archicad-automation)
-[![Tests](https://img.shields.io/badge/tests-589%20pass-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-596%20pass-brightgreen)](tests/)
 [![Status](https://img.shields.io/badge/status-active-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)](#)
 [![Gitee 镜像](https://img.shields.io/badge/Gitee-镜像-red)](https://gitee.com/archilau/archilinkai)
@@ -379,7 +379,7 @@ python regression.py                   # 一键回归（单测+集成+兼容+基
 
 | 测试类型 | 通过 | 跳过 | 失败 |
 |---|---|---|---|
-| 单元测试 | 589 | 0 | 0 |
+| 单元测试 | 596 | 0 | 0 |
 | 集成测试 | 25 | 2 | 0 |
 | 兼容性测试 | 12 | 1 | 0 |
 
@@ -621,6 +621,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 
 | 版本 | 里程碑 |
 |---|---|
+| V0.54 | 规范审查新增柱最小截面/梁高跨比 2 规则（14→16，AC28 真机验证） |
 | V0.53 | 规范审查拆 4 子模块、新增楼板厚度/承重外墙厚度 2 规则（12→14） |
 | V0.52 | 多语言输出（zh/en，ALAI_LANG/--lang）、只读工具拆 4 子模块、工具描述双语 |
 | V0.39–V0.51（研发迭代） | 规范强条审查（12 规则）、材料统计、属性别名解析、算量模板 40→44、S0–S3 包化/环境自检/桌面安装器/HTTP 网关 |

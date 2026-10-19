@@ -840,3 +840,28 @@
 ### 备注
 - 拆分后 4 个模块均 ≤500 行，符合单模块行数约束
 - 疏散距离精确算法、疏散门数量检查仍因需全新计算几何而未实现
+
+
+---
+
+## 2026-10-19 V0.54 规范审查新增柱截面/梁高跨比规则
+
+### 变更
+- DEFAULT_LIMITS 新增 column_min_side=0.30、beam_span_ratio_divisor=12
+- 新增规则 15 check_column_section：柱截面边 < 0.30m 判违规
+- 新增规则 16 check_beam_span_ratio：梁高 < 跨度/12 判违规
+- i18n.json en 补 4 键；tests 追加 7 用例
+
+### 真机验证（AC28 实例 ac28-1「1.1办公楼改造」）
+- 梁：General_Height=0.5/0.4（梁高）、General_3DLength=1.98/3.30（跨度），
+  语义正确，两根实测梁均达标
+- 柱：General_Width=0.35（截面宽，可用）；General_Height=6.4 = General_3DLength，
+  即对柱该属性是柱高而非截面边 → 已修正为只检宽度侧并在 docstring 注明，
+  避免出现"柱截面边长 6.4m"式误导
+
+### 验证
+- 单测 589 → 596 全过
+
+### 备注
+- 柱截面另一边属性语义待后续确认，确认后补第二侧检查
+- 楼梯平台宽度规则（需 stairStructures 子构件）列入下轮候选

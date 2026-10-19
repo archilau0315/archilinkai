@@ -11,8 +11,10 @@ from typing import Any
 
 from archilinkai.code_review_common import DEFAULT_LIMITS  # noqa: F401 re-export
 from archilinkai.code_review_rules_a import (
+    check_beam_span_ratio,
     check_bearing_wall_thickness,
     check_collisions,
+    check_column_section,
     check_headroom,
     check_openings,
     check_slab_thickness,
@@ -50,6 +52,7 @@ def run_review(
         "stair_tread", "window_floor_ratio", "evacuation_distance",
         "floor_height", "stair_riser_count",
         "slab_thickness", "bearing_wall_thickness",
+        "column_section", "beam_span_ratio",
     ]
     rules = rules or all_rules
     results: dict[str, list[dict[str, Any]]] = {}
@@ -84,6 +87,10 @@ def run_review(
             results[r] = check_slab_thickness(instance, limits)
         elif r == "bearing_wall_thickness":
             results[r] = check_bearing_wall_thickness(instance, limits)
+        elif r == "column_section":
+            results[r] = check_column_section(instance, limits)
+        elif r == "beam_span_ratio":
+            results[r] = check_beam_span_ratio(instance, limits)
     total = sum(len(v) for v in results.values())
     return {
         "rules_checked": rules,

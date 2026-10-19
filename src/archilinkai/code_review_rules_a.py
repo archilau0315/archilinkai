@@ -407,3 +407,83 @@ def check_bearing_wall_thickness(
                     t=f"{t:.3f}", limit=f"{lim['wall_bearing_min']:.2f}"),
             })
     return violations
+
+
+# ---- 规则 15：柱最小截面检查（V0.54 新增） -------------------------------
+
+def check_column_section(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """柱截面边长 ≥ column_min_side（默认 0.30m）。
+
+    AC28 真机验证：General_Width 是柱截面宽；General_Height 对柱是
+    柱高（=General_3DLength）而非截面边，故只检宽度侧，另一边待确认。
+    """
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    cols = _fetch_elements("Column", instance)
+    if not cols:
+        return []
+    guids = [c["guid"] for c in cols]
+    props = _get_props(guids, ["General_Width"], instance)
+    violations: list[dict[str, Any]] = []
+    for c in cols:
+        side = _num(props.get(c["guid"], {}).get("General_Width"))
+        if side is None:
+            continue
+        if side < lim["column_min_side"]:
+            violations.append({
+                "guid": c["guid"],
+                "name": c.get("name", ""),
+                "story": c.get("story_index"),
+                "rule": i18n.t("review.column_section.rule", "柱截面不足"),
+                "value": round(side, 3),
+                "limit": lim["column_min_side"],
+                "message": i18n.t(
+                    "review.column_section.msg",
+                    f"柱截面边长 {side:.3f}m 小于最小限值 "
+                    f"{lim['column_min_side']:.2f}m",
+                    side=f"{side:.3f}",
+                    limit=f"{lim['column_min_side']:.2f}"),
+            })
+    return violations
+
+
+# ---- 规则 16：梁高跨比检查（V0.54 新增） ---------------------------------
+
+def check_beam_span_ratio(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """梁高 ≥ 跨度 / beam_span_ratio_divisor（默认 12）。"""
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    divisor = lim["beam_span_ratio_divisor"]
+    beams = _fetch_elements("Beam", instance)
+    if not beams:
+        return []
+    guids = [b["guid"] for b in beams]
+    props = _get_props(guids, ["General_Height", "General_3DLength"], instance)
+    violations: list[dict[str, Any]] = []
+    for b in beams:
+        p = props.get(b["guid"], {})
+        h = _num(p.get("General_Height"))
+        span = _num(p.get("General_3DLength"))
+        if h is None or span is None or span <= 0:
+            continue
+        min_h = span / divisor
+        if h < min_h:
+            violations.append({
+                "guid": b["guid"],
+                "name": b.get("name", ""),
+                "story": b.get("story_index"),
+                "rule": i18n.t("review.beam_span_ratio.rule", "梁高跨比不足"),
+                "value": round(h, 3),
+                "limit": round(min_h, 3),
+                "message": i18n.t(
+                    "review.beam_span_ratio.msg",
+                    f"梁高 {h:.3f}m 小于跨度 {span:.2f}m 的 "
+                    f"1/{divisor:g}（{min_h:.3f}m）",
+                    h=f"{h:.3f}", span=f"{span:.2f}",
+                    divisor=f"{divisor:g}", min_h=f"{min_h:.3f}"),
+            })
+    return violations

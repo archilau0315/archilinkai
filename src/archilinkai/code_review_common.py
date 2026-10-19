@@ -55,6 +55,9 @@ DEFAULT_LIMITS: dict[str, float] = {
     # ---- V0.49 碰撞过滤 ----
     "collision_min_volume": 0.001,      # 最小碰撞体积(m³)，当前 Tapir 无此字段，保留备用
     "collision_body_only": True,        # 只报实体碰撞(hasBodyCollision)，忽略间隙碰撞
+    # ---- V0.54 柱/梁 ----
+    "column_min_side": 0.30,            # 框架柱截面最小边长(m)
+    "beam_span_ratio_divisor": 12.0,    # 梁高≥跨度/此值
 }
 
 
