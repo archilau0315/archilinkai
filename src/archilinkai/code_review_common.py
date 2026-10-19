@@ -7,6 +7,7 @@ _fetch_elements / _get_props / _num。
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from archilinkai import property_service
@@ -61,7 +62,10 @@ DEFAULT_LIMITS: dict[str, float] = {
     "beam_span_h_ratio_concrete": 12.0,   # 混凝土跨高比上限 span/h ≤ 12
     "beam_span_h_ratio_steel": 60.0,      # 钢结构简支梁 span/h ≤ 60（GB 50017）
     "beam_span_h_ratio_continuous": 40.0, # 钢结构连续梁/受约束 span/h ≤ 40
-    "column_slenderness_max": 20.0,       # 柱高/截面宽 ≤ 20（简化长细比限值）
+    "column_slenderness_max": 20.0,       # 混凝土柱高/截面宽 ≤ 20（简化长细比限值）
+    # ---- V0.57 钢结构柱长细比 ----
+    # GB 50017 受压构件 λ≤150，λ=L0/i，H 型钢 i≈0.289W → H/W≤43
+    "column_slenderness_max_steel": 43.0,
     "fake_column_max_height": 0.5,        # 假柱高度阈值(m)：< 此值视为锚栓标记跳过
 }
 
@@ -109,3 +113,46 @@ def _num(v: Any) -> float | None:
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _fetch_beam_details(
+    guids: list[str], instance: str | None,
+) -> dict[str, dict[str, Any]]:
+    """取梁的 Tapir 详情，返回 {guid: detail}；失败返回空 dict（不阻塞规则）。"""
+    if not guids:
+        return {}
+    from archilinkai.tapir_adapter import adapter
+    try:
+        rows = adapter.get_details_of_elements(list(guids), instance)
+    except Exception:
+        return {}
+    return {r.get("guid"): r for r in rows if isinstance(r, dict) and r.get("guid")}
+
+
+def _beam_horizontal_span(
+    detail: dict[str, Any] | None,
+    fallback_len: float | None,
+    instance: str | None = None,
+) -> float | None:
+    """梁水平投影跨度 = √((x2-x1)²+(y2-y1)²)。
+
+    detail 为 Tapir 梁详情（取 details.begCoordinate/endCoordinate，
+    仅含 x/y，即天然的水平投影，斜梁不含竖向分量）。
+    拿不到起止点时用 fallback_len（General_3DLength）兜底。
+    instance 为保留形参，当前未使用。
+    """
+    d = detail if isinstance(detail, dict) else {}
+    # 兼容传入整条详情（含 details 子对象）或直接传入 details 字典
+    d = d.get("details") or d
+    beg, end = d.get("begCoordinate"), d.get("endCoordinate")
+    if beg and end:
+        try:
+            span = math.hypot(
+                float(end["x"]) - float(beg["x"]),
+                float(end["y"]) - float(beg["y"]),
+            )
+            if span > 0:
+                return span
+        except (KeyError, TypeError, ValueError):
+            pass
+    return fallback_len

@@ -13,6 +13,8 @@ from archilinkai import i18n
 from archilinkai import instance_manager
 from archilinkai.code_review_common import (
     DEFAULT_LIMITS,
+    _beam_horizontal_span,
+    _fetch_beam_details,
     _fetch_elements,
     _get_props,
     _num,
@@ -474,6 +476,10 @@ def check_beam_span_ratio(
       - "steel"     ：span/h ≤ 60（GB 50017-2017 H 型钢简支梁）
       - "continuous"：span/h ≤ 40（钢结构连续梁/受约束）
       - "any"       ：不做检查，直接返回空列表
+
+    V0.57：跨度优先取梁 details 起止点算出的**水平投影**
+    √((x2-x1)²+(y2-y1)²)（斜梁不含竖向分量，更贴近真实跨度），
+    取不到起止点时用 General_3DLength 兜底。
     """
     st = (structure_type or "concrete").lower()
     if st == "any":
@@ -492,11 +498,13 @@ def check_beam_span_ratio(
         return []
     guids = [b["guid"] for b in beams]
     props = _get_props(guids, ["General_Height", "General_3DLength"], instance)
+    beam_details = _fetch_beam_details(guids, instance)
     violations: list[dict[str, Any]] = []
     for b in beams:
         p = props.get(b["guid"], {})
         h = _num(p.get("General_Height"))
-        span = _num(p.get("General_3DLength"))
+        span_3d = _num(p.get("General_3DLength"))
+        span = _beam_horizontal_span(beam_details.get(b["guid"]), span_3d)
         if h is None or span is None or h <= 0 or span <= 0:
             continue
         ratio = span / h
@@ -526,16 +534,21 @@ def check_beam_span_ratio(
 def check_column_slenderness(
     instance: str | None,
     limits: dict[str, float] | None = None,
+    structure_type: str | None = None,
 ) -> list[dict[str, Any]]:
-    """柱高/截面宽 ≤ column_slenderness_max（默认 20.0）。
+    """柱高/截面宽 ≤ 限值。
 
-    简化长细比：GB 50011 框架柱长细比限值 150（λ=L0/i，i≈W/√12），
-    折算为 H/W ≤ 20 便于规则快速检出。
+    限值按结构类型细分（V0.57）：
+      - concrete（默认）：20.0（GB 50011 框架柱 λ=150 简化 H/W≤20）
+      - steel           ：43.0（GB 50017 受压构件 λ≤150，H 型钢 i≈0.289W）
 
     V0.55 过滤 story<0 或高度 < fake_column_max_height（默认 0.5m）
     的假柱（锚栓标记）。
     """
+    stype = (structure_type or "concrete").lower()
     lim = {**DEFAULT_LIMITS, **(limits or {})}
+    max_ratio = (lim["column_slenderness_max_steel"] if stype == "steel"
+                 else lim["column_slenderness_max"])
     cols = _fetch_elements("Column", instance)
     if not cols:
         return []
@@ -544,7 +557,6 @@ def check_column_slenderness(
         guids, ["General_Height", "General_Width"], instance)
     violations: list[dict[str, Any]] = []
     fake_h = lim.get("fake_column_max_height", 0.5)
-    max_ratio = lim["column_slenderness_max"]
     for c in cols:
         st = c.get("story_index")
         if st is not None and st < 0:

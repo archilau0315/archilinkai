@@ -9,7 +9,7 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 [![MCP](https://img.shields.io/badge/MCP-Protocol-black?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIweiIvPjwvc3ZnPg==)](https://modelcontextprotocol.io/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-server-green)](https://github.com/jlowin/fastmcp)
 [![Tapir](https://img.shields.io/badge/Tapir-Add--On-yellow)](https://github.com/ENZYME-APD/tapir-archicad-automation)
-[![Tests](https://img.shields.io/badge/tests-607%20pass-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-614%20pass-brightgreen)](tests/)
 [![Status](https://img.shields.io/badge/status-active-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)](#)
 [![Gitee 镜像](https://img.shields.io/badge/Gitee-镜像-red)](https://gitee.com/archilau/archilinkai)
@@ -51,10 +51,10 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 | 🏗 **15 类构件建模** | 墙、柱、梁、板、门、窗、楼梯、屋顶、变形体、家具、灯具、网面、洞口、房间区域、机电管线 |
 | 📊 **44 个算量模板** | 混凝土体积、墙体分层、幕墙、栏杆、门窗洞口面积、模板估算、外檐真石漆、砌体工程、机电保温/配管/电缆等 |
 | 📋 **GB 50500 清单** | 自动映射清单编码、出标准清单报表（xlsx + 标题/项目信息/合计行） |
-| 🔍 **规范强条审查** | 17 条建筑强条自动检查（墙厚/板厚/承重墙/门窗洞口/净高/碰撞/防火分区/楼梯/栏杆/柱截面/柱长细比/梁跨高比/疏散/层高等），支持混凝土与钢结构分型限值 |
+| 🔍 **规范强条审查** | 17 条建筑强条自动检查（墙厚/板厚/承重墙/门窗洞口/净高/碰撞/防火分区/楼梯/栏杆/柱截面/柱长细比/梁跨高比/疏散/层高等），混凝土与钢结构分型限值，斜梁按水平投影跨度计算 |
 | 🔒 **四阶段写入** | Preview → Confirm → Execute → Verify，支持 Ctrl+Z 撤销 |
 | 🆔 **项目身份强校验** | 写入前核对项目路径 + 元素 GUID，防止项目被切换导致误写 |
-| 🧪 **607 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
+| 🧪 **614 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
 | 🖥 **多版本多实例** | 同一套代码兼容 AC26–29，支持双实例并存（ac29-1 / ac28-1） |
 
 ---
@@ -624,6 +624,8 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 
 | 版本 | 里程碑 |
 |---|---|
+| V0.57 | 规范审查增强：梁按水平投影跨度计算跨高比、柱长细比按结构类型分型限值（混凝土20/钢43） |
+| V0.56 | 拆分 cost_estimator.py 为 cost_data/cost_engine/cost_report（848→各≤438 行） |
 | V0.55 | 钢结构适配：梁跨高比框架化（concrete/steel/continuous/any）+ 柱长细比规则；假柱过滤；AC28 雄安厂房真机 beam 误报 564→6 |
 | V0.54 | 规范审查新增柱最小截面/梁高跨比 2 规则（14→16，AC28 真机验证） |
 | V0.53 | 规范审查拆 4 子模块、新增楼板厚度/承重外墙厚度 2 规则（12→14） |

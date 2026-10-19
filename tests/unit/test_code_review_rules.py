@@ -269,6 +269,66 @@ def test_beam_span_ratio_missing_prop_skipped(monkeypatch):
     assert rules_a.check_beam_span_ratio(None) == []
 
 
+# --- 梁跨度水平投影（V0.57） -----------------------------------------------
+
+def _patch_beam_details(monkeypatch, details_by_guid):
+    """挂假梁详情：details_by_guid={guid: 整条详情 dict}。"""
+    monkeypatch.setattr(
+        rules_a, "_fetch_beam_details",
+        lambda guids, instance: {g: details_by_guid.get(g) for g in guids
+                                 if g in details_by_guid})
+
+
+def test_beam_span_uses_horizontal_projection(monkeypatch):
+    """有起止点时用水平投影跨度：投影 6.2 vs 3D 长度 5.9。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Height": 0.5, "General_3DLength": 5.9}},
+    )
+    _patch_beam_details(monkeypatch, {"B1": {"details": {
+        "begCoordinate": {"x": 0.0, "y": 0.0},
+        "endCoordinate": {"x": 6.2, "y": 0.0}}}})
+    out = rules_a.check_beam_span_ratio(None)  # concrete ≤ 12
+    assert len(out) == 1
+    assert out[0]["value"] == 12.4  # 6.2 / 0.5，来自投影而非 5.9
+
+
+def test_beam_span_projection_shortens_slanted_span(monkeypatch):
+    """斜梁投影短于 3D 长度时按投影算，不虚高误报。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Height": 0.5, "General_3DLength": 7.0}},
+    )
+    _patch_beam_details(monkeypatch, {"B1": {"details": {
+        "begCoordinate": {"x": 0.0, "y": 0.0},
+        "endCoordinate": {"x": 5.0, "y": 0.0}}}})
+    assert rules_a.check_beam_span_ratio(None) == []  # 5.0/0.5=10 ≤ 12
+
+
+def test_beam_span_fallback_without_details(monkeypatch):
+    """详情缺失（空 dict）时兜底用 General_3DLength。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Height": 0.5, "General_3DLength": 6.2}},
+    )
+    _patch_beam_details(monkeypatch, {})
+    out = rules_a.check_beam_span_ratio(None)
+    assert len(out) == 1
+    assert out[0]["value"] == 12.4  # 6.2 / 0.5，来自 3DLength
+
+
+def test_beam_span_detail_without_coords_falls_back(monkeypatch):
+    """详情无起止点字段时兜底用 General_3DLength。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Height": 0.5, "General_3DLength": 6.2}},
+    )
+    _patch_beam_details(monkeypatch, {"B1": {"details": {"height": 0.5}}})
+    out = rules_a.check_beam_span_ratio(None)
+    assert len(out) == 1
+    assert out[0]["value"] == 12.4
+
+
 # --- check_column_slenderness（V0.55 新增） -------------------------------
 
 def test_column_slenderness_violation(monkeypatch):
@@ -326,3 +386,41 @@ def test_column_slenderness_zero_width_skipped(monkeypatch):
 def test_column_slenderness_no_columns(monkeypatch):
     _patch(monkeypatch, {}, {})
     assert rules_a.check_column_slenderness(None) == []
+
+
+# --- 柱长细比按结构类型细分（V0.57） ---------------------------------------
+
+def test_column_slenderness_steel_limit_ok_concrete_violates(monkeypatch):
+    """H/W=25：钢结构（≤43）达标，混凝土（≤20）违规。"""
+    _patch(
+        monkeypatch, {"Column": [_COL]},
+        {"C1": {"General_Height": 5.0, "General_Width": 0.2}},
+    )
+    steel = rules_a.check_column_slenderness(None, structure_type="steel")
+    assert steel == []
+    concrete = rules_a.check_column_slenderness(None, structure_type="concrete")
+    assert len(concrete) == 1
+    assert concrete[0]["value"] == 25.0
+    assert concrete[0]["limit"] == 20.0
+
+
+def test_column_slenderness_steel_violation(monkeypatch):
+    """H/W=50 > 钢结构限值 43 → 违规。"""
+    _patch(
+        monkeypatch, {"Column": [_COL]},
+        {"C1": {"General_Height": 5.0, "General_Width": 0.1}},
+    )
+    out = rules_a.check_column_slenderness(None, structure_type="steel")
+    assert len(out) == 1
+    assert out[0]["value"] == 50.0
+    assert out[0]["limit"] == 43.0
+
+
+def test_column_slenderness_default_is_concrete(monkeypatch):
+    """不传 structure_type 时按混凝土限值 20。"""
+    _patch(
+        monkeypatch, {"Column": [_COL]},
+        {"C1": {"General_Height": 5.0, "General_Width": 0.2}},
+    )
+    out = rules_a.check_column_slenderness(None)
+    assert len(out) == 1 and out[0]["limit"] == 20.0

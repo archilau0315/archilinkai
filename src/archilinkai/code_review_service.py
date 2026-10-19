@@ -96,7 +96,8 @@ def run_review(
             results[r] = check_beam_span_ratio(
                 instance, limits, structure_type=structure_type)
         elif r == "column_slenderness":
-            results[r] = check_column_slenderness(instance, limits)
+            results[r] = check_column_slenderness(
+                instance, limits, structure_type=structure_type)
     total = sum(len(v) for v in results.values())
     return {
         "rules_checked": rules,

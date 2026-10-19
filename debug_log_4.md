@@ -921,3 +921,36 @@
 
 ### 备注
 - 债务清理完成，下一阶段 Phase B 规范审查增强（楼梯平台宽/斜梁跨度投影/截面类型细分长细比）
+
+
+---
+
+## 2026-10-19 V0.57 规范审查增强（斜梁投影 + 柱长细比分型）
+
+### 真机侦察（AC28 ac28-2 雄安厂房 钢结构）
+- 梁 details 含 begCoordinate/endCoordinate（仅 x/y，天然水平投影），另有 isSlanted/slantAngle；
+  水平投影 √((x2-x1)²+(y2-y1)²) 可稳定算出（159 根斜梁投影略小于 3DLength）
+- Stair details 返回 {"error":"Not yet supported element type"}，stairStructures 子构件同样读不到
+  → **楼梯平台宽度规则搁置**
+
+### 变更
+- code_review_common.py：新增 _fetch_beam_details + _beam_horizontal_span（起止点算投影，
+  兜底 General_3DLength）；DEFAULT_LIMITS 新增 column_slenderness_max_steel=43.0
+  （GB 50017 λ≤150，i≈0.289W → H/W≤43）
+- code_review_rules_a.py：check_beam_span_ratio 改用水平投影跨度；check_column_slenderness
+  增 structure_type 参数（steel→43，其余→20）
+- code_review_service.py：run_review 把 structure_type 透传给 column_slenderness
+- tests/unit/test_code_review_rules.py：新增 7 用例（梁投影 4、柱长细比分型 3）
+
+### 真机验证（ac28-2，structure_type=steel）
+| 规则 | 改前 | 改后 |
+|---|---|---|
+| beam_span_ratio | 6 | 6（长跨屋面梁为平梁，比值微调如 201.78→201.11） |
+| column_slenderness | 84（误套混凝土限值 20） | 0（改用钢结构限值 43，全部达标） |
+
+### 验证
+- 单测 607 → 614 全过
+
+### 备注
+- C（楼梯平台宽度）因 Tapir 无法读楼梯子构件属性未实现，已在侦察结论中记录
+- readme 同步规则数/单测数/里程碑；CHANGELOG 补 V0.39–V0.57 研发迭代记录
