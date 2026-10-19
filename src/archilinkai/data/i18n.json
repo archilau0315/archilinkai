@@ -160,6 +160,10 @@
     "review.floor_height.msg": "Story {st} floor height {h} m < {limit} m",
     "review.stair_riser_count.rule": "Riser count exceeds limit",
     "review.stair_riser_count.msg": "Riser count {count} exceeds {limit} (landing required)",
+    "review.slab_thickness.rule": "Insufficient slab thickness",
+    "review.slab_thickness.msg": "Slab thickness {t} m < minimum {limit} m",
+    "review.bearing_wall.rule": "Insufficient bearing/external wall thickness",
+    "review.bearing_wall.msg": "Bearing/external wall thickness {t} m < minimum {limit} m",
 
     "error.INSTANCE_NOT_FOUND": "Instance '{instance}' not found. Available: {avail}",
     "error.INSTANCE_DISCONNECTED": "Instance '{instance}' disconnected; call refresh_instances to reconnect",

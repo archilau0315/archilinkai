@@ -815,3 +815,28 @@
 
 ### 备注
 - 文档改动，无代码变化，单测不受影响
+
+
+---
+
+## 2026-10-19 V0.53 规范审查拆分 + 新增 2 条规则
+
+### 变更
+- code_review_service.py（868 行 > 800 上限）拆分：
+  - code_review_common.py（102 行）：DEFAULT_LIMITS + _fetch_elements/_get_props/_num
+  - code_review_rules_a.py（409 行）：规则 1-4 + 新增 2 条
+  - code_review_rules_b.py（431 行）：规则 5-12 原样迁移
+  - code_review_service.py（94 行）：仅 run_review 聚合入口，re-export DEFAULT_LIMITS 保持兼容
+- 新增规则 13 check_slab_thickness：Slab 板厚 < 0.10m 判违规（新 limit slab_min_thickness）
+- 新增规则 14 check_bearing_wall_thickness：补齐 wall_bearing_min（0.18）悬空限值；
+  外墙判定走 General_External/Wall_External 别名解析，属性缺失时不误报
+- i18n.json en 目录补 review.slab_thickness/bearing_wall 共 4 键
+- tests/unit/test_code_review_rules.py：新增 11 用例（含外墙判定矩阵）
+
+### 验证
+- 单测 578 → 589 全过
+- code_review_tools 对 service.run_review / DEFAULT_LIMITS 的导入兼容已验证
+
+### 备注
+- 拆分后 4 个模块均 ≤500 行，符合单模块行数约束
+- 疏散距离精确算法、疏散门数量检查仍因需全新计算几何而未实现
