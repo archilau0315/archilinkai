@@ -4,6 +4,10 @@
 
 > 早期版本号 V0.x 为研发迭代号；自 0.38.0 起进入包发布号（与 V0.38 对应）。
 
+## [研发迭代 V0.62] - 2026-10-19
+
+- V0.62 材料统计增强：新增 `MATERIAL_UNITS` 单位标注（修正不同单位混算）；`generate_material_report` 增 `split_by_renovation` 输出按翻新状态分组；`export_material_excel` 重写为多表（汇总/按类型/按翻新/明细）加样式与冻结；新增 `MATERIAL_PRICE` 复用 `cost_data.PRICE_BOOK` 实现材料费联动（量×参考单价，未覆盖单价的不计价）；两个 MCP 工具增 `split_by_renovation` 参数
+
 ## [研发迭代 V0.61] - 2026-10-19
 
 - V0.61 概算报表分状态美化：`cost_report` 为新建/拆除/合计三张表加表头主题色（新建绿 / 拆除红 / 合计蓝灰），合计表追加「占比」列（该行合价占两者含税总价之和的百分比），并新增冻结表头与横向按页宽缩放的打印设置；新增 i18n 键 `estimate.h_share`

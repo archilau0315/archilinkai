@@ -59,3 +59,37 @@
 ### 备注
 - 纯报表排版层改动，不触碰计算逻辑；`build_estimate_report`（单表）行为不变
 - 合计表 item 行仍以「新建概算/拆除概算」两组小计展示，占比反映两者含税总价份额
+
+
+---
+
+## 2026-10-19 V0.62 材料统计增强（单位/翻新分组/材料费/导出）
+
+### 变更
+- material_report.py（325 行）：
+  - A 新增 `MATERIAL_UNITS`（材料→计量单位），修正"不同单位混算"——汇总/按类型各行标注单位
+  - B `generate_material_report(...)` 增 `split_by_renovation`：复用 renovation_service
+    读取 `Category_RenovationStatus`，输出 `by_renovation: {状态: {材料: 用量}}`，
+    明细行附 `renovation`
+  - C `export_material_excel` 重写：多表（材料汇总 / 各构件类型 / 按翻新状态 / 明细），
+    表头加粗+底色、边框、冻结首行、列宽自适应
+  - D 新增 `MATERIAL_PRICE`（材料→PRICE_BOOK 键 + 换算系数）与 `_material_unit_price`：
+    汇总页输出「参考单价 / 材料费」列及 `material_cost_total`；未覆盖单价的不计价（cost=None）
+- material_report_tools.py（85 行）：两个工具增 `split_by_renovation` 参数；文件名自动补 .xlsx
+- i18n.json：新增 material.h_unit / h_unit_price / h_cost / h_cost_total / h_renovation / sheet_renovation
+- tests/unit/test_material.py（新建）：6 用例
+
+### 材料费映射（复用 cost_data.PRICE_BOOK，单一价源）
+- 混凝土→C30 预拌混凝土 380/m³；钢筋→HRB400 钢筋 4000/t×0.001=4/kg
+- 砖砌体→蒸压加气混凝土砌块 350/m³；模板→木模板 45/m²
+- 内墙/外墙涂料→内墙/外墙乳胶漆 18 / 25 元/m²；防水卷材→SBS 卷材 32/m²
+- 保温板→挤塑聚苯板 XPS 380/m³×0.05=19 元/m²（按 50mm 厚折算，注释说明）
+- 防水涂料：无参考价 → 不计价
+
+### 验证
+- 单测 649 → 655 全过（新增 6 用例覆盖单位/材料费/翻新分组/导出多表）
+- 真机验证因无在线 ArchiCAD 实例跳过；由单测直接校验生成的 xlsx 结构
+
+### 备注
+- material_report.py 325 行 < 500，无需拆分
+- `summary`/`by_type` 结构未变（向后兼容），仅新增 units/price/by_renovation 字段

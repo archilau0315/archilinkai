@@ -9,7 +9,7 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 [![MCP](https://img.shields.io/badge/MCP-Protocol-black?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIweiIvPjwvc3ZnPg==)](https://modelcontextprotocol.io/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-server-green)](https://github.com/jlowin/fastmcp)
 [![Tapir](https://img.shields.io/badge/Tapir-Add--On-yellow)](https://github.com/ENZYME-APD/tapir-archicad-automation)
-[![Tests](https://img.shields.io/badge/tests-649%20pass-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-655%20pass-brightgreen)](tests/)
 [![Status](https://img.shields.io/badge/status-active-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)](#)
 [![Gitee 镜像](https://img.shields.io/badge/Gitee-镜像-red)](https://gitee.com/archilau/archilinkai)
@@ -55,7 +55,7 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 | 🔍 **规范强条审查** | 17 条建筑强条自动检查（墙厚/板厚/承重墙/门窗洞口/净高/碰撞/防火分区/楼梯/栏杆/柱截面/柱长细比/梁跨高比/疏散/层高等），混凝土与钢结构分型限值，斜梁按水平投影跨度计算 |
 | 🔒 **四阶段写入** | Preview → Confirm → Execute → Verify，支持 Ctrl+Z 撤销 |
 | 🆔 **项目身份强校验** | 写入前核对项目路径 + 元素 GUID，防止项目被切换导致误写 |
-| 🧪 **649 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
+| 🧪 **655 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
 | 🖥 **多版本多实例** | 同一套代码兼容 AC26–29，支持双实例并存（ac29-1 / ac28-1） |
 
 ---
@@ -445,7 +445,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 ├── code_review_rules_b.py # 审查规则 B：防火分区/楼梯/栏杆/窗地比/疏散/层高（V0.53 拆出）
 ├── code_review_service.py # 规范强条审查：17 条规则汇总入口（V0.55 钢结构适配）
 ├── code_review_tools.py   # 规范审查工具注册（2 个，V0.42）
-├── material_report.py     # 材料统计：按构件类型汇总材料用量（V0.49）
+├── material_report.py     # 材料统计：按构件类型汇总 + 单位标注/翻新分组/材料费（V0.49/V0.62）
 ├── material_report_tools.py # 材料统计工具注册（2 个，V0.49）
 ├── renovation_service.py  # 翻新状态读取与统计：拆除/新建/已建分算基础（V0.58）
 ├── geometry_service.py    # 几何规整：长度/起止点/高程/包围盒
@@ -572,8 +572,8 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 
 | 工具 | 说明 |
 |---|---|
-| `generate_material_report` | 按构件类型汇总材料用量（砖砌体/涂料/保温/混凝土/钢筋/模板等） |
-| `export_material_excel` | 材料统计结果导出 Excel |
+| `generate_material_report` | 按构件类型汇总材料用量（砖砌体/涂料/保温/混凝土/钢筋/模板等）；标注单位、参考单价与材料费；`split_by_renovation=true` 按新建/拆除/已建分组 |
+| `export_material_excel` | 材料统计导出 Excel（汇总/按类型/按翻新/明细 多表 + 样式）；支持 `split_by_renovation` |
 
 ### P2 诊断运维（6 个）
 
@@ -629,6 +629,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 
 | 版本 | 里程碑 |
 |---|---|
+| V0.62 | 材料统计增强：单位标注（修正不同单位混算）、按翻新状态分组、材料费联动（复用 PRICE_BOOK）、导出多表带样式 |
 | V0.61 | 概算报表分状态美化：新建/拆除/合计三表表头配色（绿/红/蓝灰），合计表加「占比」列，冻结表头 + 横向按页宽缩放打印 |
 | V0.60 | 工程量清单报表按翻新状态分表：`export_table(fmt=report)` 增 `group_by_renovation`，同一 xlsx 出「新建/拆除/已建」多 sheet；修复多模板混排时量值列静默归零缺陷（`_pick_value_column` 改为要求所有行都具备该列） |
 | V0.59 | 新建+拆除双估算：内置拆除参考定额（38 项）；estimate_project 按翻新状态一次出「新建/拆除/合计」三组并导出 3 sheet xlsx；顺带修复 estimate_project 历史遗留的量值去重缺陷（同编码多楼层行被误丢，少算 ~95%） |

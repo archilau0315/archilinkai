@@ -141,6 +141,12 @@
     "material.h_story": "Story",
     "material.h_count": "Quantity",
     "material.h_detail": "Material Details",
+    "material.h_unit": "Unit",
+    "material.h_unit_price": "Unit Price (CNY)",
+    "material.h_cost": "Material Cost (CNY)",
+    "material.h_cost_total": "Total Material Cost",
+    "material.h_renovation": "Renovation",
+    "material.sheet_renovation": "By Renovation",
     "material.err_no_openpyxl": "Error: openpyxl not installed, run pip install openpyxl",
 
     "review.wall_thickness.rule": "Insufficient wall thickness",

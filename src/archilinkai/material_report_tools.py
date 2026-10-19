@@ -31,19 +31,22 @@ def register(mcp: FastMCP, safe) -> None:
     @mcp.tool()
     def generate_material_report(
         element_types: list[str] | None = None,
+        split_by_renovation: bool = False,
         instance: str | None = None,
     ) -> dict[str, Any]:
         """生成材料统计报告。
 
         element_types 可选：Wall/Beam/Column/Slab/Stair/Roof，默认全部。
-        返回材料汇总、按构件类型统计、明细列表。
+        split_by_renovation=true 时额外按翻新状态（新建/拆除/已建）分组统计。
+        返回材料汇总（含单位、参考单价、材料费）、按构件类型统计、
+        按翻新状态分组（如启用）、明细列表。
 
         English: Generate a material takeoff report.
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
             report = material_report.generate_material_report(
-                element_types, instance)
+                element_types, instance, split_by_renovation)
             return success_result(
                 instance=info.instance_id,
                 project=info.project_name,
@@ -56,11 +59,13 @@ def register(mcp: FastMCP, safe) -> None:
     def export_material_excel(
         element_types: list[str] | None = None,
         filename: str | None = None,
+        split_by_renovation: bool = False,
         instance: str | None = None,
     ) -> str:
         """生成材料统计报告并导出为 Excel。
 
         element_types 可选：Wall/Beam/Column/Slab/Stair/Roof，默认全部。
+        split_by_renovation=true 时额外输出「按翻新状态」分表。
         filename 输出文件名，默认自动生成。
         返回 Excel 文件路径。
 
@@ -68,11 +73,13 @@ def register(mcp: FastMCP, safe) -> None:
         """
         def _run() -> str:
             report = material_report.generate_material_report(
-                element_types, instance)
+                element_types, instance, split_by_renovation)
             if not filename:
                 fname = f"material_report_{_ts()}.xlsx"
             else:
                 fname = filename
+            if not fname.lower().endswith(".xlsx"):
+                fname += ".xlsx"
             filepath = os.path.join(_ensure_output_dir(), fname)
             return material_report.export_material_excel(report, filepath)
         return safe(instance, _run)
