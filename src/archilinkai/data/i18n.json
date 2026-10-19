@@ -119,6 +119,7 @@
     "estimate.h_labor": "Labor (CNY)",
     "estimate.h_material": "Material (CNY)",
     "estimate.h_machine": "Machine (CNY)",
+    "estimate.h_share": "Share",
 
     "material.砖砌体": "Brick Masonry",
     "material.内墙涂料": "Interior Wall Paint",

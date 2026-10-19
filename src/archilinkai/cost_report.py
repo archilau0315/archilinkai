@@ -12,9 +12,17 @@ from archilinkai import i18n
 
 # ---- 概算表 xlsx 导出（GB 50500 风格排版） ------------------------------
 
-def _est_headers() -> list[str]:
+# 分状态主题色（表头底色，V0.61）
+_THEME_COLORS = {
+    "new": "C6EFCE",        # 新建：绿
+    "demolition": "FFC7CE",  # 拆除：红
+    "total": "D9E1F2",       # 合计：蓝灰
+}
+
+
+def _est_headers(show_share: bool = False) -> list[str]:
     """概算表列头（随语言变化，故用函数而非模块常量）。"""
-    return [
+    headers = [
         i18n.t("estimate.h_seq", "序号"), i18n.t("estimate.h_code", "项目编码"),
         i18n.t("estimate.h_name", "项目名称"), i18n.t("estimate.h_unit", "计量单位"),
         i18n.t("estimate.h_qty", "工程量"),
@@ -24,25 +32,31 @@ def _est_headers() -> list[str]:
         i18n.t("estimate.h_material", "材料费(元)"),
         i18n.t("estimate.h_machine", "机械费(元)"),
     ]
+    if show_share:
+        headers.append(i18n.t("estimate.h_share", "占比"))
+    return headers
 
 
 def _fill_sheet(ws, table: dict[str, Any], with_chart: bool,
-                allow_empty: bool = False) -> None:
+                allow_empty: bool = False, theme: str | None = None,
+                show_share: bool = False) -> None:
     """把概算表写进 worksheet（标题/项目信息/明细/取费/图表/备注）。
 
     allow_empty=False 时 items 为空抛错；True 时容忍空表（只写表头与取费块）。
+    theme: "new"/"demolition"/"total" 给表头着色（区分分状态表）；
+    show_share: true 时追加「占比」列（用于合计表展示新建/拆除占比）。
     """
     import time
 
     from openpyxl.chart import PieChart, BarChart, Reference
-    from openpyxl.styles import Alignment, Border, Font, Side
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
     items = table.get("items") or []
     if not items and not allow_empty:
         raise ValueError(i18n.t("estimate.err_empty", "概算表 items 为空，无法生成报表"))
     s = table.get("summary", {})
-    headers = _est_headers()
+    headers = _est_headers(show_share)
     ncol = len(headers)
 
     bold = Font(bold=True, size=11)
@@ -52,13 +66,17 @@ def _fill_sheet(ws, table: dict[str, Any], with_chart: bool,
     right = Alignment(horizontal="right", vertical="center")
     thin = Side(border_style="thin", color="000000")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    header_fill = (PatternFill("solid", fgColor=_THEME_COLORS[theme])
+                   if theme in _THEME_COLORS else None)
 
-    def _put(row, col, val, font=None, align=center, border_=border):
+    def _put(row, col, val, font=None, align=center, border_=border, fill=None):
         c = ws.cell(row, col, val)
         c.font = font or Font()
         c.alignment = align
         if border_:
             c.border = border_
+        if fill is not None:
+            c.fill = fill
         return c
 
     # 标题 + 项目信息
@@ -66,6 +84,8 @@ def _fill_sheet(ws, table: dict[str, Any], with_chart: bool,
     c = ws.cell(1, 1, i18n.t("estimate.title", "工程成本概算表"))
     c.font = title_font
     c.alignment = center
+    if header_fill is not None:
+        c.fill = header_fill
     ws.row_dimensions[1].height = 28
     _date = table.get('date', time.strftime('%Y-%m-%d'))
     _price = table.get('labor_price', '-')
@@ -85,10 +105,11 @@ def _fill_sheet(ws, table: dict[str, Any], with_chart: bool,
 
     # 表头
     for i, h in enumerate(headers, 1):
-        _put(3, i, h, bold)
+        _put(3, i, h, bold, fill=header_fill)
     ws.row_dimensions[3].height = 22
 
     # 数据行
+    denom = sum(it.get("total_price") or 0 for it in items) if show_share else 0
     row_idx = 4
     for idx, it in enumerate(items, 1):
         vals = [idx, it.get("code", ""), it.get("name", ""),
@@ -98,6 +119,9 @@ def _fill_sheet(ws, table: dict[str, Any], with_chart: bool,
                 it.get("labor_price") if it.get("labor_price") is not None else "—",
                 it.get("material_price") if it.get("material_price") is not None else "—",
                 it.get("machine_price") if it.get("machine_price") is not None else "—"]
+        if show_share:
+            pct = round((it.get("total_price") or 0) / denom * 100, 1) if denom else 0.0
+            vals.append(f"{pct}%")
         for j, v in enumerate(vals, 1):
             align = left if j == 3 else (
                 right if j >= 6 and isinstance(v, (int, float)) else center)
@@ -206,8 +230,17 @@ def _fill_sheet(ws, table: dict[str, Any], with_chart: bool,
         c.alignment = left
         row_idx += 1
 
+    # 冻结表头（滚动时标题与表头常驻）+ 打印设置（横向、按页宽缩放）
+    ws.freeze_panes = "A4"
+    ws.page_setup.orientation = "landscape"
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+
     # 列宽
     widths = [6, 14, 24, 9, 12, 12, 14, 12, 14, 12]
+    if show_share:
+        widths.append(9)
     for i, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
 
@@ -257,6 +290,7 @@ def build_combined_estimate_report(
     """新建/拆除/合计三张表 → 同一 workbook 的 3 个 sheet，返回路径。
 
     sheet 名：新建概算 / 拆除概算 / 合计（随 i18n 语言变化）。
+    各表按状态着色（新建绿 / 拆除红 / 合计蓝灰），合计表追加「占比」列。
     单组为空时该 sheet 仍生成（只写表头与合计块），不中断导出。
     """
     from openpyxl import Workbook
@@ -264,15 +298,17 @@ def build_combined_estimate_report(
     path = _out_path(filename, out_dir)
     wb = Workbook()
     sheets = [
-        (i18n.t("estimate.sheet_new", "新建概算"), new_table),
-        (i18n.t("estimate.sheet_demolition", "拆除概算"), demo_table),
-        (i18n.t("estimate.sheet_total", "合计"), total_table),
+        (i18n.t("estimate.sheet_new", "新建概算"), new_table, "new", False),
+        (i18n.t("estimate.sheet_demolition", "拆除概算"), demo_table,
+         "demolition", False),
+        (i18n.t("estimate.sheet_total", "合计"), total_table, "total", True),
     ]
-    for i, (title, table) in enumerate(sheets):
+    for i, (title, table, theme, show_share) in enumerate(sheets):
         ws = wb.active if i == 0 else wb.create_sheet()
         ws.title = str(title)[:31]
         if project_name and not table.get("project_name"):
             table["project_name"] = project_name
-        _fill_sheet(ws, table, with_chart, allow_empty=True)
+        _fill_sheet(ws, table, with_chart, allow_empty=True,
+                    theme=theme, show_share=show_share)
     wb.save(path)
     return path

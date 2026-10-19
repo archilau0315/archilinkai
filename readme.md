@@ -9,7 +9,7 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 [![MCP](https://img.shields.io/badge/MCP-Protocol-black?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIweiIvPjwvc3ZnPg==)](https://modelcontextprotocol.io/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-server-green)](https://github.com/jlowin/fastmcp)
 [![Tapir](https://img.shields.io/badge/Tapir-Add--On-yellow)](https://github.com/ENZYME-APD/tapir-archicad-automation)
-[![Tests](https://img.shields.io/badge/tests-648%20pass-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-649%20pass-brightgreen)](tests/)
 [![Status](https://img.shields.io/badge/status-active-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)](#)
 [![Gitee 镜像](https://img.shields.io/badge/Gitee-镜像-red)](https://gitee.com/archilau/archilinkai)
@@ -55,7 +55,7 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 | 🔍 **规范强条审查** | 17 条建筑强条自动检查（墙厚/板厚/承重墙/门窗洞口/净高/碰撞/防火分区/楼梯/栏杆/柱截面/柱长细比/梁跨高比/疏散/层高等），混凝土与钢结构分型限值，斜梁按水平投影跨度计算 |
 | 🔒 **四阶段写入** | Preview → Confirm → Execute → Verify，支持 Ctrl+Z 撤销 |
 | 🆔 **项目身份强校验** | 写入前核对项目路径 + 元素 GUID，防止项目被切换导致误写 |
-| 🧪 **648 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
+| 🧪 **649 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
 | 🖥 **多版本多实例** | 同一套代码兼容 AC26–29，支持双实例并存（ac29-1 / ac28-1） |
 
 ---
@@ -439,7 +439,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 ├── cost_data.py           # 成本数据层：单价库/定额消耗量/取费费率/自定义定额持久化（V0.56 拆出）
 ├── cost_demolition_data.py # 拆除参考定额消耗量表（38 项，V0.59 新建）
 ├── cost_engine.py         # 成本计算层：CostEstimator 细算（人材机→取费→总价，V0.56 拆出）
-├── cost_report.py         # 成本报表层：概算表 xlsx 排版与图表（V0.56 拆出）
+├── cost_report.py         # 成本报表层：概算表 xlsx 排版/图表/分状态配色与占比（V0.56 拆出，V0.61 美化）
 ├── code_review_common.py  # 规范审查公共层：限值表+取数 helper（V0.53 拆出）
 ├── code_review_rules_a.py # 审查规则 A：墙厚/洞口/净高/碰撞/板厚/承重墙厚/柱截面/柱长细比/梁跨高比（V0.55）
 ├── code_review_rules_b.py # 审查规则 B：防火分区/楼梯/栏杆/窗地比/疏散/层高（V0.53 拆出）
@@ -629,6 +629,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 
 | 版本 | 里程碑 |
 |---|---|
+| V0.61 | 概算报表分状态美化：新建/拆除/合计三表表头配色（绿/红/蓝灰），合计表加「占比」列，冻结表头 + 横向按页宽缩放打印 |
 | V0.60 | 工程量清单报表按翻新状态分表：`export_table(fmt=report)` 增 `group_by_renovation`，同一 xlsx 出「新建/拆除/已建」多 sheet；修复多模板混排时量值列静默归零缺陷（`_pick_value_column` 改为要求所有行都具备该列） |
 | V0.59 | 新建+拆除双估算：内置拆除参考定额（38 项）；estimate_project 按翻新状态一次出「新建/拆除/合计」三组并导出 3 sheet xlsx；顺带修复 estimate_project 历史遗留的量值去重缺陷（同编码多楼层行被误丢，少算 ~95%） |
 | V0.58 | 拆除/新建分别算量：基于 AC 翻新状态（Category_RenovationStatus）过滤与分组；新增 list_renovation_summary 工具；修复 list_all_properties 报错 |

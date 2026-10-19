@@ -259,3 +259,37 @@ def test_build_combined_estimate_report_three_sheets(tmp_path):
     tr = next(r for r in range(1, ws.max_row + 1)
               if ws.cell(r, 1).value == "含税总价")
     assert ws.cell(tr, 7).value == pytest.approx(total_table["summary"]["total"])
+
+
+def test_combined_report_theme_and_share(tmp_path):
+    """V0.61：分状态表头着色 + 合计表追加「占比」列 + 冻结表头。"""
+    new_table = estimate_from_flat_rows([_rows(renovation="New", qty=100.0)], "P")
+    demo_table = estimate_from_flat_rows(
+        [_rows(renovation="ToBeDemolished", qty=30.0)], "P",
+        consumption_table=DEMOLITION_CONSUMPTION)
+    total_table = combine_estimate_tables(new_table, demo_table, "P")
+    path = build_combined_estimate_report(
+        new_table, demo_table, total_table, "办公楼改造",
+        "v61_theme", str(tmp_path))
+
+    from openpyxl import load_workbook
+    wb = load_workbook(path)
+
+    # 各 sheet 表头底色区分（新建绿 / 拆除红 / 合计蓝灰）
+    assert wb["新建概算"].cell(3, 1).fill.fgColor.rgb.endswith("C6EFCE")
+    assert wb["拆除概算"].cell(3, 1).fill.fgColor.rgb.endswith("FFC7CE")
+    assert wb["合计"].cell(3, 1).fill.fgColor.rgb.endswith("D9E1F2")
+
+    # 新建/拆除表无「占比」列，合计表有
+    assert "占比" not in [wb["新建概算"].cell(3, c).value for c in range(1, 12)]
+    ws_total = wb["合计"]
+    headers = [ws_total.cell(3, c).value
+               for c in range(1, ws_total.max_column + 1)]
+    assert "占比" in headers
+    share_col = headers.index("占比") + 1
+    denom = total_table["summary"]["total"]
+    expected = round(new_table["summary"]["total"] / denom * 100, 1)
+    assert ws_total.cell(4, share_col).value == f"{expected}%"
+
+    # 冻结表头
+    assert ws_total.freeze_panes == "A4"

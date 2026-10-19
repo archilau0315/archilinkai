@@ -4,6 +4,10 @@
 
 > 早期版本号 V0.x 为研发迭代号；自 0.38.0 起进入包发布号（与 V0.38 对应）。
 
+## [研发迭代 V0.61] - 2026-10-19
+
+- V0.61 概算报表分状态美化：`cost_report` 为新建/拆除/合计三张表加表头主题色（新建绿 / 拆除红 / 合计蓝灰），合计表追加「占比」列（该行合价占两者含税总价之和的百分比），并新增冻结表头与横向按页宽缩放的打印设置；新增 i18n 键 `estimate.h_share`
+
 ## [研发迭代 V0.60] - 2026-10-19
 
 - V0.60 工程量清单报表按翻新状态分表：`report_service` 抽出 `_fill_sheet` 并新增 `split_rows_by_renovation`（按 新建→拆除→已建 排序，label 优先取 `renovation_label`）；`build_report` 增 `group_by_renovation`，同一 workbook 输出多 sheet（标题 = `工程量清单 · {label}`）；`export_table` 增 `group_by_renovation` 参数；**修复**多模板混排时量值列静默归零——原 `_pick_value_column(row, hint)` 只看首行，若该列在其他行缺失（如 floor_finish_area 无 `sum_with_waste`）则整体按 0 计入，改为「要求所有行都具备该列」的自适应探测
