@@ -895,3 +895,29 @@
 ### 备注
 - column_slenderness 简化公式 H/W ≤ 20 对非 H 型钢偏松，按截面类型细分留后续
 - 双实例场景下 Tapir 响应 45s，未见 timeout
+
+
+---
+
+## 2026-10-19 V0.56 拆分 cost_estimator（还债）
+
+### 变更
+- cost_estimator.py（848 行 > 800 硬上限）拆为 4 文件（纯机械搬运，逻辑/文案/数值零改动）：
+  - cost_data.py（438 行）：PRICE_BOOK/DEFAULT_LABOR_PRICE/MACHINE_BOOK/CONSUMPTION/
+    KEYWORD_FALLBACK/DEFAULT_FEE_RATES/_fallback_consumption/merge_custom_consumption/
+    自定义定额持久化三函数
+  - cost_engine.py（154 行）：CostEstimator 类 + estimate_from_flat_rows
+  - cost_report.py（204 行）：_est_headers + build_estimate_report
+  - cost_estimator.py（16 行）：薄聚合器，re-export 全部对外符号 + __all__
+- 对外 API 不变：CONSUMPTION/CostEstimator/estimate_from_flat_rows/build_estimate_report/
+  merge_custom_consumption/save_persisted_consumption/clear_persisted_consumption 等
+  仍可从 archilinkai.cost_estimator 导入
+- readme 同步：规范审查 12→17 条规则（补规则清单）、单测 565→607、
+  项目结构补 cost_data/cost_engine/cost_report 三模块、run_code_review 说明补结构类型与规则数
+
+### 验证
+- 导入自检通过；单测 607 全过（拆分前后一致）
+- 三子模块均 ≤500 行，符合单模块行数约束
+
+### 备注
+- 债务清理完成，下一阶段 Phase B 规范审查增强（楼梯平台宽/斜梁跨度投影/截面类型细分长细比）
