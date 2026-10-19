@@ -9,7 +9,7 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 [![MCP](https://img.shields.io/badge/MCP-Protocol-black?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIweiIvPjwvc3ZnPg==)](https://modelcontextprotocol.io/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-server-green)](https://github.com/jlowin/fastmcp)
 [![Tapir](https://img.shields.io/badge/Tapir-Add--On-yellow)](https://github.com/ENZYME-APD/tapir-archicad-automation)
-[![Tests](https://img.shields.io/badge/tests-596%20pass-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-607%20pass-brightgreen)](tests/)
 [![Status](https://img.shields.io/badge/status-active-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)](#)
 [![Gitee 镜像](https://img.shields.io/badge/Gitee-镜像-red)](https://gitee.com/archilau/archilinkai)
@@ -379,7 +379,7 @@ python regression.py                   # 一键回归（单测+集成+兼容+基
 
 | 测试类型 | 通过 | 跳过 | 失败 |
 |---|---|---|---|
-| 单元测试 | 596 | 0 | 0 |
+| 单元测试 | 607 | 0 | 0 |
 | 集成测试 | 25 | 2 | 0 |
 | 兼容性测试 | 12 | 1 | 0 |
 
@@ -438,7 +438,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 ├── code_review_common.py  # 规范审查公共层：限值表+取数 helper（V0.53 拆出）
 ├── code_review_rules_a.py # 审查规则 A：墙厚/洞口/净高/碰撞/板厚/承重墙厚（V0.53 拆出）
 ├── code_review_rules_b.py # 审查规则 B：防火分区/楼梯/栏杆/窗地比/疏散/层高（V0.53 拆出）
-├── code_review_service.py # 规范强条审查：14 条规则汇总入口（V0.53 拆出）
+├── code_review_service.py # 规范强条审查：17 条规则汇总入口（V0.55 钢结构适配）
 ├── code_review_tools.py   # 规范审查工具注册（2 个，V0.42）
 ├── material_report.py     # 材料统计：按构件类型汇总材料用量（V0.49）
 ├── material_report_tools.py # 材料统计工具注册（2 个，V0.49）
@@ -621,6 +621,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 
 | 版本 | 里程碑 |
 |---|---|
+| V0.55 | 钢结构适配：梁跨高比框架化（concrete/steel/continuous/any）+ 柱长细比规则；假柱过滤；AC28 雄安厂房真机 beam 误报 564→6 |
 | V0.54 | 规范审查新增柱最小截面/梁高跨比 2 规则（14→16，AC28 真机验证） |
 | V0.53 | 规范审查拆 4 子模块、新增楼板厚度/承重外墙厚度 2 规则（12→14） |
 | V0.52 | 多语言输出（zh/en，ALAI_LANG/--lang）、只读工具拆 4 子模块、工具描述双语 |

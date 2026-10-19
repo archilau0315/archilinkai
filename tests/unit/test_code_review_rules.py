@@ -147,7 +147,7 @@ def test_column_section_violation(monkeypatch):
     """截面宽 0.25 < 0.3 → 一条违规（仅宽度侧，见规则 docstring）。"""
     _patch(
         monkeypatch, {"Column": [_COL]},
-        {"C1": {"General_Width": 0.25}},
+        {"C1": {"General_Width": 0.25, "General_Height": 3.0}},
     )
     out = rules_a.check_column_section(None)
     assert len(out) == 1
@@ -160,7 +160,7 @@ def test_column_section_violation(monkeypatch):
 def test_column_section_ok(monkeypatch):
     _patch(
         monkeypatch, {"Column": [_COL]},
-        {"C1": {"General_Width": 0.35}},
+        {"C1": {"General_Width": 0.35, "General_Height": 3.0}},
     )
     assert rules_a.check_column_section(None) == []
 
@@ -170,31 +170,90 @@ def test_column_section_missing_prop_skipped(monkeypatch):
     assert rules_a.check_column_section(None) == []
 
 
-# --- check_beam_span_ratio（V0.54） ----------------------------------------
+def test_column_section_fake_column_skipped(monkeypatch):
+    """story<0 或 height<0.5m 的假柱应跳过。"""
+    fake_cols = [
+        {"guid": "CF1", "name": "Anchor", "story_index": -1},
+        {"guid": "CF2", "name": "Anchor-2", "story_index": 0},
+    ]
+    _patch(
+        monkeypatch, {"Column": fake_cols},
+        {
+            "CF1": {"General_Width": 0.1, "General_Height": 0.05},
+            "CF2": {"General_Width": 0.1, "General_Height": 0.3},
+        },
+    )
+    assert rules_a.check_column_section(None) == []
+
+
+# --- check_beam_span_ratio（V0.54 → V0.55 框架化） -------------------------
 
 _BEAM = {"guid": "B1", "name": "Beam-1", "story_index": 0}
 
 
-def test_beam_span_ratio_violation(monkeypatch):
-    """h=0.3, L=4.2 → 最小梁高 0.35，违规。"""
+def test_beam_span_ratio_concrete_violation(monkeypatch):
+    """混凝土（默认）：span/h=15 > 12 → 违规。"""
     _patch(
         monkeypatch, {"Beam": [_BEAM]},
-        {"B1": {"General_Height": 0.3, "General_3DLength": 4.2}},
+        {"B1": {"General_Height": 0.28, "General_3DLength": 4.2}},
     )
-    out = rules_a.check_beam_span_ratio(None)
+    out = rules_a.check_beam_span_ratio(None)  # 默认 concrete
     assert len(out) == 1
     assert out[0]["guid"] == "B1"
-    assert out[0]["value"] == 0.3
-    assert out[0]["limit"] == 0.35
-    assert "梁高跨比不足" in out[0]["rule"]
+    assert out[0]["value"] == 15.0  # 4.2 / 0.28
+    assert out[0]["limit"] == 12.0
+    assert "梁跨高比超限" in out[0]["rule"]
 
 
-def test_beam_span_ratio_ok(monkeypatch):
+def test_beam_span_ratio_concrete_ok(monkeypatch):
+    """混凝土：span/h=10 ≤ 12 → 达标。"""
     _patch(
         monkeypatch, {"Beam": [_BEAM]},
-        {"B1": {"General_Height": 0.4, "General_3DLength": 4.2}},
+        {"B1": {"General_Height": 0.42, "General_3DLength": 4.2}},
     )
     assert rules_a.check_beam_span_ratio(None) == []
+
+
+def test_beam_span_ratio_steel_ok(monkeypatch):
+    """钢结构：span/h=13 ≤ 60 → 达标（V0.55 消除钢结构误报）。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Height": 0.32, "General_3DLength": 4.16}},
+    )
+    out = rules_a.check_beam_span_ratio(None, structure_type="steel")
+    assert out == []
+
+
+def test_beam_span_ratio_steel_violation(monkeypatch):
+    """钢结构：span/h=70 > 60 → 违规。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Height": 0.08, "General_3DLength": 5.6}},
+    )
+    out = rules_a.check_beam_span_ratio(None, structure_type="steel")
+    assert len(out) == 1
+    assert out[0]["value"] == 70.0
+    assert out[0]["limit"] == 60.0
+
+
+def test_beam_span_ratio_continuous(monkeypatch):
+    """钢结构连续梁：span/h=50 > 40 → 违规。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Height": 0.1, "General_3DLength": 5.0}},
+    )
+    out = rules_a.check_beam_span_ratio(None, structure_type="continuous")
+    assert len(out) == 1
+    assert out[0]["limit"] == 40.0
+
+
+def test_beam_span_ratio_any_skipped(monkeypatch):
+    """structure_type="any" → 直接跳过返回空。"""
+    _patch(
+        monkeypatch, {"Beam": [_BEAM]},
+        {"B1": {"General_Height": 0.05, "General_3DLength": 5.0}},
+    )
+    assert rules_a.check_beam_span_ratio(None, structure_type="any") == []
 
 
 def test_beam_span_ratio_zero_span_skipped(monkeypatch):
@@ -208,3 +267,62 @@ def test_beam_span_ratio_zero_span_skipped(monkeypatch):
 def test_beam_span_ratio_missing_prop_skipped(monkeypatch):
     _patch(monkeypatch, {"Beam": [_BEAM]}, {"B1": {}})
     assert rules_a.check_beam_span_ratio(None) == []
+
+
+# --- check_column_slenderness（V0.55 新增） -------------------------------
+
+def test_column_slenderness_violation(monkeypatch):
+    """H=5.0m, W=0.2m → ratio=25 > 20 → 违规。"""
+    _patch(
+        monkeypatch, {"Column": [_COL]},
+        {"C1": {"General_Height": 5.0, "General_Width": 0.2}},
+    )
+    out = rules_a.check_column_slenderness(None)
+    assert len(out) == 1
+    assert out[0]["guid"] == "C1"
+    assert out[0]["value"] == 25.0
+    assert out[0]["limit"] == 20.0
+    assert "柱长细比过大" in out[0]["rule"]
+
+
+def test_column_slenderness_ok(monkeypatch):
+    """H=3.6m, W=0.2m → ratio=18 ≤ 20 → 达标。"""
+    _patch(
+        monkeypatch, {"Column": [_COL]},
+        {"C1": {"General_Height": 3.6, "General_Width": 0.2}},
+    )
+    assert rules_a.check_column_slenderness(None) == []
+
+
+def test_column_slenderness_fake_column_skipped(monkeypatch):
+    """story=-1 锚栓标记 + height=0.05m 的假柱应跳过。"""
+    fake_cols = [
+        {"guid": "CF1", "name": "Anchor", "story_index": -1},
+        {"guid": "CF2", "name": "Anchor-2", "story_index": 0},
+    ]
+    _patch(
+        monkeypatch, {"Column": fake_cols},
+        {
+            "CF1": {"General_Height": 0.05, "General_Width": 0.02},
+            "CF2": {"General_Height": 0.05, "General_Width": 0.02},
+        },
+    )
+    assert rules_a.check_column_slenderness(None) == []
+
+
+def test_column_slenderness_missing_prop_skipped(monkeypatch):
+    _patch(monkeypatch, {"Column": [_COL]}, {"C1": {}})
+    assert rules_a.check_column_slenderness(None) == []
+
+
+def test_column_slenderness_zero_width_skipped(monkeypatch):
+    _patch(
+        monkeypatch, {"Column": [_COL]},
+        {"C1": {"General_Height": 4.0, "General_Width": 0}},
+    )
+    assert rules_a.check_column_slenderness(None) == []
+
+
+def test_column_slenderness_no_columns(monkeypatch):
+    _patch(monkeypatch, {}, {})
+    assert rules_a.check_column_slenderness(None) == []

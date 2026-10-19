@@ -57,13 +57,19 @@ DEFAULT_LIMITS: dict[str, float] = {
     "collision_body_only": True,        # 只报实体碰撞(hasBodyCollision)，忽略间隙碰撞
     # ---- V0.54 柱/梁 ----
     "column_min_side": 0.30,            # 框架柱截面最小边长(m)
-    "beam_span_ratio_divisor": 12.0,    # 梁高≥跨度/此值
+    # ---- V0.55 钢结构梁 + 柱长细比 ----
+    "beam_span_h_ratio_concrete": 12.0,   # 混凝土跨高比上限 span/h ≤ 12
+    "beam_span_h_ratio_steel": 60.0,      # 钢结构简支梁 span/h ≤ 60（GB 50017）
+    "beam_span_h_ratio_continuous": 40.0, # 钢结构连续梁/受约束 span/h ≤ 40
+    "column_slenderness_max": 20.0,       # 柱高/截面宽 ≤ 20（简化长细比限值）
+    "fake_column_max_height": 0.5,        # 假柱高度阈值(m)：< 此值视为锚栓标记跳过
 }
 
 
 def _fetch_elements(element_type: str, instance: str | None) -> list[dict[str, Any]]:
     """用 query_engine 取指定类型元素（含 guid/story_index）。"""
-    page = engine.query(QueryRequest(element_type=element_type, limit=10000))
+    page = engine.query(QueryRequest(
+        element_type=element_type, limit=10000, instance=instance))
     return page.items
 
 

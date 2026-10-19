@@ -865,3 +865,33 @@
 ### 备注
 - 柱截面另一边属性语义待后续确认，确认后补第二侧检查
 - 楼梯平台宽度规则（需 stairStructures 子构件）列入下轮候选
+
+
+---
+
+## 2026-10-19 V0.55 钢结构适配（AC28 雄安厂房真机驱动）
+
+### 变更
+- beam_span_ratio 规则框架化：新增 structure_type 参数
+  - concrete（默认）：span/h ≤ 12（混凝土梁 h ≥ span/12）
+  - steel：span/h ≤ 60（GB 50017 H 型钢简支梁）
+  - continuous：span/h ≤ 40（钢结构连续梁/受约束）
+  - any：跳过
+- 新增规则 17 check_column_slenderness：柱高/截面宽 > 20 判违规（GB 50011 λ=150 简化）
+- column_section + column_slenderness：story<0 或 height<0.5m 假柱过滤（排除锚栓标记）
+- run_review / run_code_review 同步加 structure_type 参数
+- i18n.json en：删除旧 beam_span_ratio 键，新增 beam_span_h_ratio + column_slenderness 键
+
+### 真机验证（AC28 ac28-2「1.雄安厂房2#」钢结构）
+| 规则 | V0.54 concrete | V0.55 steel | 判定 |
+|---|---|---|---|
+| beam_span_ratio | 564（大量误报） | **6**（真实大跨屋面梁） | ✅ |
+| column_section | 36（含假柱） | **24**（假柱已排除） | ✅ |
+| column_slenderness | — | **84**（首层柱高/H 型钢翼缘宽比值） | ✅ |
+
+### 验证
+- 单测 596 → 607 全过
+
+### 备注
+- column_slenderness 简化公式 H/W ≤ 20 对非 H 型钢偏松，按截面类型细分留后续
+- 双实例场景下 Tapir 响应 45s，未见 timeout

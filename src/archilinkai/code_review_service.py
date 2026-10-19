@@ -15,6 +15,7 @@ from archilinkai.code_review_rules_a import (
     check_bearing_wall_thickness,
     check_collisions,
     check_column_section,
+    check_column_slenderness,
     check_headroom,
     check_openings,
     check_slab_thickness,
@@ -39,12 +40,14 @@ def run_review(
     building_type: str = "multi",
     high_rise: bool = False,
     has_sprinkler: bool = False,
+    structure_type: str | None = None,
 ) -> dict[str, Any]:
     """执行规范审查，返回各规则违规清单与汇总。
 
     building_type: high/multi（影响防火分区面积限值）；
     high_rise: 是否高层（影响栏杆高度限值）；
-    has_sprinkler: 是否有自动喷淋（影响疏散距离限值）。
+    has_sprinkler: 是否有自动喷淋（影响疏散距离限值）；
+    structure_type: concrete/steel/continuous/any（影响梁跨高比限值）。
     """
     all_rules = [
         "wall_thickness", "openings", "headroom", "collisions",
@@ -52,7 +55,7 @@ def run_review(
         "stair_tread", "window_floor_ratio", "evacuation_distance",
         "floor_height", "stair_riser_count",
         "slab_thickness", "bearing_wall_thickness",
-        "column_section", "beam_span_ratio",
+        "column_section", "beam_span_ratio", "column_slenderness",
     ]
     rules = rules or all_rules
     results: dict[str, list[dict[str, Any]]] = {}
@@ -90,7 +93,10 @@ def run_review(
         elif r == "column_section":
             results[r] = check_column_section(instance, limits)
         elif r == "beam_span_ratio":
-            results[r] = check_beam_span_ratio(instance, limits)
+            results[r] = check_beam_span_ratio(
+                instance, limits, structure_type=structure_type)
+        elif r == "column_slenderness":
+            results[r] = check_column_slenderness(instance, limits)
     total = sum(len(v) for v in results.values())
     return {
         "rules_checked": rules,

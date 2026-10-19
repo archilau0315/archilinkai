@@ -419,23 +419,34 @@ def check_column_section(
 
     AC28 真机验证：General_Width 是柱截面宽；General_Height 对柱是
     柱高（=General_3DLength）而非截面边，故只检宽度侧，另一边待确认。
+
+    V0.55 过滤 story<0 或高度 < fake_column_max_height（默认 0.5m）
+    的假柱（锚栓标记）。
     """
     lim = {**DEFAULT_LIMITS, **(limits or {})}
     cols = _fetch_elements("Column", instance)
     if not cols:
         return []
     guids = [c["guid"] for c in cols]
-    props = _get_props(guids, ["General_Width"], instance)
+    props = _get_props(guids, ["General_Width", "General_Height"], instance)
     violations: list[dict[str, Any]] = []
+    fake_h = lim.get("fake_column_max_height", 0.5)
     for c in cols:
-        side = _num(props.get(c["guid"], {}).get("General_Width"))
+        st = c.get("story_index")
+        if st is not None and st < 0:
+            continue
+        p = props.get(c["guid"], {})
+        h = _num(p.get("General_Height"))
+        if h is not None and h < fake_h:
+            continue
+        side = _num(p.get("General_Width"))
         if side is None:
             continue
         if side < lim["column_min_side"]:
             violations.append({
                 "guid": c["guid"],
                 "name": c.get("name", ""),
-                "story": c.get("story_index"),
+                "story": st,
                 "rule": i18n.t("review.column_section.rule", "柱截面不足"),
                 "value": round(side, 3),
                 "limit": lim["column_min_side"],
@@ -449,15 +460,33 @@ def check_column_section(
     return violations
 
 
-# ---- 规则 16：梁高跨比检查（V0.54 新增） ---------------------------------
+# ---- 规则 16：梁跨高比检查（V0.54 → V0.55 框架化） -----------------------
 
 def check_beam_span_ratio(
     instance: str | None,
     limits: dict[str, float] | None = None,
+    structure_type: str | None = None,
 ) -> list[dict[str, Any]]:
-    """梁高 ≥ 跨度 / beam_span_ratio_divisor（默认 12）。"""
+    """梁跨高比 span/h 不应超限（V0.55 改为"跨高比"语义）。
+
+    structure_type 决定限值：
+      - "concrete"（默认）：span/h ≤ 12（混凝土梁 h ≥ span/12 反向表达）
+      - "steel"     ：span/h ≤ 60（GB 50017-2017 H 型钢简支梁）
+      - "continuous"：span/h ≤ 40（钢结构连续梁/受约束）
+      - "any"       ：不做检查，直接返回空列表
+    """
+    st = (structure_type or "concrete").lower()
+    if st == "any":
+        return []
     lim = {**DEFAULT_LIMITS, **(limits or {})}
-    divisor = lim["beam_span_ratio_divisor"]
+    key_map = {
+        "concrete": "beam_span_h_ratio_concrete",
+        "steel": "beam_span_h_ratio_steel",
+        "continuous": "beam_span_h_ratio_continuous",
+    }
+    ratio_key = key_map.get(st, "beam_span_h_ratio_concrete")
+    max_ratio = lim.get(ratio_key, 12.0)
+
     beams = _fetch_elements("Beam", instance)
     if not beams:
         return []
@@ -468,22 +497,81 @@ def check_beam_span_ratio(
         p = props.get(b["guid"], {})
         h = _num(p.get("General_Height"))
         span = _num(p.get("General_3DLength"))
-        if h is None or span is None or span <= 0:
+        if h is None or span is None or h <= 0 or span <= 0:
             continue
-        min_h = span / divisor
-        if h < min_h:
+        ratio = span / h
+        if ratio > max_ratio:
             violations.append({
                 "guid": b["guid"],
                 "name": b.get("name", ""),
                 "story": b.get("story_index"),
-                "rule": i18n.t("review.beam_span_ratio.rule", "梁高跨比不足"),
-                "value": round(h, 3),
-                "limit": round(min_h, 3),
+                "rule": i18n.t(
+                    "review.beam_span_h_ratio.rule", "梁跨高比超限"),
+                "value": round(ratio, 2),
+                "limit": max_ratio,
                 "message": i18n.t(
-                    "review.beam_span_ratio.msg",
-                    f"梁高 {h:.3f}m 小于跨度 {span:.2f}m 的 "
-                    f"1/{divisor:g}（{min_h:.3f}m）",
-                    h=f"{h:.3f}", span=f"{span:.2f}",
-                    divisor=f"{divisor:g}", min_h=f"{min_h:.3f}"),
+                    "review.beam_span_h_ratio.msg",
+                    f"梁跨高比 {span:.2f}m / {h:.3f}m = "
+                    f"{ratio:.1f} > 限值 {max_ratio:.0f} "
+                    f"（{st}）",
+                    span=f"{span:.2f}", h=f"{h:.3f}",
+                    ratio=f"{ratio:.1f}",
+                    limit=f"{max_ratio:.0f}", st=st),
+            })
+    return violations
+
+
+# ---- 规则 17：柱长细比检查（V0.55 新增） ----------------------------------
+
+def check_column_slenderness(
+    instance: str | None,
+    limits: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """柱高/截面宽 ≤ column_slenderness_max（默认 20.0）。
+
+    简化长细比：GB 50011 框架柱长细比限值 150（λ=L0/i，i≈W/√12），
+    折算为 H/W ≤ 20 便于规则快速检出。
+
+    V0.55 过滤 story<0 或高度 < fake_column_max_height（默认 0.5m）
+    的假柱（锚栓标记）。
+    """
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
+    cols = _fetch_elements("Column", instance)
+    if not cols:
+        return []
+    guids = [c["guid"] for c in cols]
+    props = _get_props(
+        guids, ["General_Height", "General_Width"], instance)
+    violations: list[dict[str, Any]] = []
+    fake_h = lim.get("fake_column_max_height", 0.5)
+    max_ratio = lim["column_slenderness_max"]
+    for c in cols:
+        st = c.get("story_index")
+        if st is not None and st < 0:
+            continue
+        p = props.get(c["guid"], {})
+        h = _num(p.get("General_Height"))
+        w = _num(p.get("General_Width"))
+        if h is None or w is None or w <= 0:
+            continue
+        if h < fake_h:
+            continue
+        ratio = h / w
+        if ratio > max_ratio:
+            violations.append({
+                "guid": c["guid"],
+                "name": c.get("name", ""),
+                "story": st,
+                "rule": i18n.t(
+                    "review.column_slenderness.rule", "柱长细比过大"),
+                "value": round(ratio, 2),
+                "limit": max_ratio,
+                "message": i18n.t(
+                    "review.column_slenderness.msg",
+                    f"柱高 {h:.2f}m / 截面宽 {w:.2f}m = "
+                    f"{ratio:.1f} > 限值 {max_ratio:.0f}",
+                    h=f"{h:.2f}", w=f"{w:.2f}",
+                    ratio=f"{ratio:.1f}",
+                    lim=f"{max_ratio:.0f}"),
             })
     return violations
