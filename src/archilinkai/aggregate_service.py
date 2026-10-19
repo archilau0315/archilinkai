@@ -25,6 +25,12 @@ from archilinkai.query_engine import engine, MAX_LIMIT
 from archilinkai.schemas import Filter, Operator, QueryRequest
 from archilinkai.tapir_adapter import _to_dict, adapter as _tapir
 
+# 翻新状态规范值 → 中文默认显示名（V0.58）
+_RENOV_CN = {
+    "Existing": "已建", "ToBeDemolished": "拆除",
+    "New": "新建", "Undefined": "未定义",
+}
+
 
 def _fetch_story_names(instance: str | None) -> dict[int, str]:
     """取楼层 index→name 映射，失败返回空 dict。"""
@@ -190,6 +196,8 @@ class AggregateService:
         formula_unit: str | None = None,
         with_code: bool | None = None,
         code_override: dict[str, str] | None = None,
+        renovation_status: str | None = None,
+        split_by_renovation: bool = False,
     ) -> dict[str, Any]:
         """返回 {"unit"/"units", "rows", "flat_rows"}。
 
@@ -201,6 +209,9 @@ class AggregateService:
           每组按 type 查 code_table.lookup，要求 group_by 含 type（缺则自动加）。
         code_override: 模板级清单编码覆盖（如 {"code": "011406001", "name": "墙面喷刷涂料", "unit": "m²"}），
           用于同一 element_type 不同用途（如 Wall 用于真石漆/砌体）时指定正确编码。
+        renovation_status: 只统计该翻新状态的元素（existing/toBeDemolished/new/
+          undefined/all），None 或 "all" 不过滤。
+        split_by_renovation: True 时按翻新状态分组输出（group_by 自动加 "renovation"）。
         """
         if quantities and not quantity:
             quantity = quantities
@@ -234,11 +245,25 @@ class AggregateService:
             keep = _classification_guids(
                 [s["guid"] for s in summaries], classification, instance)
             summaries = [s for s in summaries if s["guid"] in keep]
+        # 翻新状态过滤 / 分组（V0.58）
+        status_map: dict[str, str] = {}
+        if renovation_status or split_by_renovation:
+            from archilinkai import renovation_service as rsvc
+            want = rsvc.normalize_status(renovation_status)
+            status_map = rsvc.get_status_map(
+                [s["guid"] for s in summaries], instance)
+            if want:
+                summaries = [s for s in summaries
+                             if status_map.get(s["guid"]) == want]
+            if split_by_renovation and "renovation" not in group_by:
+                group_by = [*group_by, "renovation"]
         guids = [s["guid"] for s in summaries]
         svc = property_service.service
 
         qvals = svc.get_quantities(guids, qty_list, instance)
-        prop_dims = [d for d in group_by if d not in ("type", "story")]
+        prop_dims = [
+            d for d in group_by if d not in ("type", "story", "renovation")
+        ]
         prop_vals = (
             svc.get_values(guids, prop_dims, instance) if prop_dims else {}
         )
@@ -249,6 +274,7 @@ class AggregateService:
                 "name": s.get("name") or "",
                 "type": s.get("element_type"),
                 "story": s.get("story_index"),
+                "renovation": status_map.get(s["guid"]) if status_map else None,
             }
             for d in prop_dims:
                 row[d] = prop_vals.get(s["guid"], {}).get(d)
@@ -300,6 +326,11 @@ class AggregateService:
                         # formula 模式用 formula_unit，否则用 code_table 清单单位
                         g["group"]["code_unit"] = (
                             formula_unit if use_formula else info["unit"])
+            if g["group"].get("renovation") is not None:
+                from archilinkai import renovation_service as rsvc
+                st = g["group"]["renovation"]
+                g["group"]["renovation_label"] = rsvc.label(
+                    st, _RENOV_CN.get(st, st))
         # 单位
         if use_formula:
             units = formula_unit
@@ -331,10 +362,14 @@ class AggregateService:
         self,
         template_name: str,
         instance: str | None = None,
+        renovation_status: str | None = None,
+        split_by_renovation: bool = False,
     ) -> dict[str, Any]:
         """按预设模板算量。模板含 quantity 或 quantities + group_by + element_types。
 
         多 element_types 时分别汇总再合并。支持 waste_factor（损耗系数）。
+        renovation_status / split_by_renovation：透传给内部 aggregate，用于只算
+        某翻新状态（如拆除 / 新建）或按状态分组。
         """
         tpl = get_template(template_name)
         if tpl is None:
@@ -366,6 +401,8 @@ class AggregateService:
                 formula=formula, formula_name=formula_name,
                 formula_unit=formula_unit,
                 with_code=with_code, code_override=code_override,
+                renovation_status=renovation_status,
+                split_by_renovation=split_by_renovation,
             )
             if is_multi:
                 units.update(r.get("units", {}))

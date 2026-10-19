@@ -60,6 +60,8 @@ PROPERTY_ALIASES: dict[str, list[str]] = {
     "element_area": ["General_Area", "General_NetArea"],
     "element_volume": ["General_Volume", "General_NetVolume"],
     "wall_volume": ["General_NetVolume", "General_Volume"],
+    # 翻新状态（内置属性，固定英文名）
+    "renovation_status": ["Category_RenovationStatus"],
 }
 
 

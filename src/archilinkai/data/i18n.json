@@ -61,6 +61,12 @@
     "warn.missing_quantity": "Quantity {q} missing for {n_missing}/{total} elements ({pct}%), zero used in sum",
     "template.custom": "Custom template",
 
+    "renovation.Existing": "Existing",
+    "renovation.ToBeDemolished": "ToBeDemolished",
+    "renovation.New": "New",
+    "renovation.Undefined": "Undefined",
+    "renovation.title": "Renovation Status",
+
     "report.title": "Bill of Quantities",
     "report.uncategorized": "Uncategorized",
     "report.unnamed_project": "Unnamed Project",

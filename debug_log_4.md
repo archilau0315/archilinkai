@@ -954,3 +954,35 @@
 ### 备注
 - C（楼梯平台宽度）因 Tapir 无法读楼梯子构件属性未实现，已在侦察结论中记录
 - readme 同步规则数/单测数/里程碑；CHANGELOG 补 V0.39–V0.57 研发迭代记录
+
+
+---
+
+## 2026-10-19 V0.58 拆除/新建分别算量（AC 翻新状态）
+
+### 真机侦察（AC28 ac28-1「1.1办公楼改造」）
+- 翻新状态为内置属性，属性名固定 **Category_RenovationStatus**（中文名读不到）
+- 值 4 选 1：Existing / ToBeDemolished / New / Undefined，现有 get_values 可批量读
+- 项目实测：拆除 231 / 新建 2583 / 已建 3554 / 未定义 0
+
+### 变更
+- 新建 renovation_service.py（110 行）：RENOVATION_PROP/STATUSES/STATUS_CN、
+  normalize_status（支持"拆除/新建"中文别名）、get_status_map、label、summarize
+- property_alias.py：新增别名 renovation_status → ["Category_RenovationStatus"]
+- aggregate_service.py：aggregate() 新增 renovation_status（过滤）+ split_by_renovation
+  （按状态分组，附 renovation_label）；aggregate_by_template() 同名参数透传；不传时行为不变
+- read_tools_quantity.py：aggregate_quantities / aggregate_by_template 加两参数；
+  新增工具 list_renovation_summary（类型×状态计数，工具 72→73）
+- read_tools_meta.py：修复 list_all_properties 报错（success_result(**data) → data=data）
+- i18n.json：新增 renovation.Existing/ToBeDemolished/New/Undefined/title
+- tests/unit/test_renovation.py（新建）+ test_aggregate.py 追加
+
+### 真机验证
+- summarize：total 6368，拆除 231 / 新建 2583 与侦察一致
+- aggregate(Wall, split_by_renovation=True)：3 组，墙净体积 已建 806.03 / 新建 571.83 / 拆除 165.89 m³
+
+### 验证
+- 单测 614 → 630 全过
+
+### 备注
+- 拆除/新建分算打通，改造项目可分别统计；沿用 AC 自带翻新状态，无需人工标注

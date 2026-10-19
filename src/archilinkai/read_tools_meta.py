@@ -200,7 +200,8 @@ def register(mcp: FastMCP, safe) -> None:
             props = data.get("properties", [])
             return success_result(
                 instance=info.instance_id, project=info.project_name,
-                count=len(props) if isinstance(props, list) else 0, **data,
+                count=len(props) if isinstance(props, list) else 0,
+                data=data,
             )
         return safe(instance, _run)
 

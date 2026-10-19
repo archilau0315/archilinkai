@@ -13,6 +13,7 @@ from archilinkai import errors
 from archilinkai import i18n
 from archilinkai import instance_manager
 from archilinkai import property_service
+from archilinkai import renovation_service
 from mcp.server.fastmcp import FastMCP
 from archilinkai.schemas import success_result
 
@@ -95,6 +96,8 @@ def register(mcp: FastMCP, safe) -> None:
         classification: str | None = None,
         formula: str | None = None,
         formula_name: str | None = None,
+        renovation_status: str | None = None,
+        split_by_renovation: bool = False,
     ) -> dict[str, Any]:
         """按维度分组汇总工程量（count/sum/avg）。算量出表入口。
 
@@ -104,6 +107,9 @@ def register(mcp: FastMCP, safe) -> None:
         缺省 ["type"]。例：按楼层汇总墙的净体积 →
         quantity="General_NetVolume", element_type="Wall", group_by=["story"]
         classification：只统计挂了该分类项的元素，如 "标准墙"。
+        renovation_status：只统计该翻新状态（existing/toBeDemolished/new/
+          undefined/all，中文别名如"拆除"/"新建"亦可），用于拆除/新建分别算量；
+        split_by_renovation=true 时按翻新状态分组输出（自动加 renovation 维度）。
 
         English: Group and aggregate quantities by dimension (count/sum/avg); the takeoff table entry point.
         """
@@ -112,6 +118,8 @@ def register(mcp: FastMCP, safe) -> None:
             data = aggregate_service.service.aggregate(
                 quantity, group_by, element_type, stories, filters, instance,
                 classification, formula=formula, formula_name=formula_name,
+                renovation_status=renovation_status,
+                split_by_renovation=split_by_renovation,
             )
             return success_result(
                 instance=info.instance_id, project=info.project_name,
@@ -139,16 +147,23 @@ def register(mcp: FastMCP, safe) -> None:
     @mcp.tool()
     def aggregate_by_template(
         template_name: str, instance: str | None = None,
+        renovation_status: str | None = None,
+        split_by_renovation: bool = False,
     ) -> dict[str, Any]:
         """按预设模板算量（如 concrete_volume 混凝土体积、wall_area 墙体面积）。
         用 list_quantity_templates 查看全部模板。
+        renovation_status / split_by_renovation 同 aggregate_quantities，
+        用于只算某翻新状态或按状态分组。
 
         English: Aggregate quantities by a preset template (e.g. concrete_volume, wall_area).
         """
         def _run() -> dict[str, Any]:
             info = instance_manager.manager.get_info(instance)
             data = aggregate_service.service.aggregate_by_template(
-                template_name, instance)
+                template_name, instance,
+                renovation_status=renovation_status,
+                split_by_renovation=split_by_renovation,
+            )
             return success_result(
                 instance=info.instance_id, project=info.project_name,
                 count=len(data["rows"]),
@@ -158,6 +173,27 @@ def register(mcp: FastMCP, safe) -> None:
                       "groups": data["rows"],
                       "flat": data["flat_rows"],
                       "warnings": data.get("warnings", [])},
+            )
+        return safe(instance, _run)
+
+    @mcp.tool()
+    def list_renovation_summary(
+        element_types: list[str] | None = None,
+        instance: str | None = None,
+    ) -> dict[str, Any]:
+        """统计翻新状态（现有/拆除/新建/未定义）的元素数，供拆除/新建分别算量参考。
+
+        读内置属性 Category_RenovationStatus；element_types 缺省统计全部类型，
+        可传如 ["Wall","Slab"] 只统计指定类型。
+        返回 total、by_status（各状态总数）、by_type（类型×状态）、element_count（各类型总数）。
+
+        English: Summarize element counts by renovation status (Existing/Demolished/New/Undefined); for demolition vs. new split takeoff.
+        """
+        def _run() -> dict[str, Any]:
+            data = renovation_service.summarize(
+                element_types=element_types, instance=instance)
+            return success_result(
+                instance=instance, count=data["total"], data=data,
             )
         return safe(instance, _run)
 

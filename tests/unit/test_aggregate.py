@@ -731,3 +731,64 @@ def test_template_railing_length_registered():
     assert tpl["quantity"] == "General_3DLength"
     assert tpl["element_types"] == ["Railing"]
     assert tpl["with_code"] is True
+
+
+# --- V0.58 翻新状态（拆除/新建分别算量）----------------------------------
+
+def test_aggregate_default_no_renovation(svc):
+    """不传新参数时行为不变：不出现 renovation 维度。"""
+    out = svc.aggregate("General_NetVolume", group_by=["type"])
+    assert "renovation" not in out["rows"][0]["group"]
+    assert out["rows"][0].get("renovation") is None
+
+
+def test_aggregate_renovation_status_filter(svc, monkeypatch):
+    from archilinkai import renovation_service
+    monkeypatch.setattr(
+        renovation_service, "get_status_map",
+        lambda guids, instance=None: {"g1": "New", "g2": "Existing",
+                                      "g3": "New"},
+    )
+    out = svc.aggregate(
+        "General_NetVolume", group_by=["type"], renovation_status="new")
+    # 只保留 New：g1(Wall) 与 g3(Slab)
+    by_type = {g["group"]["type"]: g for g in out["rows"]}
+    assert set(by_type) == {"Wall", "Slab"}
+    assert by_type["Wall"]["count"] == 1
+    assert by_type["Wall"]["sum"] == 1.0
+    assert by_type["Slab"]["sum"] == 5.0
+
+
+def test_aggregate_split_by_renovation(svc, monkeypatch):
+    from archilinkai import renovation_service
+    monkeypatch.setattr(
+        renovation_service, "get_status_map",
+        lambda guids, instance=None: {"g1": "ToBeDemolished",
+                                      "g2": "ToBeDemolished", "g3": "New"},
+    )
+    out = svc.aggregate(
+        "General_NetVolume", group_by=["type"], split_by_renovation=True)
+    # group_by 自动加 renovation，按 type×status 分组
+    assert len(out["rows"]) == 2
+    wall = next(g for g in out["rows"] if g["group"]["type"] == "Wall")
+    assert wall["group"]["renovation"] == "ToBeDemolished"
+    assert wall["group"]["renovation_label"] == renovation_service.label(
+        "ToBeDemolished")
+    assert wall["count"] == 2
+    assert wall["sum"] == 3.0
+    slab = next(g for g in out["rows"] if g["group"]["type"] == "Slab")
+    assert slab["group"]["renovation"] == "New"
+    assert slab["group"]["renovation_label"] == renovation_service.label("New")
+
+
+def test_aggregate_by_template_renovation_filter(svc, monkeypatch):
+    from archilinkai import renovation_service
+    monkeypatch.setattr(
+        renovation_service, "get_status_map",
+        lambda guids, instance=None: {"g1": "New", "g2": "Existing",
+                                      "g3": "New"},
+    )
+    out = svc.aggregate_by_template("wall_area", renovation_status="New")
+    # Wall 只剩 g1(story 0)
+    assert len(out["rows"]) == 1
+    assert out["rows"][0]["group"]["story"] == 0
