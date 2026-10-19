@@ -292,6 +292,8 @@ def register(mcp: FastMCP, safe) -> None:
         filename: str = "estimate",
         custom_consumption: dict[str, dict[str, Any]] | None = None,
         instance: str | None = None,
+        renovation_status: str | None = None,
+        split_by_renovation: bool = False,
     ) -> dict[str, Any]:
         """一键全链路：模板算量 → 成本细算 →（可选）导出概算 xlsx。
 
@@ -302,40 +304,123 @@ def register(mcp: FastMCP, safe) -> None:
         custom_consumption 自定义定额（编码→{labor_qty, materials, machines}），
         与内置表合并且自定义优先；export_xlsx=true 导出 GB 50500 概算表。
 
+        V0.59 新建+拆除双估算：
+        - split_by_renovation=true：按翻新状态拆组，一次输出三组结果
+          —— new（新建，用建造定额）、demolition（拆除，用拆除定额）、
+          total（合计，含税总价 = 新建 + 拆除）；已建(Existing)行不计价
+          并在 notes 记数；export_xlsx 时出一份含 3 个 sheet 的 xlsx。
+        - renovation_status 单值（existing/new/toBeDemolished 或中文别名）：
+          只统计该状态，选中拆除状态时改用拆除定额，输出单表。
+        - 两者都不传：行为与旧版一致。
+
         English: One-stop pipeline: template takeoff -> cost estimate -> (optional) export GB 50500 xlsx.
+        Supports new-works + demolition split estimate (V0.59).
         """
+        def _group_view(table: dict[str, Any]) -> dict[str, Any]:
+            """一组估算结果的摘要视图（供 split 结果组装）。"""
+            return {
+                "summary": table.get("summary", {}),
+                "coverage": table.get("coverage", {}),
+                "item_count": len(table.get("items") or []),
+                "items": table.get("items") or [],
+                "notes": table.get("notes") or [],
+            }
+
         def _run() -> dict[str, Any]:
             from archilinkai.cost_estimator import (
+                DEMOLITION_CONSUMPTION,
+                build_combined_estimate_report,
                 build_estimate_report,
+                combine_estimate_tables,
                 estimate_from_flat_rows,
+                split_rows_by_renovation,
             )
             info = instance_manager.manager.get_info(instance)
+            status = renovation_service.normalize_status(renovation_status)
+            raw = (renovation_status or "").strip()
+            # 拆除选择：规范化命中 ToBeDemolished，或常见别名「到拆除」
+            demo_filter = status == "ToBeDemolished" or raw == "到拆除"
+            agg_status = status or ("拆除" if raw == "到拆除" else renovation_status)
+
             all_rows: list[dict[str, Any]] = []
             seen_codes: set[str] = set()
             per_template: dict[str, Any] = {}
             dedup_notes: list[str] = []
             for tname in template_names:
                 r = aggregate_service.service.aggregate_by_template(
-                    tname, instance)
-                kept = []
-                for row in r.get("flat_rows", []):
-                    code = str(row.get("code") or "")
-                    if code and code in seen_codes:
-                        dedup_notes.append(
-                            f"编码 {code} 已由前序模板统计，跳过「{tname}」")
-                        continue
-                    seen_codes.add(code)
-                    kept.append(row)
+                    tname, instance, renovation_status=agg_status,
+                    split_by_renovation=split_by_renovation)
+                flat = r.get("flat_rows", [])
+                # 模板级去重：一个编码由首个产出它的模板「认领」，该模板的
+                # 全部行（含多楼层/多翻新状态行）保留；后续模板若重复产出同编码
+                # 则整块跳过，避免跨模板双算。不可按行去重（同编码多行会被丢量）。
+                own_codes = {str(row.get("code") or "") for row in flat} - {""}
+                claimed = own_codes & seen_codes
+                if claimed:
+                    dedup_notes.append(
+                        f"编码 {'、'.join(sorted(claimed))} 已由前序模板统计，"
+                        f"跳过「{tname}」")
+                kept = [row for row in flat
+                        if str(row.get("code") or "") not in claimed
+                        or not row.get("code")]
+                seen_codes |= own_codes
                 per_template[tname] = {
                     "rows": len(r.get("rows", [])),
                     "kept": len(kept),
                 }
                 all_rows.extend(kept)
+
+            # --- 新建 / 拆除 / 合计 三组 ---
+            if split_by_renovation:
+                new_rows, demo_rows, existing_n = split_rows_by_renovation(all_rows)
+                new_table = estimate_from_flat_rows(
+                    new_rows, project_name, labor_price, price_overrides,
+                    fee_overrides, region, custom_consumption=custom_consumption)
+                demo_table = estimate_from_flat_rows(
+                    demo_rows, project_name, labor_price, price_overrides,
+                    fee_overrides, region, custom_consumption=custom_consumption,
+                    consumption_table=DEMOLITION_CONSUMPTION)
+                new_table["notes"] = dedup_notes + new_table.get("notes", [])
+                demo_table["notes"] = [
+                    i18n.t("estimate.demolition_note",
+                           "拆除消耗量为参考定额，可按项目调整"),
+                ] + demo_table.get("notes", [])
+                total_table = combine_estimate_tables(
+                    new_table, demo_table, project_name)
+                notes = list(dedup_notes)
+                if existing_n:
+                    note = i18n.t("estimate.note_existing",
+                                  f"已建 {existing_n} 条不计价", n=existing_n)
+                    notes.append(note)
+                    total_table["notes"] = [note] + total_table["notes"]
+                result: dict[str, Any] = {
+                    "mode": "split_by_renovation",
+                    "per_template": per_template,
+                    "new": _group_view(new_table),
+                    "demolition": _group_view(demo_table),
+                    "total": total_table["summary"],
+                    "notes": notes,
+                    "labor_price": new_table.get("labor_price"),
+                    "date": new_table.get("date"),
+                }
+                if export_xlsx:
+                    result["xlsx_path"] = build_combined_estimate_report(
+                        new_table, demo_table, total_table, project_name,
+                        filename or project_name)
+                return success_result(
+                    instance=info.instance_id, project=info.project_name,
+                    count=len(new_table["items"]) + len(demo_table["items"]),
+                    data=result,
+                )
+
+            # --- 单表（可含 renovation_status 过滤；拆除状态走拆除定额）---
+            consumption_table = DEMOLITION_CONSUMPTION if demo_filter else None
             table = estimate_from_flat_rows(
                 all_rows, project_name, labor_price, price_overrides,
-                fee_overrides, region, custom_consumption=custom_consumption)
+                fee_overrides, region, custom_consumption=custom_consumption,
+                consumption_table=consumption_table)
             table["notes"] = dedup_notes + table.get("notes", [])
-            result: dict[str, Any] = {
+            result = {
                 "per_template": per_template,
                 "summary": table["summary"],
                 "coverage": table.get("coverage", {}),

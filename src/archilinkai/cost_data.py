@@ -100,6 +100,9 @@ PRICE_BOOK: dict[str, float] = {
     "开关插座": 18.0,         # 元/套
     "吸顶灯": 80.0,           # 元/套
     "LED灯带": 12.0,          # 元/m
+    # ---- V0.59 补充：拆除清运/损耗 ----
+    "渣土清运": 45.0,         # 元/m³（含装车外运）
+    "切割片": 12.0,           # 元/片
 }
 
 # 人工与机械单价（元）
@@ -112,6 +115,10 @@ MACHINE_BOOK: dict[str, float] = {
     "对焊机": 90.0,
     "卷扬机": 80.0,
     "塔式起重机": 550.0,
+    # ---- V0.59 补充：拆除机械 ----
+    "破碎锤": 800.0,          # 元/台班（液压破碎锤）
+    "混凝土切割机": 350.0,    # 元/台班
+    "自卸汽车": 600.0,        # 元/台班
 }
 
 # ---- 消耗量：清单编码 → 每 1 清单单位的工料消耗 ------------------------
@@ -386,8 +393,12 @@ def _fallback_consumption(name: str) -> dict[str, Any] | None:
 
 def merge_custom_consumption(
     custom: dict[str, dict[str, Any]] | None,
+    base_table: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """合并内置消耗量表与用户自定义定额（自定义优先，覆盖同编码内置项）。
+
+    base_table 为基表（默认 CONSUMPTION）；传 DEMOLITION_CONSUMPTION 即
+    得到「拆除基表 + 自定义覆盖」的合并结果。
 
     自定义条目格式：
         {"编码": {"labor_qty": float,
@@ -395,7 +406,8 @@ def merge_custom_consumption(
                   "machines": [[名称, 台班, 单位], ...]}}
     materials/machines 用 list 形式（JSON 无 tuple），合并时转 tuple。
     """
-    merged = {k: dict(v) for k, v in CONSUMPTION.items()}
+    base = base_table if base_table is not None else CONSUMPTION
+    merged = {k: dict(v) for k, v in base.items()}
     if not custom:
         return merged
     for code, cons in custom.items():
@@ -462,3 +474,8 @@ def clear_persisted_consumption() -> None:
     path = _persisted_quota_path()
     if os.path.exists(path):
         os.remove(path)
+
+
+# ---- 拆除消耗量表（V0.59）：拆到独立模块，保持本模块精简 ---------------
+# 便于 `from archilinkai.cost_data import DEMOLITION_CONSUMPTION` 直接可用
+from archilinkai.cost_demolition_data import DEMOLITION_CONSUMPTION  # noqa: E402

@@ -1,4 +1,7 @@
-"""成本估算报表层：概算表 xlsx 导出（V0.56 从 cost_estimator 拆出）。"""
+"""成本估算报表层：概算表 xlsx 导出（V0.56 从 cost_estimator 拆出）。
+
+V0.59 新增 build_combined_estimate_report：新建/拆除/合计三张表写同一 workbook。
+"""
 
 from __future__ import annotations
 
@@ -23,36 +26,24 @@ def _est_headers() -> list[str]:
     ]
 
 
-def build_estimate_report(
-    table: dict[str, Any],
-    filename: str = "estimate",
-    out_dir: str | None = None,
-    with_chart: bool = True,
-) -> str:
-    """概算表 → xlsx（标题/项目信息/人材机明细/合计/取费/图表/备注），返回路径。"""
-    import os
+def _fill_sheet(ws, table: dict[str, Any], with_chart: bool,
+                allow_empty: bool = False) -> None:
+    """把概算表写进 worksheet（标题/项目信息/明细/取费/图表/备注）。
+
+    allow_empty=False 时 items 为空抛错；True 时容忍空表（只写表头与取费块）。
+    """
     import time
 
-    from openpyxl import Workbook
+    from openpyxl.chart import PieChart, BarChart, Reference
     from openpyxl.styles import Alignment, Border, Font, Side
     from openpyxl.utils import get_column_letter
-    from openpyxl.chart import PieChart, BarChart, Reference
 
     items = table.get("items") or []
-    if not items:
+    if not items and not allow_empty:
         raise ValueError(i18n.t("estimate.err_empty", "概算表 items 为空，无法生成报表"))
     s = table.get("summary", {})
     headers = _est_headers()
     ncol = len(headers)
-
-    if out_dir is None:
-        out_dir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "output")
-    os.makedirs(out_dir, exist_ok=True)
-    safe_name = "".join(c for c in filename if c.isalnum() or c in "-_") \
-        or "estimate"
-    path = os.path.join(
-        out_dir, f"{safe_name}_{time.strftime('%Y%m%d_%H%M%S')}.xlsx")
 
     bold = Font(bold=True, size=11)
     title_font = Font(bold=True, size=14)
@@ -61,10 +52,6 @@ def build_estimate_report(
     right = Alignment(horizontal="right", vertical="center")
     thin = Side(border_style="thin", color="000000")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = i18n.t("estimate.sheet", "成本概算表")
 
     def _put(row, col, val, font=None, align=center, border_=border):
         c = ws.cell(row, col, val)
@@ -224,5 +211,68 @@ def build_estimate_report(
     for i, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
 
+
+def _out_path(filename: str | None, out_dir: str | None) -> str:
+    """统一生成输出路径（output 目录 + 时间戳 .xlsx）。"""
+    import os
+    import time
+
+    if out_dir is None:
+        out_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "output")
+    os.makedirs(out_dir, exist_ok=True)
+    safe_name = "".join(c for c in (filename or "estimate")
+                        if c.isalnum() or c in "-_") or "estimate"
+    return os.path.join(
+        out_dir, f"{safe_name}_{time.strftime('%Y%m%d_%H%M%S')}.xlsx")
+
+
+def build_estimate_report(
+    table: dict[str, Any],
+    filename: str = "estimate",
+    out_dir: str | None = None,
+    with_chart: bool = True,
+) -> str:
+    """概算表 → xlsx（标题/项目信息/人材机明细/合计/取费/图表/备注），返回路径。"""
+    from openpyxl import Workbook
+
+    path = _out_path(filename, out_dir)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = i18n.t("estimate.sheet", "成本概算表")
+    _fill_sheet(ws, table, with_chart)
+    wb.save(path)
+    return path
+
+
+def build_combined_estimate_report(
+    new_table: dict[str, Any],
+    demo_table: dict[str, Any],
+    total_table: dict[str, Any],
+    project_name: str | None = None,
+    filename: str = "estimate",
+    out_dir: str | None = None,
+    with_chart: bool = True,
+) -> str:
+    """新建/拆除/合计三张表 → 同一 workbook 的 3 个 sheet，返回路径。
+
+    sheet 名：新建概算 / 拆除概算 / 合计（随 i18n 语言变化）。
+    单组为空时该 sheet 仍生成（只写表头与合计块），不中断导出。
+    """
+    from openpyxl import Workbook
+
+    path = _out_path(filename, out_dir)
+    wb = Workbook()
+    sheets = [
+        (i18n.t("estimate.sheet_new", "新建概算"), new_table),
+        (i18n.t("estimate.sheet_demolition", "拆除概算"), demo_table),
+        (i18n.t("estimate.sheet_total", "合计"), total_table),
+    ]
+    for i, (title, table) in enumerate(sheets):
+        ws = wb.active if i == 0 else wb.create_sheet()
+        ws.title = str(title)[:31]
+        if project_name and not table.get("project_name"):
+            table["project_name"] = project_name
+        _fill_sheet(ws, table, with_chart, allow_empty=True)
     wb.save(path)
     return path

@@ -81,6 +81,13 @@
     "report.err_no_value": "No value column (sum / sum_* / formula_result) found in rows; pass value_column explicitly",
 
     "estimate.sheet": "Cost Estimate",
+    "estimate.sheet_new": "New Works Estimate",
+    "estimate.sheet_demolition": "Demolition Estimate",
+    "estimate.sheet_total": "Total",
+    "estimate.group_new": "New Works Subtotal",
+    "estimate.group_demolition": "Demolition Subtotal",
+    "estimate.demolition_note": "Demolition consumption is a reference estimate, adjustable per project",
+    "estimate.note_existing": "{n} existing items not priced",
     "estimate.title": "Project Cost Estimate",
     "estimate.info": "Project: {name}    Date: {date}    Labor rate: {price} CNY",
     "estimate.unnamed_project": "Unnamed Project",

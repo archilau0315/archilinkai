@@ -986,3 +986,44 @@
 
 ### 备注
 - 拆除/新建分算打通，改造项目可分别统计；沿用 AC 自带翻新状态，无需人工标注
+
+
+---
+
+## 2026-10-19 V0.59 新建+拆除双估算（内置换算定额 + 一次出三组）
+
+### 变更
+- cost_demolition_data.py（新建 226 行）：DEMOLITION_CONSUMPTION 拆除参考定额，
+  覆盖与 CONSUMPTION 相同的 38 个清单编码（labor_qty 普遍高于建造，材料以清运/损耗为主）
+- cost_data.py（481 行）：PRICE_BOOK 补 渣土清运/切割片；MACHINE_BOOK 补
+  破碎锤/混凝土切割机/自卸汽车；merge_custom_consumption 增 base_table 参数
+- cost_engine.py（253 行）：CostEstimator.estimate_from_flat_rows 增 consumption_table
+  （默认建造表，可传拆除表）；新增纯函数 split_rows_by_renovation、combine_estimate_tables；
+  summary 补 labor_cost/material_cost/machine_cost
+- cost_report.py（278 行）：抽出 _fill_sheet；新增 build_combined_estimate_report
+  （同一 workbook 出 3 sheet：新建概算/拆除概算/合计）
+- read_tools_quantity.py：estimate_project 增 renovation_status/split_by_renovation，
+  split 时一次输出 new/demolition/total 三组（已建行不计价仅计数）
+- i18n.json + tests/unit/test_estimate_renovation.py（新建）
+
+### 故障修复（真机验证暴露，属历史遗留）
+- **现象**：真机 3 组估算中拆除直接费≈新建 3 倍，且 010402001/010502001 各状态 sum/n 完全相同
+- **根因**：estimate_project 按「行」用 code 去重（seen_codes），把同编码的多楼层行
+  （每楼层一行）全部丢掉，只留第一行 → 严重少算。实测 concrete_volume 模板 61 行仅留 1 行/编码
+  （新建量 1551.8 m³ → 69.6 m³，含税 84.1 万 → 3.7 万，仅剩 ~4%）。
+  另：report_service._aggregate_by_code 本就按 code 求和，行级去重纯属多余
+- **修复**：改为「模板级」去重——某编码由首个产出它的模板整块认领（保留其全部行，含多楼层/
+  多翻新状态），后序模板重复产出同编码则整块跳过。既避免跨模板双算，又不丢量
+- 该缺陷自 V0.52 之前即存在，非 V0.59 引入；本轮一并修复
+
+### 真机验证（ac28-1「办公楼改造」，修复后）
+- 模板组：concrete_volume + floor_finish_area + ceiling_area + skirting_length（编码互不冲突）
+- 行数：新建 41 / 拆除 31 / 已建 41；coverage 100%
+- 新建含税 554,649.56 元；拆除含税 93,867.43 元（< 新建，符合常理）；合计 648,516.99（校验一致）
+- 拆除人工占直接费 54%（符合拆除特征）
+
+### 验证
+- 单测 630 → 644 全过（新增 12 双估算用例 + 2 去重用例）
+
+### 备注
+- 拆除定额为参考量级，可按项目调整；estimate_project 不传新参数时行为与旧版一致

@@ -4,8 +4,9 @@
 
 > 早期版本号 V0.x 为研发迭代号；自 0.38.0 起进入包发布号（与 V0.38 对应）。
 
-## [研发迭代 V0.52–V0.58] - 2026-10-19
+## [研发迭代 V0.52–V0.59] - 2026-10-19
 
+- V0.59 新建+拆除双估算：新增模块 `cost_demolition_data`（拆除参考定额 `DEMOLITION_CONSUMPTION` 覆盖 38 个清单编码）；`CostEstimator`/`estimate_from_flat_rows` 支持 `consumption_table` 选表（建造/拆除）；新增纯函数 `split_rows_by_renovation` / `combine_estimate_tables`；`estimate_project` 增 `renovation_status` + `split_by_renovation`，一次输出「新建 / 拆除 / 合计」三组并按 3 sheet 导出 xlsx；**修复** `estimate_project` 历史遗留量值缺陷——原按行用清单编码去重，把同编码的多楼层行全部丢弃，导致概算严重少算（实测新建量仅剩 ~4%），改为模板级「编码整块认领」去重
 - V0.58 拆除/新建分别算量：基于 AC 翻新状态（内置属性 `Category_RenovationStatus`：Existing/ToBeDemolished/New）过滤与分组；`aggregate_quantities` / `aggregate_by_template` 新增 `renovation_status` + `split_by_renovation` 参数；新增工具 `list_renovation_summary`；新增模块 `renovation_service`；修复 `list_all_properties` 报错（`success_result(**data)` → `data=data`）；AC28「1.1办公楼改造」真机验证（拆除 231 / 新建 2583）
 - V0.57 规范审查增强：梁跨高比按**水平投影跨度**计算（斜梁取 details 起止点，兜底 General_3DLength）；柱长细比按结构类型分型限值（混凝土 20 / 钢 43）
 - V0.56 拆分 `cost_estimator.py`（848 行）为 `cost_data`（438）/`cost_engine`（154）/`cost_report`（204）+ 薄聚合器
@@ -13,7 +14,7 @@
 - V0.54 规范审查新增柱最小截面/梁高跨比 2 规则（14→16）
 - V0.53 规范审查拆 4 子模块，新增楼板厚度/承重外墙厚度 2 规则（12→14）
 - V0.52 多语言输出（zh/en，`ALAI_LANG` / `serve --lang`，英文目录外置 `data/i18n.json`）、只读工具拆 4 子模块、72 工具描述双语；新增 `get_locale` 诊断工具
-- 工具 73 个，单测 630 全过
+- 工具 73 个，单测 644 全过
 
 ## [研发迭代 V0.39–V0.51] - 2026-09 ~ 2026-10
 

@@ -9,7 +9,7 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 [![MCP](https://img.shields.io/badge/MCP-Protocol-black?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIweiIvPjwvc3ZnPg==)](https://modelcontextprotocol.io/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-server-green)](https://github.com/jlowin/fastmcp)
 [![Tapir](https://img.shields.io/badge/Tapir-Add--On-yellow)](https://github.com/ENZYME-APD/tapir-archicad-automation)
-[![Tests](https://img.shields.io/badge/tests-630%20pass-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-644%20pass-brightgreen)](tests/)
 [![Status](https://img.shields.io/badge/status-active-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)](#)
 [![Gitee 镜像](https://img.shields.io/badge/Gitee-镜像-red)](https://gitee.com/archilau/archilinkai)
@@ -51,11 +51,11 @@ AI 智能体与 ArchiCAD 之间的 MCP 桥梁。任何支持 MCP 的智能体（
 | 🏗 **15 类构件建模** | 墙、柱、梁、板、门、窗、楼梯、屋顶、变形体、家具、灯具、网面、洞口、房间区域、机电管线 |
 | 📊 **44 个算量模板** | 混凝土体积、墙体分层、幕墙、栏杆、门窗洞口面积、模板估算、外檐真石漆、砌体工程、机电保温/配管/电缆等 |
 | 📋 **GB 50500 清单** | 自动映射清单编码、出标准清单报表（xlsx + 标题/项目信息/合计行） |
-| ♻️ **拆除/新建分算** | 基于 AC 翻新状态（`Category_RenovationStatus`）过滤与分组，改造项目可分别统计拆除 / 新建 / 已建工程量 |
+| ♻️ **拆除/新建分算与估算** | 基于 AC 翻新状态（`Category_RenovationStatus`）过滤与分组，改造项目可分别统计拆除 / 新建 / 已建工程量，并一次估算出「新建 / 拆除 / 合计」三组造价（拆除走内置拆除定额，V0.59） |
 | 🔍 **规范强条审查** | 17 条建筑强条自动检查（墙厚/板厚/承重墙/门窗洞口/净高/碰撞/防火分区/楼梯/栏杆/柱截面/柱长细比/梁跨高比/疏散/层高等），混凝土与钢结构分型限值，斜梁按水平投影跨度计算 |
 | 🔒 **四阶段写入** | Preview → Confirm → Execute → Verify，支持 Ctrl+Z 撤销 |
 | 🆔 **项目身份强校验** | 写入前核对项目路径 + 元素 GUID，防止项目被切换导致误写 |
-| 🧪 **630 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
+| 🧪 **644 单测全过** | 单元 + 集成 + AC26–29 兼容矩阵 + 一键回归脚本 |
 | 🖥 **多版本多实例** | 同一套代码兼容 AC26–29，支持双实例并存（ac29-1 / ac28-1） |
 
 ---
@@ -435,8 +435,9 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 ├── code_table.py          # GB 50500 构件类型→清单编码映射（V0.26）
 ├── report_service.py      # 工程量清单报表排版（V0.26）
 ├── formula_eval.py        # 算量规则公式安全求值（V0.25）
-├── cost_estimator.py      # 成本估算对外聚合入口（V0.56 拆为下列 3 模块）
+├── cost_estimator.py      # 成本估算对外聚合入口（V0.56 拆为下列数据/计算/报表模块）
 ├── cost_data.py           # 成本数据层：单价库/定额消耗量/取费费率/自定义定额持久化（V0.56 拆出）
+├── cost_demolition_data.py # 拆除参考定额消耗量表（38 项，V0.59 新建）
 ├── cost_engine.py         # 成本计算层：CostEstimator 细算（人材机→取费→总价，V0.56 拆出）
 ├── cost_report.py         # 成本报表层：概算表 xlsx 排版与图表（V0.56 拆出）
 ├── code_review_common.py  # 规范审查公共层：限值表+取数 helper（V0.53 拆出）
@@ -526,7 +527,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 | `get_calculation_units` | 读项目计算单位与精度 |
 | `get_navigator_tree` | 读导航树（楼层/视图/图册/发布集） |
 | `estimate_cost` | 成本估算细算：算量结果 → 人材机分解 → 取费 → 总价（含覆盖率） |
-| `estimate_project` | 一键全链路：模板算量 → 细算 → 可选导出概算 xlsx（同编码自动去重防双算） |
+| `estimate_project` | 一键全链路：模板算量 → 细算 → 可选导出概算 xlsx；`split_by_renovation=true` 时按翻新状态一次出「新建 / 拆除 / 合计」三组（拆除走内置拆除定额，V0.59） |
 
 ### P1 安全写入工具（16 个）
 
@@ -584,7 +585,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 | `list_property_aliases` | 查看属性别名候选/命中/回退（V0.50） |
 | `get_locale` | 查看当前语言设置与英文目录条目数（V0.52） |
 
-> 工具总数：**72 个**
+> 工具总数：**73 个**
 
 ### 已支持建模构件（15 类）
 
@@ -627,6 +628,7 @@ src/archilinkai/  （包体；regression.py / benchmark.py / server.py 兼容壳
 
 | 版本 | 里程碑 |
 |---|---|
+| V0.59 | 新建+拆除双估算：内置拆除参考定额（38 项）；estimate_project 按翻新状态一次出「新建/拆除/合计」三组并导出 3 sheet xlsx；顺带修复 estimate_project 历史遗留的量值去重缺陷（同编码多楼层行被误丢，少算 ~95%） |
 | V0.58 | 拆除/新建分别算量：基于 AC 翻新状态（Category_RenovationStatus）过滤与分组；新增 list_renovation_summary 工具；修复 list_all_properties 报错 |
 | V0.57 | 规范审查增强：梁按水平投影跨度计算跨高比、柱长细比按结构类型分型限值（混凝土20/钢43） |
 | V0.56 | 拆分 cost_estimator.py 为 cost_data/cost_engine/cost_report（848→各≤438 行） |

@@ -7,7 +7,7 @@ from typing import Any
 from archilinkai import i18n
 from archilinkai.cost_data import (
     DEFAULT_LABOR_PRICE, PRICE_BOOK, MACHINE_BOOK, DEFAULT_FEE_RATES,
-    merge_custom_consumption, load_persisted_consumption,
+    CONSUMPTION, merge_custom_consumption, load_persisted_consumption,
     _fallback_consumption,
 )
 
@@ -22,6 +22,7 @@ class CostEstimator:
         fee_overrides: dict[str, float] | None = None,
         region: str | None = None,
         custom_consumption: dict[str, dict[str, Any]] | None = None,
+        consumption_table: dict[str, dict[str, Any]] | None = None,
     ):
         self.labor_price = labor_price
         self.prices = dict(PRICE_BOOK)
@@ -33,10 +34,12 @@ class CostEstimator:
             self.fees.update(fee_overrides)
         self.region = region
         self.notes: list[str] = []
-        # 消耗量表：内置 + 持久化定额 + 本次传入自定义（优先级递增）
+        # 消耗量表：基表（默认建造 CONSUMPTION，可传拆除表）
+        # + 持久化定额 + 本次传入自定义（优先级递增）
         persisted = load_persisted_consumption()
         merged = {**persisted, **(custom_consumption or {})}
-        self.consumption = merge_custom_consumption(merged)
+        self.consumption = merge_custom_consumption(
+            merged, consumption_table or CONSUMPTION)
         self.persisted_count = len(persisted)
 
     def estimate_item(self, item: dict[str, Any]) -> dict[str, Any]:
@@ -117,6 +120,9 @@ class CostEstimator:
 
         priced = [self.estimate_item(i) for i in items]
         direct_cost = round(sum(i["total_price"] or 0 for i in priced), 2)
+        labor_cost = round(sum(i.get("labor_price") or 0 for i in priced), 2)
+        material_cost = round(sum(i.get("material_price") or 0 for i in priced), 2)
+        machine_cost = round(sum(i.get("machine_price") or 0 for i in priced), 2)
         management = round(direct_cost * self.fees["management_fee"], 2)
         profit = round(direct_cost * self.fees["profit"], 2)
         tax = round((direct_cost + management + profit) * self.fees["tax"], 2)
@@ -130,6 +136,9 @@ class CostEstimator:
             "profit": profit,
             "tax": tax,
             "total": total,
+            "labor_cost": labor_cost,
+            "material_cost": material_cost,
+            "machine_cost": machine_cost,
         }
         table["notes"] = list(self.notes)
         table["fee_rates"] = dict(self.fees)
@@ -161,13 +170,84 @@ def estimate_from_flat_rows(
     fee_overrides: dict[str, float] | None = None,
     region: str | None = None,
     custom_consumption: dict[str, dict[str, Any]] | None = None,
+    consumption_table: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """flat_rows → 概算表全流程：转换 → 细算 → 汇总。"""
+    """flat_rows → 概算表全流程：转换 → 细算 → 汇总。
+
+    consumption_table 缺省 CONSUMPTION（建造）；传 DEMOLITION_CONSUMPTION
+    则按拆除定额细算。
+    """
     from archilinkai.estimate_schema import aggregate_rows_to_estimate_items
 
     items = aggregate_rows_to_estimate_items(flat_rows)
     est = CostEstimator(
         labor_price, price_overrides, fee_overrides, region,
         custom_consumption=custom_consumption,
+        consumption_table=consumption_table,
     )
     return est.estimate_table(items, project_name)
+
+
+def split_rows_by_renovation(
+    flat_rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+    """按 "renovation" 键拆分 flat_rows。
+
+    返回 (新建行, 拆除行, 已建条数)；Existing 行不计价，仅计数。
+    """
+    new_rows: list[dict[str, Any]] = []
+    demo_rows: list[dict[str, Any]] = []
+    existing = 0
+    for r in flat_rows:
+        st = r.get("renovation")
+        if st == "New":
+            new_rows.append(r)
+        elif st == "ToBeDemolished":
+            demo_rows.append(r)
+        elif st == "Existing":
+            existing += 1
+    return new_rows, demo_rows, existing
+
+
+# summary 中需逐项相加的金额字段
+_SUMMARY_SUM_KEYS = (
+    "direct_cost", "measure_fee", "management_fee", "profit", "tax",
+    "total", "labor_cost", "material_cost", "machine_cost",
+)
+
+
+def combine_estimate_tables(
+    new_table: dict[str, Any],
+    demo_table: dict[str, Any],
+    project_name: str,
+) -> dict[str, Any]:
+    """新建/拆除两表 → 合计表：summary 逐项相加，items 为两行分组小计。
+
+    含税总价 total = 新建含税总价 + 拆除含税总价。
+    """
+    from archilinkai.estimate_schema import create_estimate_table
+
+    ns = new_table.get("summary", {}) or {}
+    ds = demo_table.get("summary", {}) or {}
+    total_summary = {
+        k: round((ns.get(k) or 0) + (ds.get(k) or 0), 2)
+        for k in _SUMMARY_SUM_KEYS
+    }
+    rows = [
+        (i18n.t("estimate.group_new", "新建概算"), ns),
+        (i18n.t("estimate.group_demolition", "拆除概算"), ds),
+    ]
+    items = [{
+        "code": "", "name": label, "unit": "项", "quantity": 1,
+        "unit_price": s.get("total", 0.0), "total_price": s.get("total", 0.0),
+        "labor_price": s.get("labor_cost", 0.0),
+        "material_price": s.get("material_cost", 0.0),
+        "machine_price": s.get("machine_cost", 0.0),
+    } for label, s in rows]
+    table = create_estimate_table(project_name, items, new_table.get("region"))
+    table["summary"] = total_summary
+    table["notes"] = (list(new_table.get("notes") or [])
+                      + list(demo_table.get("notes") or []))
+    table["fee_rates"] = dict(new_table.get("fee_rates") or {})
+    table["labor_price"] = new_table.get("labor_price")
+    return table
