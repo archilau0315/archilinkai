@@ -4,16 +4,24 @@ mock _fetch_elements 与 _get_props，不依赖真机连接。
 """
 
 from archilinkai import code_review_rules_a as rules_a
+from archilinkai import code_review_rules_c as rules_c
 
 
 def _patch(monkeypatch, elements_by_type, props):
-    """挂假数据：elements_by_type={类型: [元素]}，props={guid: {属性: 值}}。"""
-    monkeypatch.setattr(
-        rules_a, "_fetch_elements",
-        lambda etype, instance: elements_by_type.get(etype, []))
-    monkeypatch.setattr(
-        rules_a, "_get_props",
-        lambda guids, names, instance: {g: props.get(g, {}) for g in guids})
+    """挂假数据：elements_by_type={类型: [元素]}，props={guid: {属性: 值}}。
+
+    同时挂 rules_a 与 rules_c（V0.65 拆分后两组规则共用此 mock）。
+    """
+    for mod in (rules_a, rules_c):
+        monkeypatch.setattr(
+            mod, "_fetch_elements",
+            lambda etype, instance: elements_by_type.get(etype, []))
+        monkeypatch.setattr(
+            mod, "_get_props",
+            lambda guids, names, instance: {g: props.get(g, {}) for g in guids})
+    # 梁详情默认 mock 为空（除非用例单独 _patch_beam_details），
+    # 防止真实通道调用渗入单元测试（V0.65）。
+    monkeypatch.setattr(rules_c, "_fetch_beam_details", lambda guids, instance: {})
 
 
 # --- check_slab_thickness -------------------------------------------------
@@ -149,7 +157,7 @@ def test_column_section_violation(monkeypatch):
         monkeypatch, {"Column": [_COL]},
         {"C1": {"General_Width": 0.25, "General_Height": 3.0}},
     )
-    out = rules_a.check_column_section(None)
+    out = rules_c.check_column_section(None)
     assert len(out) == 1
     assert out[0]["guid"] == "C1"
     assert out[0]["value"] == 0.25
@@ -162,12 +170,12 @@ def test_column_section_ok(monkeypatch):
         monkeypatch, {"Column": [_COL]},
         {"C1": {"General_Width": 0.35, "General_Height": 3.0}},
     )
-    assert rules_a.check_column_section(None) == []
+    assert rules_c.check_column_section(None) == []
 
 
 def test_column_section_missing_prop_skipped(monkeypatch):
     _patch(monkeypatch, {"Column": [_COL]}, {"C1": {}})
-    assert rules_a.check_column_section(None) == []
+    assert rules_c.check_column_section(None) == []
 
 
 def test_column_section_fake_column_skipped(monkeypatch):
@@ -183,7 +191,7 @@ def test_column_section_fake_column_skipped(monkeypatch):
             "CF2": {"General_Width": 0.1, "General_Height": 0.3},
         },
     )
-    assert rules_a.check_column_section(None) == []
+    assert rules_c.check_column_section(None) == []
 
 
 # --- check_beam_span_ratio（V0.54 → V0.55 框架化） -------------------------
@@ -197,7 +205,7 @@ def test_beam_span_ratio_concrete_violation(monkeypatch):
         monkeypatch, {"Beam": [_BEAM]},
         {"B1": {"General_Height": 0.28, "General_3DLength": 4.2}},
     )
-    out = rules_a.check_beam_span_ratio(None)  # 默认 concrete
+    out = rules_c.check_beam_span_ratio(None)  # 默认 concrete
     assert len(out) == 1
     assert out[0]["guid"] == "B1"
     assert out[0]["value"] == 15.0  # 4.2 / 0.28
@@ -211,7 +219,7 @@ def test_beam_span_ratio_concrete_ok(monkeypatch):
         monkeypatch, {"Beam": [_BEAM]},
         {"B1": {"General_Height": 0.42, "General_3DLength": 4.2}},
     )
-    assert rules_a.check_beam_span_ratio(None) == []
+    assert rules_c.check_beam_span_ratio(None) == []
 
 
 def test_beam_span_ratio_steel_ok(monkeypatch):
@@ -220,7 +228,7 @@ def test_beam_span_ratio_steel_ok(monkeypatch):
         monkeypatch, {"Beam": [_BEAM]},
         {"B1": {"General_Height": 0.32, "General_3DLength": 4.16}},
     )
-    out = rules_a.check_beam_span_ratio(None, structure_type="steel")
+    out = rules_c.check_beam_span_ratio(None, structure_type="steel")
     assert out == []
 
 
@@ -230,7 +238,7 @@ def test_beam_span_ratio_steel_violation(monkeypatch):
         monkeypatch, {"Beam": [_BEAM]},
         {"B1": {"General_Height": 0.08, "General_3DLength": 5.6}},
     )
-    out = rules_a.check_beam_span_ratio(None, structure_type="steel")
+    out = rules_c.check_beam_span_ratio(None, structure_type="steel")
     assert len(out) == 1
     assert out[0]["value"] == 70.0
     assert out[0]["limit"] == 60.0
@@ -242,7 +250,7 @@ def test_beam_span_ratio_continuous(monkeypatch):
         monkeypatch, {"Beam": [_BEAM]},
         {"B1": {"General_Height": 0.1, "General_3DLength": 5.0}},
     )
-    out = rules_a.check_beam_span_ratio(None, structure_type="continuous")
+    out = rules_c.check_beam_span_ratio(None, structure_type="continuous")
     assert len(out) == 1
     assert out[0]["limit"] == 40.0
 
@@ -253,7 +261,7 @@ def test_beam_span_ratio_any_skipped(monkeypatch):
         monkeypatch, {"Beam": [_BEAM]},
         {"B1": {"General_Height": 0.05, "General_3DLength": 5.0}},
     )
-    assert rules_a.check_beam_span_ratio(None, structure_type="any") == []
+    assert rules_c.check_beam_span_ratio(None, structure_type="any") == []
 
 
 def test_beam_span_ratio_zero_span_skipped(monkeypatch):
@@ -261,12 +269,12 @@ def test_beam_span_ratio_zero_span_skipped(monkeypatch):
         monkeypatch, {"Beam": [_BEAM]},
         {"B1": {"General_Height": 0.1, "General_3DLength": 0}},
     )
-    assert rules_a.check_beam_span_ratio(None) == []
+    assert rules_c.check_beam_span_ratio(None) == []
 
 
 def test_beam_span_ratio_missing_prop_skipped(monkeypatch):
     _patch(monkeypatch, {"Beam": [_BEAM]}, {"B1": {}})
-    assert rules_a.check_beam_span_ratio(None) == []
+    assert rules_c.check_beam_span_ratio(None) == []
 
 
 # --- 梁跨度水平投影（V0.57） -----------------------------------------------
@@ -274,7 +282,7 @@ def test_beam_span_ratio_missing_prop_skipped(monkeypatch):
 def _patch_beam_details(monkeypatch, details_by_guid):
     """挂假梁详情：details_by_guid={guid: 整条详情 dict}。"""
     monkeypatch.setattr(
-        rules_a, "_fetch_beam_details",
+        rules_c, "_fetch_beam_details",
         lambda guids, instance: {g: details_by_guid.get(g) for g in guids
                                  if g in details_by_guid})
 
@@ -288,7 +296,7 @@ def test_beam_span_uses_horizontal_projection(monkeypatch):
     _patch_beam_details(monkeypatch, {"B1": {"details": {
         "begCoordinate": {"x": 0.0, "y": 0.0},
         "endCoordinate": {"x": 6.2, "y": 0.0}}}})
-    out = rules_a.check_beam_span_ratio(None)  # concrete ≤ 12
+    out = rules_c.check_beam_span_ratio(None)  # concrete ≤ 12
     assert len(out) == 1
     assert out[0]["value"] == 12.4  # 6.2 / 0.5，来自投影而非 5.9
 
@@ -302,7 +310,7 @@ def test_beam_span_projection_shortens_slanted_span(monkeypatch):
     _patch_beam_details(monkeypatch, {"B1": {"details": {
         "begCoordinate": {"x": 0.0, "y": 0.0},
         "endCoordinate": {"x": 5.0, "y": 0.0}}}})
-    assert rules_a.check_beam_span_ratio(None) == []  # 5.0/0.5=10 ≤ 12
+    assert rules_c.check_beam_span_ratio(None) == []  # 5.0/0.5=10 ≤ 12
 
 
 def test_beam_span_fallback_without_details(monkeypatch):
@@ -312,7 +320,7 @@ def test_beam_span_fallback_without_details(monkeypatch):
         {"B1": {"General_Height": 0.5, "General_3DLength": 6.2}},
     )
     _patch_beam_details(monkeypatch, {})
-    out = rules_a.check_beam_span_ratio(None)
+    out = rules_c.check_beam_span_ratio(None)
     assert len(out) == 1
     assert out[0]["value"] == 12.4  # 6.2 / 0.5，来自 3DLength
 
@@ -324,7 +332,7 @@ def test_beam_span_detail_without_coords_falls_back(monkeypatch):
         {"B1": {"General_Height": 0.5, "General_3DLength": 6.2}},
     )
     _patch_beam_details(monkeypatch, {"B1": {"details": {"height": 0.5}}})
-    out = rules_a.check_beam_span_ratio(None)
+    out = rules_c.check_beam_span_ratio(None)
     assert len(out) == 1
     assert out[0]["value"] == 12.4
 
@@ -337,7 +345,7 @@ def test_column_slenderness_violation(monkeypatch):
         monkeypatch, {"Column": [_COL]},
         {"C1": {"General_Height": 5.0, "General_Width": 0.2}},
     )
-    out = rules_a.check_column_slenderness(None)
+    out = rules_c.check_column_slenderness(None)
     assert len(out) == 1
     assert out[0]["guid"] == "C1"
     assert out[0]["value"] == 25.0
@@ -351,7 +359,7 @@ def test_column_slenderness_ok(monkeypatch):
         monkeypatch, {"Column": [_COL]},
         {"C1": {"General_Height": 3.6, "General_Width": 0.2}},
     )
-    assert rules_a.check_column_slenderness(None) == []
+    assert rules_c.check_column_slenderness(None) == []
 
 
 def test_column_slenderness_fake_column_skipped(monkeypatch):
@@ -367,12 +375,12 @@ def test_column_slenderness_fake_column_skipped(monkeypatch):
             "CF2": {"General_Height": 0.05, "General_Width": 0.02},
         },
     )
-    assert rules_a.check_column_slenderness(None) == []
+    assert rules_c.check_column_slenderness(None) == []
 
 
 def test_column_slenderness_missing_prop_skipped(monkeypatch):
     _patch(monkeypatch, {"Column": [_COL]}, {"C1": {}})
-    assert rules_a.check_column_slenderness(None) == []
+    assert rules_c.check_column_slenderness(None) == []
 
 
 def test_column_slenderness_zero_width_skipped(monkeypatch):
@@ -380,12 +388,12 @@ def test_column_slenderness_zero_width_skipped(monkeypatch):
         monkeypatch, {"Column": [_COL]},
         {"C1": {"General_Height": 4.0, "General_Width": 0}},
     )
-    assert rules_a.check_column_slenderness(None) == []
+    assert rules_c.check_column_slenderness(None) == []
 
 
 def test_column_slenderness_no_columns(monkeypatch):
     _patch(monkeypatch, {}, {})
-    assert rules_a.check_column_slenderness(None) == []
+    assert rules_c.check_column_slenderness(None) == []
 
 
 # --- 柱长细比按结构类型细分（V0.57） ---------------------------------------
@@ -396,9 +404,9 @@ def test_column_slenderness_steel_limit_ok_concrete_violates(monkeypatch):
         monkeypatch, {"Column": [_COL]},
         {"C1": {"General_Height": 5.0, "General_Width": 0.2}},
     )
-    steel = rules_a.check_column_slenderness(None, structure_type="steel")
+    steel = rules_c.check_column_slenderness(None, structure_type="steel")
     assert steel == []
-    concrete = rules_a.check_column_slenderness(None, structure_type="concrete")
+    concrete = rules_c.check_column_slenderness(None, structure_type="concrete")
     assert len(concrete) == 1
     assert concrete[0]["value"] == 25.0
     assert concrete[0]["limit"] == 20.0
@@ -410,7 +418,7 @@ def test_column_slenderness_steel_violation(monkeypatch):
         monkeypatch, {"Column": [_COL]},
         {"C1": {"General_Height": 5.0, "General_Width": 0.1}},
     )
-    out = rules_a.check_column_slenderness(None, structure_type="steel")
+    out = rules_c.check_column_slenderness(None, structure_type="steel")
     assert len(out) == 1
     assert out[0]["value"] == 50.0
     assert out[0]["limit"] == 43.0
@@ -422,7 +430,7 @@ def test_column_slenderness_default_is_concrete(monkeypatch):
         monkeypatch, {"Column": [_COL]},
         {"C1": {"General_Height": 5.0, "General_Width": 0.2}},
     )
-    out = rules_a.check_column_slenderness(None)
+    out = rules_c.check_column_slenderness(None)
     assert len(out) == 1 and out[0]["limit"] == 20.0
 
 
@@ -435,7 +443,7 @@ def test_wall_slenderness_violation(monkeypatch):
         {"Wall": [{"guid": "W1", "name": "Q1", "story_index": 0}]},
         {"W1": {"Wall_MaximumHeight": 6.0, "General_Thickness": 0.15}},
     )
-    out = rules_a.check_wall_slenderness(None)
+    out = rules_c.check_wall_slenderness(None)
     assert len(out) == 1
     assert out[0]["guid"] == "W1"
     assert out[0]["value"] == 40.0
@@ -450,7 +458,7 @@ def test_wall_slenderness_ok(monkeypatch):
         {"Wall": [{"guid": "W1", "name": "Q1", "story_index": 0}]},
         {"W1": {"Wall_MaximumHeight": 3.0, "General_Thickness": 0.2}},
     )
-    assert rules_a.check_wall_slenderness(None) == []
+    assert rules_c.check_wall_slenderness(None) == []
 
 
 def test_wall_slenderness_missing_prop_skipped(monkeypatch):
@@ -460,7 +468,7 @@ def test_wall_slenderness_missing_prop_skipped(monkeypatch):
         {"Wall": [{"guid": "W1", "name": "Q1", "story_index": 0}]},
         {"W1": {"General_Thickness": 0.15}},
     )
-    assert rules_a.check_wall_slenderness(None) == []
+    assert rules_c.check_wall_slenderness(None) == []
 
 
 def test_wall_slenderness_zero_thickness_skipped(monkeypatch):
@@ -469,12 +477,12 @@ def test_wall_slenderness_zero_thickness_skipped(monkeypatch):
         {"Wall": [{"guid": "W1", "name": "Q1", "story_index": 0}]},
         {"W1": {"Wall_MaximumHeight": 6.0, "General_Thickness": 0.0}},
     )
-    assert rules_a.check_wall_slenderness(None) == []
+    assert rules_c.check_wall_slenderness(None) == []
 
 
 def test_wall_slenderness_no_walls(monkeypatch):
     _patch(monkeypatch, {}, {})
-    assert rules_a.check_wall_slenderness(None) == []
+    assert rules_c.check_wall_slenderness(None) == []
 
 
 # --- check_evacuation_door_width（V0.63 新增） ----------------------------
@@ -486,7 +494,7 @@ def test_evacuation_door_width_violation(monkeypatch):
         {"Door": [{"guid": "D1", "name": "疏散门-1", "story_index": 0}]},
         {"D1": {"General_Width": 0.9}},
     )
-    out = rules_a.check_evacuation_door_width(None)
+    out = rules_c.check_evacuation_door_width(None)
     assert len(out) == 1
     assert out[0]["guid"] == "D1"
     assert out[0]["value"] == 0.8
@@ -501,7 +509,7 @@ def test_evacuation_door_width_ok(monkeypatch):
         {"Door": [{"guid": "D1", "name": "安全出口", "story_index": 0}]},
         {"D1": {"General_Width": 1.1}},
     )
-    assert rules_a.check_evacuation_door_width(None) == []
+    assert rules_c.check_evacuation_door_width(None) == []
 
 
 def test_evacuation_door_non_evac_skipped(monkeypatch):
@@ -511,12 +519,12 @@ def test_evacuation_door_non_evac_skipped(monkeypatch):
         {"Door": [{"guid": "D1", "name": "卫生间门", "story_index": 0}]},
         {"D1": {"General_Width": 0.7}},
     )
-    assert rules_a.check_evacuation_door_width(None) == []
+    assert rules_c.check_evacuation_door_width(None) == []
 
 
 def test_evacuation_door_no_doors(monkeypatch):
     _patch(monkeypatch, {}, {})
-    assert rules_a.check_evacuation_door_width(None) == []
+    assert rules_c.check_evacuation_door_width(None) == []
 
 
 # --- check_beam_section_width（V0.64 新增，仅混凝土） -----------------------
@@ -528,7 +536,7 @@ def test_beam_section_width_violation(monkeypatch):
         {"B1": {"General_Width": 0.15, "General_Height": 0.5,
                 "General_3DLength": 4.2}},
     )
-    out = rules_a.check_beam_section_width(None)
+    out = rules_c.check_beam_section_width(None)
     assert len(out) == 1
     assert out[0]["guid"] == "B1"
     assert out[0]["value"] == 0.15
@@ -543,7 +551,7 @@ def test_beam_section_width_ok(monkeypatch):
         {"B1": {"General_Width": 0.25, "General_Height": 0.5,
                 "General_3DLength": 4.2}},
     )
-    assert rules_a.check_beam_section_width(None) == []
+    assert rules_c.check_beam_section_width(None) == []
 
 
 def test_beam_section_width_steel_skipped(monkeypatch):
@@ -554,7 +562,7 @@ def test_beam_section_width_steel_skipped(monkeypatch):
                 "General_3DLength": 4.2}},
     )
     for st in ("steel", "continuous", "any"):
-        assert rules_a.check_beam_section_width(None, structure_type=st) == []
+        assert rules_c.check_beam_section_width(None, structure_type=st) == []
 
 
 def test_beam_section_width_fake_beam_skipped(monkeypatch):
@@ -564,7 +572,7 @@ def test_beam_section_width_fake_beam_skipped(monkeypatch):
         {"B1": {"General_Width": 0.13, "General_Height": 0.06,
                 "General_3DLength": 0.17}},
     )
-    assert rules_a.check_beam_section_width(None) == []
+    assert rules_c.check_beam_section_width(None) == []
 
 
 def test_beam_section_width_fake_beam_by_length_only(monkeypatch):
@@ -574,17 +582,17 @@ def test_beam_section_width_fake_beam_by_length_only(monkeypatch):
         {"B1": {"General_Width": 0.13, "General_Height": 0.5,
                 "General_3DLength": 0.3}},
     )
-    assert rules_a.check_beam_section_width(None) == []
+    assert rules_c.check_beam_section_width(None) == []
 
 
 def test_beam_section_width_missing_prop_skipped(monkeypatch):
     _patch(monkeypatch, {"Beam": [_BEAM]}, {"B1": {}})
-    assert rules_a.check_beam_section_width(None) == []
+    assert rules_c.check_beam_section_width(None) == []
 
 
 def test_beam_section_width_no_beams(monkeypatch):
     _patch(monkeypatch, {}, {})
-    assert rules_a.check_beam_section_width(None) == []
+    assert rules_c.check_beam_section_width(None) == []
 
 
 # --- check_beam_aspect_ratio（V0.64 新增，仅混凝土） ------------------------
@@ -596,7 +604,7 @@ def test_beam_aspect_ratio_violation(monkeypatch):
         {"B1": {"General_Width": 0.2, "General_Height": 0.9,
                 "General_3DLength": 5.0}},
     )
-    out = rules_a.check_beam_aspect_ratio(None)
+    out = rules_c.check_beam_aspect_ratio(None)
     assert len(out) == 1
     assert out[0]["guid"] == "B1"
     assert out[0]["value"] == 4.5
@@ -611,7 +619,7 @@ def test_beam_aspect_ratio_ok(monkeypatch):
         {"B1": {"General_Width": 0.25, "General_Height": 0.5,
                 "General_3DLength": 4.2}},
     )
-    assert rules_a.check_beam_aspect_ratio(None) == []
+    assert rules_c.check_beam_aspect_ratio(None) == []
 
 
 def test_beam_aspect_ratio_steel_skipped(monkeypatch):
@@ -621,7 +629,7 @@ def test_beam_aspect_ratio_steel_skipped(monkeypatch):
         {"B1": {"General_Width": 0.2, "General_Height": 0.9,
                 "General_3DLength": 5.0}},
     )
-    assert rules_a.check_beam_aspect_ratio(None, structure_type="steel") == []
+    assert rules_c.check_beam_aspect_ratio(None, structure_type="steel") == []
 
 
 def test_beam_aspect_ratio_fake_beam_skipped(monkeypatch):
@@ -631,12 +639,12 @@ def test_beam_aspect_ratio_fake_beam_skipped(monkeypatch):
         {"B1": {"General_Width": 0.13, "General_Height": 0.06,
                 "General_3DLength": 0.17}},
     )
-    assert rules_a.check_beam_aspect_ratio(None) == []
+    assert rules_c.check_beam_aspect_ratio(None) == []
 
 
 def test_beam_aspect_ratio_missing_prop_skipped(monkeypatch):
     _patch(monkeypatch, {"Beam": [_BEAM]}, {"B1": {}})
-    assert rules_a.check_beam_aspect_ratio(None) == []
+    assert rules_c.check_beam_aspect_ratio(None) == []
 
 
 # --- check_fire_door_rating（V0.64 新增） -----------------------------------
@@ -648,7 +656,7 @@ def test_fire_door_rating_missing_violation(monkeypatch):
         {"Door": [{"guid": "D1", "name": "FM-防火门-1", "story_index": 0}]},
         {"D1": {"WindowDoor_FireRating": None}},
     )
-    out = rules_a.check_fire_door_rating(None)
+    out = rules_c.check_fire_door_rating(None)
     assert len(out) == 1
     assert out[0]["guid"] == "D1"
     assert "防火门" in out[0]["rule"]
@@ -661,7 +669,7 @@ def test_fire_door_rating_empty_string_violation(monkeypatch):
         {"Door": [{"guid": "D1", "name": "防火门-2", "story_index": 0}]},
         {"D1": {"WindowDoor_FireRating": "  "}},
     )
-    assert len(rules_a.check_fire_door_rating(None)) == 1
+    assert len(rules_c.check_fire_door_rating(None)) == 1
 
 
 def test_fire_door_rating_ok(monkeypatch):
@@ -671,7 +679,7 @@ def test_fire_door_rating_ok(monkeypatch):
         {"Door": [{"guid": "D1", "name": "防火门-3", "story_index": 0}]},
         {"D1": {"WindowDoor_FireRating": "甲级"}},
     )
-    assert rules_a.check_fire_door_rating(None) == []
+    assert rules_c.check_fire_door_rating(None) == []
 
 
 def test_fire_door_rating_normal_door_skipped(monkeypatch):
@@ -681,9 +689,9 @@ def test_fire_door_rating_normal_door_skipped(monkeypatch):
         {"Door": [{"guid": "D1", "name": "M1022", "story_index": 0}]},
         {"D1": {"WindowDoor_FireRating": None}},
     )
-    assert rules_a.check_fire_door_rating(None) == []
+    assert rules_c.check_fire_door_rating(None) == []
 
 
 def test_fire_door_rating_no_doors(monkeypatch):
     _patch(monkeypatch, {}, {})
-    assert rules_a.check_fire_door_rating(None) == []
+    assert rules_c.check_fire_door_rating(None) == []

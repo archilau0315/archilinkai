@@ -174,3 +174,29 @@
 - code_review_rules_a.py 现 768 行，逼近 800 行拆分线；下次再新增规则前应先拆出 rules_c 子模块
 
 
+
+---
+
+## 2026-10-20 V0.65 rules_a 拆分 + 实例发现防挂死
+
+### 变更
+- 新增 code_review_rules_c.py（460 行）：迁移规则 15-22（柱截面/梁跨高比/柱长细比/
+  墙高厚比/疏散门净宽/梁截面宽度/梁截面高宽比/防火门等级）+ _is_fake_beam/
+  _EVAC_DOOR_KEYWORDS/_FIRE_DOOR_KEYWORDS；helper 从 code_review_common 导入
+- code_review_rules_a.py：847→413 行，保留规则 1-4/13/14；移除未用的
+  _beam_horizontal_span/_fetch_beam_details 导入
+- code_review_service.py：规则 15-22 改从 rules_c 导入；模块 docstring 更新
+- instance_manager.py：discover_instances 探测期设 3s socket 超时
+  （_PROBE_TIMEOUT_SECS）+ connect 异常按坏端口跳过，finally 恢复原超时——
+  修复 AC 弹模态对话框时端口可连但不应答导致的永久挂起（连带卡死
+  server 启动与全量单测）
+- tests/conftest.py：新增 autouse fixture，每测试前后清空全局实例注册表，
+  防止 test_cli 实例发现留下的真实 AC 连接渗入后续测试
+- test_code_review_rules.py：_patch 同时挂 rules_a/rules_c，并补
+  _fetch_beam_details 默认 mock；test_instance_manager.py 新增黑洞端口
+  回归测试（接受连接但不应答 → 应超时跳过且不挂死）
+
+### 备注
+- 全量单测 681→682 全过（53s）；rules_a/rules_b/rules_c 均 <500 行
+- 挂死根因链条：test_cli 发现实例 → 全局注册表存入被弹窗阻塞的 AC 连接
+  → 后续未 mock 的 _fetch_beam_details 直连 → 永久阻塞

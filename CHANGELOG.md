@@ -4,6 +4,10 @@
 
 > 早期版本号 V0.x 为研发迭代号；自 0.38.0 起进入包发布号（与 V0.38 对应）。
 
+## [研发迭代 V0.65] - 2026-10-20
+
+- V0.65 模块拆分 + 实例发现防挂死：**rules_a 拆出 `code_review_rules_c`**（847→413/460 行，迁移规则 15-22：柱截面/梁跨高比/柱长细比/墙高厚比/疏散门净宽/梁截面宽度/梁截面高宽比/防火门等级，规则 A 组保留墙厚/洞口/净高/碰撞/板厚/承重墙厚）；`code_review_service` 改从 rules_c 导入。**修复实例发现无超时缺陷**——AC 弹模态对话框时端口能连但不应答，`discover_instances`（及 server 启动、doctor）会永久挂起：探测期设 3s socket 超时（`_PROBE_TIMEOUT_SECS`）+ `connect` 异常按坏端口跳过，结束恢复原超时；新增黑洞端口回归测试。**测试隔离加固**——tests/conftest 增 autouse fixture 每测试清空全局实例注册表，防止 test_cli 的实例发现留下的真实 AC 连接渗入后续测试造成未 mock 通道调用挂死；rules 测试 `_patch` 补 `_fetch_beam_details` mock。单测 681→682 全过（53s）
+
 ## [研发迭代 V0.64] - 2026-10-19
 
 - V0.64 规范审查新增 3 规则（19→22）：**梁截面宽度**（`check_beam_section_width`，`General_Width < 0.20m` 判违规，GB 50010 6.3.1）+ **梁截面高宽比**（`check_beam_aspect_ratio`，`General_Height / General_Width > 4.0` 判违规）——两条仅 `structure_type=concrete` 生效，避免钢结构窄翼缘 H 梁误报；新增 `_is_fake_beam` 过滤装饰段/碎梁（长度 < 0.5m 或高度 < 0.15m 跳过）。**防火门耐火等级缺失**（`check_fire_door_rating`，名称含 防火/fire 关键词的门 `WindowDoor_FireRating` 为空判违规，数据完整性检查）。`DEFAULT_LIMITS` 增 4 键（beam_section_min_width / beam_aspect_ratio_max / fake_beam_max_length / fake_beam_min_height）；新增 6 个 i18n en 键；新增 17 个单测（664→681）。AC28「1.1办公楼改造」真机验证：梁宽不足 67 条（KL 梁 0.08~0.14m）、高宽比超限 40 条（h=1.4~1.67m 薄梁）、防火门 0 条（项目无防火门名称标记，零误报）

@@ -268,3 +268,41 @@ def test_identity_untitled_then_saved_blocks(monkeypatch):
     mgr = _managers_with({"ac29-1": entry})
     with pytest.raises(ProjectIdentityChangedError):
         mgr.check_project_identity(["g1"], "ac29-1")
+
+
+# --- discover_instances：探测超时防挂死（V0.65） --------------------------
+
+
+def test_discover_instances_black_hole_port_no_hang(monkeypatch):
+    """端口接受连接但永不应答（如 AC 模态弹窗阻塞 HTTP）时，
+    探测应超时跳过并抛 NoInstanceAvailableError，不得永久挂起；
+    结束后 socket 默认超时应恢复原值。"""
+    import socket as socket_mod
+    import threading
+    import time
+
+    srv = socket_mod.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(8)
+    port = srv.getsockname()[1]
+
+    def _accept_forever():
+        while True:
+            try:
+                srv.accept()
+            except OSError:
+                return
+
+    threading.Thread(target=_accept_forever, daemon=True).start()
+    monkeypatch.setattr(im_mod, "_PORT_RANGE", range(port, port + 1))
+
+    timeout_before = socket_mod.getdefaulttimeout()
+    mgr = InstanceManager()
+    start = time.monotonic()
+    with pytest.raises(NoInstanceAvailableError):
+        mgr.discover_instances()
+    elapsed = time.monotonic() - start
+    srv.close()
+    # 未加探测超时前此处会永久挂起；修复后应在 ~3s/端口 内失败返回
+    assert elapsed < 30
+    assert socket_mod.getdefaulttimeout() == timeout_before

@@ -1,7 +1,7 @@
 """建筑规范强条审查服务入口（V0.53 拆分后）。
 
 本模块只保留 run_review 汇总入口；限值与公共 helper 在
-code_review_common，规则实现在 code_review_rules_a / _b。
+code_review_common，规则实现在 code_review_rules_a / _b / _c。
 对外兼容：code_review_service.run_review / DEFAULT_LIMITS 仍可 import。
 """
 
@@ -11,20 +11,22 @@ from typing import Any
 
 from archilinkai.code_review_common import DEFAULT_LIMITS  # noqa: F401 re-export
 from archilinkai.code_review_rules_a import (
+    check_bearing_wall_thickness,
+    check_collisions,
+    check_headroom,
+    check_openings,
+    check_slab_thickness,
+    check_wall_thickness,
+)
+from archilinkai.code_review_rules_c import (
     check_beam_aspect_ratio,
     check_beam_section_width,
     check_beam_span_ratio,
-    check_bearing_wall_thickness,
-    check_collisions,
     check_column_section,
     check_column_slenderness,
     check_evacuation_door_width,
     check_fire_door_rating,
-    check_headroom,
-    check_openings,
-    check_slab_thickness,
     check_wall_slenderness,
-    check_wall_thickness,
 )
 from archilinkai.code_review_rules_b import (
     check_evacuation_distance,

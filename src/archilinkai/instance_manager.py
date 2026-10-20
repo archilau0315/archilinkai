@@ -10,6 +10,7 @@ InstanceManager 维护 {instance_id: InstanceEntry} 注册表。
 
 from __future__ import annotations
 
+import socket
 from dataclasses import dataclass
 from typing import Any
 
@@ -26,6 +27,10 @@ from archilinkai.schemas import InstanceInfo, InstanceStatus
 
 # ArchiCAD 官方端口范围：19723–19743
 _PORT_RANGE = range(19723, 19744)
+
+# 单端口探测超时（秒）：AC 弹模态对话框时 HTTP 应答会被阻塞，
+# 官方 connect/命令默认无超时会永久挂起，探测期强制限流（V0.65）。
+_PROBE_TIMEOUT_SECS = 3.0
 
 
 @dataclass
@@ -92,13 +97,23 @@ class InstanceManager:
         registry: dict[str, InstanceEntry] = {}
         version_counter: dict[int, int] = {}
 
-        for port in _PORT_RANGE:
-            conn = archicad.ACConnection.connect(port=port)
-            if conn is None:
-                continue
-            entry = self._build_entry(conn, port, version_counter)
-            if entry is not None:
-                registry[entry.info.instance_id] = entry
+        # 探测期设短超时：端口能连但 AC 不应答（如模态对话框阻塞）时
+        # 快速跳过，防止整体发现流程挂死；结束恢复原超时设置。
+        old_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(_PROBE_TIMEOUT_SECS)
+        try:
+            for port in _PORT_RANGE:
+                try:
+                    conn = archicad.ACConnection.connect(port=port)
+                except Exception:
+                    continue  # 连接超时/拒绝，视为坏端口
+                if conn is None:
+                    continue
+                entry = self._build_entry(conn, port, version_counter)
+                if entry is not None:
+                    registry[entry.info.instance_id] = entry
+        finally:
+            socket.setdefaulttimeout(old_timeout)
 
         if not registry:
             # 不抛异常时也清空旧注册表，避免误用陈旧连接
